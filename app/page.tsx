@@ -1,104 +1,52 @@
 import { getJobs } from "@/lib/data";
 import Link from "next/link";
-import DraftButton from "./components/DraftButton";
+import PriorityInbox from "./components/PriorityInbox";
 
 export default async function Home() {
   const jobs = await getJobs();
 
   return (
-    <main className="min-h-screen bg-black text-white p-8 font-sans">
-      <div className="max-w-5xl mx-auto">
+    <main className="min-h-screen bg-black text-white p-6 sm:p-8 font-sans">
+      <div className="max-w-6xl mx-auto space-y-8">
         
-{/* HEADER: Minimalist & Clean */}
-        <div className="flex justify-between items-end mb-12 pb-6 border-b border-neutral-900">
+        {/* HEADER: Minimalist & Clean */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-neutral-900">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Career Operations</h1>
-            <p className="text-neutral-500 text-sm flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-              Pulse Agent Active
+            <div className="flex items-center gap-3 mb-1">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Career Operations</h1>
+              <span className="px-2 py-0.5 rounded-full text-[10px] uppercase font-mono tracking-widest bg-purple-950/60 border border-purple-800 text-purple-400">
+                Pulse v1.0
+              </span>
+            </div>
+            <p className="text-neutral-500 text-xs sm:text-sm flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Autonomous Job Evaluation & Application Tracking
             </p>
           </div>
           
           <div className="flex items-center gap-3">
-            {/* NEW: Settings / Resume Button */}
             <Link 
               href="/settings"
-              className="group flex items-center gap-2 px-4 py-2 rounded-md border border-neutral-800 text-neutral-400 hover:text-white hover:border-neutral-600 transition-all text-sm font-medium"
+              className="group flex items-center gap-2 px-3.5 py-2 rounded-lg border border-neutral-800 bg-[#0D0D0D] text-neutral-400 hover:text-white hover:border-neutral-700 transition-all text-xs font-semibold"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-              <span>Context</span>
+              <svg className="w-4 h-4 text-neutral-500 group-hover:text-purple-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              </svg>
+              <span>Candidate Profile</span>
             </Link>
 
-            {/* Existing Add Target Button */}
             <Link 
               href="/create-job"
-              className="group flex items-center gap-2 bg-white text-black px-4 py-2 rounded-md font-semibold text-sm hover:bg-neutral-200 transition-all"
+              className="group flex items-center gap-2 px-3.5 py-2 rounded-lg border border-neutral-800 bg-[#0D0D0D] text-neutral-400 hover:text-white hover:border-neutral-700 transition-all text-xs font-semibold"
             >
-              <span>Add Target</span>
-              <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+              <span>Manual Entry</span>
             </Link>
           </div>
         </div>
 
-        {/* JOB GRID */}
-        <div className="grid gap-4">
-          {jobs.map((job) => (
-            <div 
-              key={job.id} 
-              className="bg-[#0A0A0A] p-6 rounded-lg border border-neutral-900 hover:border-neutral-700 transition-all group"
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-3">
-                    <h2 className="text-lg font-bold text-white tracking-wide">
-                      {job.role}
-                    </h2>
-                    {/* STATUS PILL */}
-                    <span className={`text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-sm ${
-                      job.status === "Interviewing" ? "bg-purple-900/30 text-purple-400 border border-purple-900" :
-                      job.status === "Offer" ? "bg-emerald-900/30 text-emerald-400 border border-emerald-900" :
-                      job.status === "Rejected" ? "bg-red-900/30 text-red-400 border border-red-900" :
-                      "bg-neutral-900 text-neutral-500 border border-neutral-800"
-                    }`}>
-                      {job.status}
-                    </span>
-                  </div>
-                  <p className="text-neutral-400 text-sm font-medium">{job.companyName}</p>
-                </div>
-
-                <DraftButton company={job.companyName} role={job.role} />
-              </div>
-
-              {/* DATA ROW */}
-              <div className="flex items-center gap-6 text-xs text-neutral-600 font-mono border-t border-neutral-900/50 pt-4 mt-2">
-                <div className="flex items-center gap-2">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                  <span>{job.dateApplied.toLocaleDateString("en-US", { month: 'short', day: 'numeric' })}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
-                  <span>{job.id.slice(0, 4)}...</span>
-                </div>
-              </div>
-
-              {/* AI INSIGHT SECTION */}
-              {job.aiAnalysis && (
-                <div className="mt-4 pt-4 border-t border-neutral-900">
-                  <div className="flex gap-3 text-sm">
-                    <div className="mt-0.5 shrink-0">
-                      {/* Pulse Icon */}
-                      <svg className="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                    </div>
-                    <div>
-                      <span className="text-[10px] uppercase tracking-widest text-purple-500 font-bold block mb-1">Pulse Insight</span>
-                      <p className="text-neutral-300 leading-relaxed text-xs">{job.aiAnalysis}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+        {/* Priority Inbox & Pipeline Tracker */}
+        <PriorityInbox initialJobs={jobs} />
       </div>
     </main>
   );

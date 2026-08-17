@@ -118,3 +118,33 @@ export async function ingestJob(input: IngestionInput) {
   return result;
 }
 
+// ---------------------------------------------------------
+// 4. STATUS TRANSITION ACTIONS
+// ---------------------------------------------------------
+export async function updateJobStatusAction(
+  jobId: string,
+  newStatus: string,
+  payload?: Record<string, unknown>
+) {
+  const { updateJobStatus } = await import("@/lib/data");
+  const updated = await updateJobStatus(jobId, newStatus, payload);
+  revalidatePath("/");
+  return { success: true, job: updated };
+}
+
+export async function shortlistJobAction(jobId: string) {
+  return await updateJobStatusAction(jobId, "SHORTLISTED");
+}
+
+export async function prepareJobAction(jobId: string) {
+  return await updateJobStatusAction(jobId, "PREPARED");
+}
+
+export async function applyJobAction(jobId: string) {
+  return await updateJobStatusAction(jobId, "APPLIED");
+}
+
+export async function archiveJobAction(jobId: string) {
+  return await updateJobStatusAction(jobId, "ARCHIVED");
+}
+

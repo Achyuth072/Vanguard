@@ -40,12 +40,13 @@ export const TailoredSummarySchema = z.object({
 export type TailoredSummary = z.infer<typeof TailoredSummarySchema>;
 
 export interface CandidateContext {
+  name?: string;
   targetRole?: string;
   minSalary?: number;
   yearsOfExperience?: number;
   remotePreference?: string;
   preferredLocations?: string[] | string;
-  skills?: string[] | string;
+  skills?: string[] | string | unknown;
   projects?: string[] | string | unknown;
   experiences?: string[] | string | unknown;
   resumeText?: string;
@@ -102,7 +103,7 @@ export async function generateStructuredWithFallback<T>({
   prompt: string;
   system?: string;
   options?: AIRouterOptions;
-}): Promise<T> {
+  }): Promise<T> {
   const primary = options?.primaryModel || getOpenRouterModel();
   const fallback = options?.fallbackModel || getGeminiModel();
 
@@ -139,20 +140,28 @@ export async function generateStructuredWithFallback<T>({
 export function buildCandidateFactSheet(candidate: CandidateContext): string {
   const formatList = (val: string[] | string | unknown): string => {
     if (!val) return "Not specified";
-    if (Array.isArray(val)) return val.join(", ");
+    if (Array.isArray(val)) {
+      if (val.length === 0) return "None";
+      if (typeof val[0] === "string") return val.join(", ");
+      return JSON.stringify(val, null, 2);
+    }
     if (typeof val === "string") {
       try {
         const parsed = JSON.parse(val);
-        if (Array.isArray(parsed)) return parsed.join(", ");
+        if (Array.isArray(parsed)) {
+          if (parsed.length === 0) return "None";
+          if (typeof parsed[0] === "string") return parsed.join(", ");
+          return JSON.stringify(parsed, null, 2);
+        }
       } catch {
         return val;
       }
       return val;
     }
-    return JSON.stringify(val);
+    return JSON.stringify(val, null, 2);
   };
 
-  return [
+  const lines = [
     `Target Role: ${candidate.targetRole || "Software Engineer"}`,
     `Years of Experience: ${candidate.yearsOfExperience ?? "Not specified"}`,
     `Skills: ${formatList(candidate.skills)}`,
@@ -161,7 +170,13 @@ export function buildCandidateFactSheet(candidate: CandidateContext): string {
     `Experience Records: ${formatList(candidate.experiences)}`,
     `Projects: ${formatList(candidate.projects)}`,
     `Resume Text: ${candidate.resumeText || "None provided"}`,
-  ].join("\n");
+  ];
+
+  if (candidate.name) {
+    lines.unshift(`Candidate Name: ${candidate.name}`);
+  }
+
+  return lines.join("\n");
 }
 
 export async function scoreJobFit(
@@ -253,6 +268,17 @@ Generate a concise tailored summary, key matching points, and relevant projects.
   });
 }
 
+export {
+  TailoredResumeSchema,
+  type TailoredResume,
+  SelectedProjectSchema,
+  type SelectedProject,
+  ExperienceHighlightSchema,
+  type ExperienceHighlight,
+} from "../../types/tailoring";
+export { tailorResume } from "../tailoring/resume";
+
 export const scoreJob = scoreJobFit;
 export const extractJob = extractJobDetails;
 export const tailorSummary = tailorApplicationSummary;
+

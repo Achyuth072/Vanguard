@@ -63,8 +63,10 @@ model Application {
   status        String    @default("SHORTLISTED")
   appliedAt     DateTime?
   resumeVersion String    @default("v1")
-  tailoredNotes String    @default("")
-  followUpAt    DateTime?
+  tailoredNotes   String    @default("")
+  tailoredResume  String    @default("{}")
+  questionAnswers String    @default("[]")
+  followUpAt      DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }

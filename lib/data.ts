@@ -16,6 +16,8 @@ export interface EnrichedApplication {
   appliedAt: Date | null;
   resumeVersion: string;
   tailoredNotes: string;
+  tailoredResume?: string;
+  questionAnswers?: string;
   followUpAt: Date | null;
 }
 
@@ -84,6 +86,8 @@ export async function getJobs(): Promise<EnrichedJob[]> {
           appliedAt: job.application.appliedAt,
           resumeVersion: job.application.resumeVersion,
           tailoredNotes: job.application.tailoredNotes,
+          tailoredResume: job.application.tailoredResume,
+          questionAnswers: job.application.questionAnswers,
           followUpAt: job.application.followUpAt,
         }
       : null;

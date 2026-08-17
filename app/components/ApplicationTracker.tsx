@@ -8,6 +8,7 @@ import DraftButton from "./DraftButton";
 interface ApplicationTrackerProps {
   jobs: EnrichedJob[];
   onStatusUpdated?: () => void;
+  onOpenPreparation?: (job: EnrichedJob) => void;
 }
 
 const PIPELINE_STAGES = [
@@ -19,7 +20,7 @@ const PIPELINE_STAGES = [
   { id: "REJECTED", label: "Rejected", color: "border-rose-900 text-rose-400 bg-rose-950/30" },
 ];
 
-export default function ApplicationTracker({ jobs, onStatusUpdated }: ApplicationTrackerProps) {
+export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPreparation }: ApplicationTrackerProps) {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   // Normalize status for grouping (handles INTERVIEW / INTERVIEWING)
@@ -125,8 +126,8 @@ export default function ApplicationTracker({ jobs, onStatusUpdated }: Applicatio
                           </div>
                         )}
 
-                        {/* Stage Selector & Draft Button */}
-                        <div className="pt-2 border-t border-neutral-800/80 flex items-center justify-between gap-2">
+                        {/* Stage Selector, Prep Trigger & Draft Button */}
+                        <div className="pt-2 border-t border-neutral-800/80 flex items-center justify-between gap-1.5">
                           <div className="relative flex-1">
                             <select
                               value={normalizeStatus(job.status)}
@@ -140,6 +141,19 @@ export default function ApplicationTracker({ jobs, onStatusUpdated }: Applicatio
                               ))}
                             </select>
                           </div>
+
+                          {onOpenPreparation && (
+                            <button
+                              type="button"
+                              onClick={() => onOpenPreparation(job)}
+                              className="p-1 rounded bg-[#1c1c1c] border border-neutral-700 text-purple-400 hover:text-purple-300 hover:bg-neutral-800 transition-colors"
+                              title="Open Tailored Resume & Screening Answers"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                              </svg>
+                            </button>
+                          )}
 
                           <DraftButton company={job.company} role={job.title} />
                         </div>

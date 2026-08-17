@@ -6,6 +6,7 @@ import type { EnrichedJob } from "@/lib/data";
 import JobCard from "./JobCard";
 import ApplicationTracker from "./ApplicationTracker";
 import IngestModal from "./IngestModal";
+import ApplicationPreparationDrawer from "./ApplicationPreparationDrawer";
 
 interface PriorityInboxProps {
   initialJobs: EnrichedJob[];
@@ -18,6 +19,8 @@ export default function PriorityInbox({ initialJobs }: PriorityInboxProps) {
   const [activeTab, setActiveTab] = useState<TabType>("inbox");
   const [searchQuery, setSearchQuery] = useState("");
   const [isIngestOpen, setIsIngestOpen] = useState(false);
+  const [selectedPrepJob, setSelectedPrepJob] = useState<EnrichedJob | null>(null);
+  const [isPrepDrawerOpen, setIsPrepDrawerOpen] = useState(false);
 
   // Categorize jobs for tabs
   const inboxJobs = initialJobs.filter((job) => {
@@ -74,6 +77,11 @@ export default function PriorityInbox({ initialJobs }: PriorityInboxProps) {
 
   function handleDataRefreshed() {
     router.refresh();
+  }
+
+  function handleOpenPreparation(job: EnrichedJob) {
+    setSelectedPrepJob(job);
+    setIsPrepDrawerOpen(true);
   }
 
   return (
@@ -171,7 +179,11 @@ export default function PriorityInbox({ initialJobs }: PriorityInboxProps) {
 
       {/* Main Content Area */}
       {activeTab === "applications" ? (
-        <ApplicationTracker jobs={initialJobs} onStatusUpdated={handleDataRefreshed} />
+        <ApplicationTracker
+          jobs={initialJobs}
+          onStatusUpdated={handleDataRefreshed}
+          onOpenPreparation={handleOpenPreparation}
+        />
       ) : (
         <div className="space-y-4">
           {displayedJobs.length === 0 ? (
@@ -201,7 +213,12 @@ export default function PriorityInbox({ initialJobs }: PriorityInboxProps) {
           ) : (
             <div className="grid gap-3">
               {displayedJobs.map((job) => (
-                <JobCard key={job.id} job={job} onStatusUpdated={handleDataRefreshed} />
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  onStatusUpdated={handleDataRefreshed}
+                  onOpenPreparation={handleOpenPreparation}
+                />
               ))}
             </div>
           )}
@@ -213,6 +230,17 @@ export default function PriorityInbox({ initialJobs }: PriorityInboxProps) {
         isOpen={isIngestOpen}
         onClose={() => setIsIngestOpen(false)}
         onSuccess={handleDataRefreshed}
+      />
+
+      {/* Application Preparation Drawer */}
+      <ApplicationPreparationDrawer
+        job={selectedPrepJob}
+        isOpen={isPrepDrawerOpen}
+        onClose={() => {
+          setIsPrepDrawerOpen(false);
+          setSelectedPrepJob(null);
+        }}
+        onStatusUpdated={handleDataRefreshed}
       />
     </div>
   );

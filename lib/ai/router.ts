@@ -275,10 +275,23 @@ export {
   type SelectedProject,
   ExperienceHighlightSchema,
   type ExperienceHighlight,
+  ApplicationAnswerSchema,
+  type ApplicationAnswer,
+  ApplicationAnswersBatchSchema,
+  type ApplicationAnswersBatch,
 } from "../../types/tailoring";
 export { tailorResume } from "../tailoring/resume";
+export {
+  generateApplicationAnswers,
+  generateApplicationAnswers as generateAnswers,
+  answerCustomQuestion,
+  answerCustomQuestion as answerQuestion,
+  STANDARD_APPLICATION_QUESTIONS,
+} from "../tailoring/answers";
 
 export const scoreJob = scoreJobFit;
 export const extractJob = extractJobDetails;
 export const tailorSummary = tailorApplicationSummary;
+
+
 

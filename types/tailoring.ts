@@ -26,3 +26,20 @@ export const TailoredResumeSchema = z.object({
 });
 
 export type TailoredResume = z.infer<typeof TailoredResumeSchema>;
+
+export const ApplicationAnswerSchema = z.object({
+  id: z.string(),
+  question: z.string(),
+  answer: z.string(),
+  keyPointsUsed: z.array(z.string()),
+  createdAt: z.string(),
+});
+
+export type ApplicationAnswer = z.infer<typeof ApplicationAnswerSchema>;
+
+export const ApplicationAnswersBatchSchema = z.object({
+  answers: z.array(ApplicationAnswerSchema),
+});
+
+export type ApplicationAnswersBatch = z.infer<typeof ApplicationAnswersBatchSchema>;
+

@@ -1,24 +1,62 @@
 "use client";
-import { saveResumeContext } from "./actions";
-import { useState } from "react";
-import Link from "next/link"; // 1. Import Link
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { getCandidateProfile, updateCandidateProfile } from "@/app/actions/candidate";
+import ProfileDrawer from "@/app/components/ProfileDrawer";
+import type { CandidateProfile } from "@/types/candidate";
 
 export default function SettingsPage() {
   const [status, setStatus] = useState("Idle");
+  const [profile, setProfile] = useState<CandidateProfile | null>(null);
+  const [resumeText, setResumeText] = useState("");
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  async function handleSave(formData: FormData) {
+  useEffect(() => {
+    async function load() {
+      try {
+        const data = await getCandidateProfile("candidate-default");
+        setProfile(data);
+        setResumeText(data.resumeText || "");
+      } catch (e) {
+        console.error("Failed to load profile", e);
+      }
+    }
+    load();
+  }, []);
+
+  async function handleSaveResume(e: React.FormEvent) {
+    e.preventDefault();
     setStatus("Saving...");
-    await saveResumeContext(formData);
-    setStatus("Context Updated!");
-    setTimeout(() => setStatus("Idle"), 2000);
+    try {
+      if (profile) {
+        const updated = await updateCandidateProfile({
+          ...profile,
+          resumeText,
+        });
+        setProfile(updated.profile);
+      } else {
+        const updated = await updateCandidateProfile({
+          id: "candidate-default",
+          resumeText,
+        });
+        setProfile(updated.profile);
+      }
+      setStatus("Saved!");
+      setTimeout(() => setStatus("Idle"), 2000);
+    } catch (err) {
+      console.error(err);
+      setStatus("Save failed");
+      setTimeout(() => setStatus("Idle"), 2000);
+    }
   }
 
   return (
     <main className="min-h-screen bg-black text-white p-8">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-3xl mx-auto space-y-8">
         
-        {/* 2. NEW: Back Button Row */}
-        <div className="mb-8">
+        {/* Back Button Row */}
+        <div>
           <Link 
             href="/"
             className="inline-flex items-center gap-2 text-neutral-500 hover:text-white transition-colors text-sm font-medium group"
@@ -30,43 +68,109 @@ export default function SettingsPage() {
           </Link>
         </div>
 
-        <h1 className="text-3xl font-bold mb-2 tracking-tight">Agent Context</h1>
-        <p className="text-neutral-500 mb-8">
-          Paste your resume text here. The AI Agent uses this to personalize your emails.
-        </p>
+        {/* Header with Master Facts Trigger */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-neutral-900">
+          <div>
+            <h1 className="text-3xl font-bold mb-1 tracking-tight">Candidate Settings</h1>
+            <p className="text-neutral-500 text-sm">
+              Manage your verified facts repository, raw resume context, and data backups.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsDrawerOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-950/70 border border-purple-800 hover:bg-purple-900 text-purple-300 text-xs font-bold transition-all shadow-sm shrink-0"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            <span>Edit Full Master Profile</span>
+          </button>
+        </div>
+
+        {/* Master Facts Summary Card */}
+        {profile && (
+          <div className="bg-[#111] p-5 rounded-xl border border-neutral-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                Active Master Facts Summary
+              </h2>
+              <button
+                type="button"
+                onClick={() => setIsDrawerOpen(true)}
+                className="text-xs text-purple-400 hover:text-purple-300 font-semibold"
+              >
+                Manage &rarr;
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+              <div className="bg-[#161616] p-3 rounded-lg border border-neutral-800/80">
+                <div className="text-[10px] text-neutral-500 uppercase font-semibold">Target Role</div>
+                <div className="text-xs font-bold text-neutral-200 truncate">{profile.targetRole || "Not set"}</div>
+              </div>
+
+              <div className="bg-[#161616] p-3 rounded-lg border border-neutral-800/80">
+                <div className="text-[10px] text-neutral-500 uppercase font-semibold">Master Projects</div>
+                <div className="text-xs font-bold text-neutral-200">{profile.projects.length} recorded</div>
+              </div>
+
+              <div className="bg-[#161616] p-3 rounded-lg border border-neutral-800/80">
+                <div className="text-[10px] text-neutral-500 uppercase font-semibold">Skills Catalog</div>
+                <div className="text-xs font-bold text-neutral-200">{profile.skills.length} skills</div>
+              </div>
+
+              <div className="bg-[#161616] p-3 rounded-lg border border-neutral-800/80">
+                <div className="text-[10px] text-neutral-500 uppercase font-semibold">Experience</div>
+                <div className="text-xs font-bold text-neutral-200">{profile.experiences.length} roles</div>
+              </div>
+            </div>
+          </div>
+        )}
         
-        <div className="bg-[#111] p-6 rounded-xl border border-neutral-800">
-          <form action={handleSave} className="space-y-4">
+        {/* Raw Resume Text Editor */}
+        <div className="bg-[#111] p-6 rounded-xl border border-neutral-800 space-y-4">
+          <div>
+            <h2 className="text-sm font-bold text-white tracking-tight">Raw Resume / Bio Text</h2>
+            <p className="text-xs text-neutral-500 mt-0.5">
+              Paste your unformatted bio or Markdown resume. Grounding engines use this for holistic context.
+            </p>
+          </div>
+
+          <form onSubmit={handleSaveResume} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
-                Resume / Bio Text
-              </label>
               <textarea 
-                name="resumeText"
-                rows={15}
-                className="w-full bg-black border border-neutral-800 rounded-lg p-4 text-sm text-neutral-300 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none resize-none font-mono"
+                value={resumeText}
+                onChange={(e) => setResumeText(e.target.value)}
+                rows={12}
+                className="w-full bg-black border border-neutral-800 rounded-lg p-4 text-xs text-neutral-300 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none resize-none font-mono"
                 placeholder="Paste your full resume content here..."
-                required
               />
             </div>
             
-            <div className="flex justify-end">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-mono text-neutral-500">
+                {resumeText.length} characters
+              </span>
               <button 
                 type="submit" 
-                className="bg-white text-black px-6 py-2.5 rounded-md font-bold text-sm hover:bg-neutral-200 transition-colors cursor-pointer"
+                disabled={status === "Saving..."}
+                className="bg-white text-black px-5 py-2 rounded-lg font-bold text-xs hover:bg-neutral-200 transition-colors cursor-pointer disabled:opacity-50"
               >
-                {status === "Idle" ? "Save Context" : status}
+                {status === "Idle" ? "Save Resume Context" : status}
               </button>
             </div>
           </form>
         </div>
 
         {/* Data Export & Backup Utilities */}
-        <div className="mt-10 pt-8 border-t border-neutral-900">
+        <div className="pt-2">
           <div className="mb-4">
-            <h2 className="text-xl font-bold tracking-tight text-white">Data Sovereignty & Backups</h2>
+            <h2 className="text-lg font-bold tracking-tight text-white">Data Sovereignty & Backups</h2>
             <p className="text-xs text-neutral-500 mt-1">
-              Export your local database for offline backups, archiving, and spreadsheet interoperability.
+              Export your local SQLite database for offline backups, archiving, and spreadsheet interoperability.
             </p>
           </div>
 
@@ -138,6 +242,16 @@ export default function SettingsPage() {
             </a>
           </div>
         </div>
+
+        {/* Profile Drawer Modal */}
+        <ProfileDrawer
+          isOpen={isDrawerOpen}
+          onClose={() => setIsDrawerOpen(false)}
+          onProfileUpdated={(updated) => {
+            setProfile(updated);
+            setResumeText(updated.resumeText || "");
+          }}
+        />
       </div>
     </main>
   );

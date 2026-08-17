@@ -130,7 +130,7 @@ function createMockDb() {
         }
         return res;
       },
-      create: async ({ data }: { data: Omit<MockJob, "id" | "discoveredAt"> & { id?: string } }) => {
+      create: async ({ data }: { data: Partial<MockJob> & { dedupeKey: string; title: string; company: string; description: string } }) => {
         const id = data.id || `job-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
         const job: MockJob = {
           location: "",
@@ -167,7 +167,7 @@ function createMockDb() {
         update,
       }: {
         where: { dedupeKey: string };
-        create: Omit<MockJob, "id" | "discoveredAt"> & { id?: string };
+        create: Partial<MockJob> & { dedupeKey: string; title: string; company: string; description: string };
         update: Partial<MockJob>;
       }) => {
         const existing = Array.from(jobs.values()).find((j) => j.dedupeKey === where.dedupeKey);
@@ -201,7 +201,7 @@ function createMockDb() {
         update,
       }: {
         where: { jobId: string };
-        create: Omit<MockFitScore, "id" | "createdAt"> & { id?: string };
+        create: Partial<MockFitScore> & { score: number; recommendation: string };
         update: Partial<MockFitScore>;
       }) => {
         const existing = fitScores.get(where.jobId);
@@ -212,6 +212,7 @@ function createMockDb() {
         }
         const id = create.id || `fit-${Date.now()}`;
         const created: MockFitScore = {
+          jobId: create.jobId || where.jobId,
           strengths: "[]",
           gaps: "[]",
           risks: "[]",

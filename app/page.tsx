@@ -1,6 +1,7 @@
 import { getJobs } from "@/lib/data";
 import Link from "next/link";
 import PriorityInbox from "./components/PriorityInbox";
+import ExportMenu from "./components/ExportMenu";
 
 export default async function Home() {
   const jobs = await getJobs();
@@ -25,6 +26,8 @@ export default async function Home() {
           </div>
           
           <div className="flex items-center gap-3">
+            <ExportMenu />
+
             <Link 
               href="/settings"
               className="group flex items-center gap-2 px-3.5 py-2 rounded-lg border border-neutral-800 bg-[#0D0D0D] text-neutral-400 hover:text-white hover:border-neutral-700 transition-all text-xs font-semibold"

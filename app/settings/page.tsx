@@ -53,12 +53,90 @@ export default function SettingsPage() {
             <div className="flex justify-end">
               <button 
                 type="submit" 
-                className="bg-white text-black px-6 py-2.5 rounded-md font-bold text-sm hover:bg-neutral-200 transition-colors"
+                className="bg-white text-black px-6 py-2.5 rounded-md font-bold text-sm hover:bg-neutral-200 transition-colors cursor-pointer"
               >
                 {status === "Idle" ? "Save Context" : status}
               </button>
             </div>
           </form>
+        </div>
+
+        {/* Data Export & Backup Utilities */}
+        <div className="mt-10 pt-8 border-t border-neutral-900">
+          <div className="mb-4">
+            <h2 className="text-xl font-bold tracking-tight text-white">Data Sovereignty & Backups</h2>
+            <p className="text-xs text-neutral-500 mt-1">
+              Export your local database for offline backups, archiving, and spreadsheet interoperability.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <a
+              href="/api/export?format=json"
+              download
+              className="flex flex-col justify-between p-4 rounded-xl border border-neutral-800 bg-[#0D0D0D] hover:bg-neutral-900/60 hover:border-neutral-700 transition-all group"
+            >
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-purple-400"></span>
+                  <span className="font-semibold text-xs text-white">JSON Snapshot</span>
+                </div>
+                <p className="text-[11px] text-neutral-500 leading-relaxed">
+                  Full dump of Candidate, Job, FitScore, Application, and Event records.
+                </p>
+              </div>
+              <div className="pt-3 mt-3 border-t border-neutral-900 flex items-center justify-between text-[11px] font-semibold text-purple-400 group-hover:text-purple-300">
+                <span>Download JSON</span>
+                <svg className="w-3.5 h-3.5 group-hover:translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+              </div>
+            </a>
+
+            <a
+              href="/api/export?format=applications"
+              download
+              className="flex flex-col justify-between p-4 rounded-xl border border-neutral-800 bg-[#0D0D0D] hover:bg-neutral-900/60 hover:border-neutral-700 transition-all group"
+            >
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+                  <span className="font-semibold text-xs text-white">Applications CSV</span>
+                </div>
+                <p className="text-[11px] text-neutral-500 leading-relaxed">
+                  Flattened spreadsheet of tracked jobs, submission dates, and tailored notes.
+                </p>
+              </div>
+              <div className="pt-3 mt-3 border-t border-neutral-900 flex items-center justify-between text-[11px] font-semibold text-blue-400 group-hover:text-blue-300">
+                <span>Download CSV</span>
+                <svg className="w-3.5 h-3.5 group-hover:translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+              </div>
+            </a>
+
+            <a
+              href="/api/export?format=jobs"
+              download
+              className="flex flex-col justify-between p-4 rounded-xl border border-neutral-800 bg-[#0D0D0D] hover:bg-neutral-900/60 hover:border-neutral-700 transition-all group"
+            >
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  <span className="font-semibold text-xs text-white">All Jobs CSV</span>
+                </div>
+                <p className="text-[11px] text-neutral-500 leading-relaxed">
+                  Discovered opportunities, fit scores, strengths, gaps, and status.
+                </p>
+              </div>
+              <div className="pt-3 mt-3 border-t border-neutral-900 flex items-center justify-between text-[11px] font-semibold text-emerald-400 group-hover:text-emerald-300">
+                <span>Download CSV</span>
+                <svg className="w-3.5 h-3.5 group-hover:translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+              </div>
+            </a>
+          </div>
         </div>
       </div>
     </main>

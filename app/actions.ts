@@ -13,8 +13,8 @@ import { db } from "@/lib/db";
 export async function generateDraft(jobRole: string, companyName: string) {
   try {
     // A. Fetch Resume Context from DB
-    const profile = await db.userProfile.findUnique({
-      where: { id: "user-main" },
+    const profile = await db.candidate.findFirst({
+      where: { id: "candidate-default" },
     });
     const resumeContext = profile?.resumeText || "No resume provided.";
 
@@ -62,8 +62,8 @@ export async function createJob(formData: FormData) {
 
   try {
     // 1. Fetch Resume Context (New Step)
-    const profile = await db.userProfile.findUnique({
-      where: { id: "user-main" },
+    const profile = await db.candidate.findFirst({
+      where: { id: "candidate-default" },
     });
     const resumeContext = profile?.resumeText || "No resume provided.";
 

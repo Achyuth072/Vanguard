@@ -10,13 +10,18 @@ export async function saveResumeContext(formData: FormData) {
     throw new Error("No text provided");
   }
 
-  // Save the raw text directly to the DB
-  await db.userProfile.upsert({
-    where: { id: "user-main" },
+  // Save the raw text directly to the DB Candidate profile
+  await db.candidate.upsert({
+    where: { id: "candidate-default" },
     update: { resumeText: text },
-    create: { id: "user-main", resumeText: text },
+    create: {
+      id: "candidate-default",
+      resumeText: text,
+      name: "Default Candidate",
+    },
   });
 
   revalidatePath("/");
   return { success: true };
 }
+

@@ -1,23 +1,79 @@
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
+  engineType = "library"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
-model JobApplication {
-  id          String   @id @default(uuid())
-  companyName String
-  role        String
-  status      String
-  dateApplied DateTime @default(now())
-  aiAnalysis  String?
-  createdAt   DateTime @default(now())
+model Candidate {
+  id                 String   @id @default(uuid())
+  name               String   @default("Default Candidate")
+  targetRole         String   @default("Software Engineer")
+  minSalary          Int      @default(0)
+  yearsOfExperience  Int      @default(0)
+  remotePreference   String   @default("ANY")
+  preferredLocations String   @default("[]")
+  skills             String   @default("[]")
+  projects           String   @default("[]")
+  experiences        String   @default("[]")
+  resumeText         String   @default("")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
-model UserProfile {
+model Job {
+  id             String       @id @default(uuid())
+  dedupeKey      String       @unique
+  title          String
+  company        String
+  location       String       @default("")
+  remoteStatus   String       @default("UNKNOWN")
+  salaryMin      Int?
+  salaryMax      Int?
+  employmentType String       @default("FULL_TIME")
+  description    String
+  url            String       @default("")
+  source         String       @default("MANUAL")
+  status         String       @default("DISCOVERED")
+  postedAt       DateTime?
+  discoveredAt   DateTime     @default(now())
+  fitScore       FitScore?
+  application    Application?
+}
+
+model FitScore {
+  id             String   @id @default(uuid())
+  jobId          String   @unique
+  job            Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  score          Int
+  recommendation String
+  strengths      String   @default("[]")
+  gaps           String   @default("[]")
+  risks          String   @default("[]")
+  reasoning      String   @default("")
+  createdAt      DateTime @default(now())
+}
+
+model Application {
+  id            String    @id @default(uuid())
+  jobId         String    @unique
+  job           Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  status        String    @default("SHORTLISTED")
+  appliedAt     DateTime?
+  resumeVersion String    @default("v1")
+  tailoredNotes String    @default("")
+  followUpAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Event {
   id         String   @id @default(uuid())
-  resumeText String   @db.Text // Store the parsed text here
-  updatedAt  DateTime @updatedAt
+  entityType String
+  entityId   String
+  eventType  String
+  payload    String   @default("{}")
+  timestamp  DateTime @default(now())
 }

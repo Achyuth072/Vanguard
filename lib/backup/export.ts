@@ -60,9 +60,16 @@ export function generateCsv(headers: string[], rows: unknown[][]): string {
 }
 
 /**
- * Parses JSON array string or returns raw string.
+ * Formats a Date object as an ISO string, or returns empty string if null/undefined.
  */
-function parseJsonArrayToString(jsonStr?: string | null): string {
+function formatDate(date?: Date | null): string {
+  return date ? date.toISOString() : "";
+}
+
+/**
+ * Formats a JSON-encoded array string into a semicolon-separated string, or returns the raw string.
+ */
+function formatJsonArray(jsonStr?: string | null): string {
   if (!jsonStr) return "";
   try {
     const parsed = JSON.parse(jsonStr);
@@ -160,9 +167,9 @@ export async function exportApplicationsCsv(prisma: typeof db = db): Promise<str
     app.job?.company || "",
     app.job?.title || "",
     app.status,
-    app.appliedAt ? app.appliedAt.toISOString() : "",
+    formatDate(app.appliedAt),
     app.resumeVersion,
-    app.followUpAt ? app.followUpAt.toISOString() : "",
+    formatDate(app.followUpAt),
     app.tailoredNotes,
     app.job?.salaryMin ?? "",
     app.job?.salaryMax ?? "",
@@ -171,8 +178,8 @@ export async function exportApplicationsCsv(prisma: typeof db = db): Promise<str
     app.job?.url || "",
     app.job?.fitScore?.score ?? "",
     app.job?.fitScore?.recommendation || "",
-    app.createdAt ? app.createdAt.toISOString() : "",
-    app.updatedAt ? app.updatedAt.toISOString() : "",
+    formatDate(app.createdAt),
+    formatDate(app.updatedAt),
   ]);
 
   return generateCsv(headers, rows);
@@ -232,14 +239,14 @@ export async function exportJobsCsv(prisma: typeof db = db): Promise<string> {
     job.source,
     job.fitScore?.score ?? "",
     job.fitScore?.recommendation || "",
-    parseJsonArrayToString(job.fitScore?.strengths),
-    parseJsonArrayToString(job.fitScore?.gaps),
-    parseJsonArrayToString(job.fitScore?.risks),
+    formatJsonArray(job.fitScore?.strengths),
+    formatJsonArray(job.fitScore?.gaps),
+    formatJsonArray(job.fitScore?.risks),
     job.fitScore?.reasoning || "",
     job.application?.status || "",
-    job.application?.appliedAt ? job.application.appliedAt.toISOString() : "",
-    job.discoveredAt ? job.discoveredAt.toISOString() : "",
-    job.postedAt ? job.postedAt.toISOString() : "",
+    formatDate(job.application?.appliedAt),
+    formatDate(job.discoveredAt),
+    formatDate(job.postedAt),
     job.url,
     job.description,
   ]);

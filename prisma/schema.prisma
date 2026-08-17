@@ -49,6 +49,10 @@ model FitScore {
   job            Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
   score          Int
   recommendation String
+  skillsFit      Int?
+  experienceFit  Int?
+  domainFit      Int?
+  trajectoryFit  Int?
   strengths      String   @default("[]")
   gaps           String   @default("[]")
   risks          String   @default("[]")

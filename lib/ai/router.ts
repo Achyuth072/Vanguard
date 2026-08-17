@@ -2,10 +2,26 @@ import { z } from "zod";
 import { generateObject, type LanguageModel } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import {
+  computeCompositeFitScore,
+  deriveRecommendation,
+} from "../scoring/fit-score";
 
 export const FitScoreSchema = z.object({
   score: z.number().int().min(0).max(100),
   recommendation: z.enum(["APPLY", "REVIEW", "IGNORE"]),
+  skillsFit: z.number().int().min(0).max(100),
+  experienceFit: z.number().int().min(0).max(100),
+  domainFit: z.number().int().min(0).max(100),
+  trajectoryFit: z.number().int().min(0).max(100),
+  dimensionRationale: z
+    .object({
+      skills: z.string().optional(),
+      experience: z.string().optional(),
+      domain: z.string().optional(),
+      trajectory: z.string().optional(),
+    })
+    .optional(),
   strengths: z.array(z.string()),
   gaps: z.array(z.string()),
   risks: z.array(z.string()),
@@ -190,7 +206,13 @@ CRITICAL INVARIANTS:
 1. Ground your evaluation strictly in the provided candidate facts and job requirements.
 2. Never invent, hallucinate, or assume any skills, credentials, metrics, or experiences not explicitly present in the candidate profile.
 3. If a job requirement is not evidenced in the candidate facts, record it as a gap.
-4. Score ranges:
+4. Evaluate four orthogonal sub-dimensions (0–100):
+   - skillsFit: Alignment between verified candidate technical/soft skills and mandatory job requirements.
+   - experienceFit: Alignment of seniority, years of relevant experience, and scope of past responsibilities.
+   - domainFit: Industry vertical alignment (e.g. Fintech, Healthcare, Developer Tools, B2B SaaS).
+   - trajectoryFit: Growth suitability (natural career step vs lateral vs overqualified).
+5. Provide a clear reasoning string and optional dimension rationale.
+6. Score ranges:
    - APPLY (80-100): High alignment across critical requirements, minimal gaps.
    - REVIEW (60-79): Moderate alignment, viable potential with notable gaps or uncertainties.
    - IGNORE (0-59): Major disqualifying gaps, misaligned experience level, or incompatible domain.`;
@@ -208,14 +230,27 @@ Employment Type: ${job.employmentType || "FULL_TIME"}
 Description:
 ${job.description}
 
-Evaluate the candidate's fit for this role and return a structured FitScore.`;
+Evaluate the candidate's fit across all four sub-dimensions (skillsFit, experienceFit, domainFit, trajectoryFit) and return a structured FitScore.`;
 
-  return generateStructuredWithFallback({
+  const result = await generateStructuredWithFallback({
     schema: FitScoreSchema,
     system,
     prompt,
     options,
   });
+
+  const computedScore = computeCompositeFitScore({
+    skillsFit: result.skillsFit,
+    experienceFit: result.experienceFit,
+    domainFit: result.domainFit,
+    trajectoryFit: result.trajectoryFit,
+  });
+
+  return {
+    ...result,
+    score: computedScore,
+    recommendation: deriveRecommendation(computedScore),
+  };
 }
 
 export async function extractJobDetails(

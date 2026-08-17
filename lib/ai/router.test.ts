@@ -60,6 +60,16 @@ describe("AI Router Schemas", () => {
       const validPayload = {
         score: 92,
         recommendation: "APPLY",
+        skillsFit: 95,
+        experienceFit: 90,
+        domainFit: 85,
+        trajectoryFit: 90,
+        dimensionRationale: {
+          skills: "Strong TypeScript",
+          experience: "5+ years matches senior scope",
+          domain: "B2B SaaS aligns",
+          trajectory: "Natural next level",
+        },
         strengths: ["TypeScript", "Next.js", "Domain alignment"],
         gaps: ["No direct Rust experience required by team"],
         risks: ["Fast-paced early startup environment"],
@@ -71,6 +81,10 @@ describe("AI Router Schemas", () => {
       if (parsed.success) {
         assert.strictEqual(parsed.data.score, 92);
         assert.strictEqual(parsed.data.recommendation, "APPLY");
+        assert.strictEqual(parsed.data.skillsFit, 95);
+        assert.strictEqual(parsed.data.experienceFit, 90);
+        assert.strictEqual(parsed.data.domainFit, 85);
+        assert.strictEqual(parsed.data.trajectoryFit, 90);
         assert.strictEqual(parsed.data.strengths.length, 3);
       }
     });
@@ -79,6 +93,10 @@ describe("AI Router Schemas", () => {
       const negativeScore = FitScoreSchema.safeParse({
         score: -5,
         recommendation: "IGNORE",
+        skillsFit: 0,
+        experienceFit: 0,
+        domainFit: 0,
+        trajectoryFit: 0,
         strengths: [],
         gaps: [],
         risks: [],
@@ -89,6 +107,10 @@ describe("AI Router Schemas", () => {
       const overScore = FitScoreSchema.safeParse({
         score: 105,
         recommendation: "APPLY",
+        skillsFit: 100,
+        experienceFit: 100,
+        domainFit: 100,
+        trajectoryFit: 100,
         strengths: [],
         gaps: [],
         risks: [],
@@ -101,6 +123,10 @@ describe("AI Router Schemas", () => {
       const invalidEnum = FitScoreSchema.safeParse({
         score: 75,
         recommendation: "MAYBE",
+        skillsFit: 75,
+        experienceFit: 75,
+        domainFit: 75,
+        trajectoryFit: 75,
         strengths: [],
         gaps: [],
         risks: [],
@@ -171,6 +197,10 @@ describe("Provider Fallback & Error Handling", () => {
       generateOutput: {
         score: 88,
         recommendation: "APPLY",
+        skillsFit: 90,
+        experienceFit: 85,
+        domainFit: 90,
+        trajectoryFit: 85,
         strengths: ["Clean Architecture"],
         gaps: [],
         risks: [],
@@ -226,6 +256,10 @@ describe("Provider Fallback & Error Handling", () => {
       generateOutput: {
         score: 85,
         recommendation: "APPLY",
+        skillsFit: 90,
+        experienceFit: 80,
+        domainFit: 80,
+        trajectoryFit: 90,
         strengths: ["TypeScript", "SQLite"],
         gaps: ["Kubernetes"],
         risks: [],
@@ -304,8 +338,16 @@ describe("Structured Domain Functions", () => {
   it("scoreJobFit produces a validated FitScore output", async () => {
     const mockModel = createMockModel({
       generateOutput: {
-        score: 86,
+        score: 80,
         recommendation: "APPLY",
+        skillsFit: 90,
+        experienceFit: 85,
+        domainFit: 80,
+        trajectoryFit: 90,
+        dimensionRationale: {
+          skills: "Mastery of TS/React",
+          experience: "Senior scope",
+        },
         strengths: ["TypeScript expertise", "Remote experience"],
         gaps: ["No direct experience with proprietary internal tooling"],
         risks: [],
@@ -314,8 +356,13 @@ describe("Structured Domain Functions", () => {
     });
 
     const fitScore = await scoreJobFit(candidate, job, { primaryModel: mockModel });
-    assert.strictEqual(fitScore.score, 86);
+    // 90*0.35 + 85*0.30 + 80*0.20 + 90*0.15 = 31.5 + 25.5 + 16 + 13.5 = 86.5 -> 87
+    assert.strictEqual(fitScore.score, 87);
     assert.strictEqual(fitScore.recommendation, "APPLY");
+    assert.strictEqual(fitScore.skillsFit, 90);
+    assert.strictEqual(fitScore.experienceFit, 85);
+    assert.strictEqual(fitScore.domainFit, 80);
+    assert.strictEqual(fitScore.trajectoryFit, 90);
     assert.strictEqual(fitScore.strengths[0], "TypeScript expertise");
   });
 

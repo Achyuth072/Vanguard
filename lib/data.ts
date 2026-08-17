@@ -4,6 +4,10 @@ export interface EnrichedFitScore {
   id: string;
   score: number;
   recommendation: string;
+  skillsFit: number;
+  experienceFit: number;
+  domainFit: number;
+  trajectoryFit: number;
   strengths: string[];
   gaps: string[];
   risks: string[];
@@ -72,6 +76,10 @@ export async function getJobs(): Promise<EnrichedJob[]> {
           id: job.fitScore.id,
           score: job.fitScore.score,
           recommendation: job.fitScore.recommendation,
+          skillsFit: job.fitScore.skillsFit ?? job.fitScore.score,
+          experienceFit: job.fitScore.experienceFit ?? job.fitScore.score,
+          domainFit: job.fitScore.domainFit ?? job.fitScore.score,
+          trajectoryFit: job.fitScore.trajectoryFit ?? job.fitScore.score,
           strengths: safeParseJsonArray(job.fitScore.strengths),
           gaps: safeParseJsonArray(job.fitScore.gaps),
           risks: safeParseJsonArray(job.fitScore.risks),

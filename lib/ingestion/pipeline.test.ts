@@ -66,8 +66,15 @@ function createMockModel(output: Record<string, unknown>): LanguageModel {
     modelId: "test-mock-model",
     supportedUrls: {},
     async doGenerate() {
+      const payload = {
+        skillsFit: typeof output.score === "number" ? output.score : 85,
+        experienceFit: typeof output.score === "number" ? output.score : 85,
+        domainFit: typeof output.score === "number" ? output.score : 85,
+        trajectoryFit: typeof output.score === "number" ? output.score : 85,
+        ...output,
+      };
       return {
-        content: [{ type: "text", text: JSON.stringify(output) }],
+        content: [{ type: "text", text: JSON.stringify(payload) }],
         finishReason: "stop",
         usage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 },
         rawCall: { rawPrompt: null, rawSettings: {} },
@@ -314,6 +321,10 @@ describe("Ingestion Pipeline", () => {
     const scoringResponse = {
       score: 75,
       recommendation: "REVIEW",
+      skillsFit: 80,
+      experienceFit: 75,
+      domainFit: 70,
+      trajectoryFit: 70,
       strengths: ["Strong Node skills"],
       gaps: ["No GraphQL listed in resume"],
       risks: [],
@@ -380,6 +391,10 @@ describe("Ingestion Pipeline", () => {
               text: JSON.stringify({
                 score: 85,
                 recommendation: "APPLY",
+                skillsFit: 85,
+                experienceFit: 85,
+                domainFit: 85,
+                trajectoryFit: 85,
                 strengths: ["Great match"],
                 gaps: [],
                 risks: [],

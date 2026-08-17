@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { EnrichedJob } from "@/lib/data";
 import { updateJobStatusAction } from "../actions";
 import DraftButton from "./DraftButton";
+import SubDimensionScores from "./SubDimensionScores";
 
 interface JobCardProps {
   job: EnrichedJob;
@@ -158,6 +159,17 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
           <DraftButton company={job.company} role={job.title} />
         </div>
       </div>
+
+      {/* Sub-Dimension Score Visual Breakdown */}
+      {fitScore && (
+        <SubDimensionScores
+          skillsFit={fitScore.skillsFit}
+          experienceFit={fitScore.experienceFit}
+          domainFit={fitScore.domainFit}
+          trajectoryFit={fitScore.trajectoryFit}
+          className="mt-3"
+        />
+      )}
 
       {/* Reasoning Snippet */}
       {fitScore?.reasoning && (

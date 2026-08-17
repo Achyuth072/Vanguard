@@ -7,6 +7,7 @@ import { prepareApplication, getApplicationData } from "@/app/actions/tailoring"
 import { updateJobStatusAction } from "@/app/actions";
 import TailoredResumeEditor from "./TailoredResumeEditor";
 import QuestionAnswersList from "./QuestionAnswersList";
+import SubDimensionScores from "./SubDimensionScores";
 
 interface ApplicationPreparationDrawerProps {
   job: EnrichedJob | null;
@@ -201,6 +202,18 @@ export default function ApplicationPreparationDrawer({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span>{error}</span>
+              </div>
+            )}
+
+            {/* Sub-Dimension Score Visual Breakdown */}
+            {job.fitScore && (
+              <div className="pt-2 border-t border-neutral-900">
+                <SubDimensionScores
+                  skillsFit={job.fitScore.skillsFit}
+                  experienceFit={job.fitScore.experienceFit}
+                  domainFit={job.fitScore.domainFit}
+                  trajectoryFit={job.fitScore.trajectoryFit}
+                />
               </div>
             )}
 

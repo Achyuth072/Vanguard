@@ -6,6 +6,7 @@ import { addJob } from "@/lib/data";
 import { generateText } from "ai";
 import { getModel } from "@/lib/ai";
 import { db } from "@/lib/db";
+import { ingestJobPipeline, type IngestionInput } from "@/lib/ingestion";
 
 // ---------------------------------------------------------
 // 1. AI EMAIL DRAFTER (Called by the "Draft Follow-up" button)
@@ -107,3 +108,13 @@ export async function createJob(formData: FormData) {
   revalidatePath("/");
   redirect("/");
 }
+
+// ---------------------------------------------------------
+// 3. SYNCHRONOUS INGESTION ACTION
+// ---------------------------------------------------------
+export async function ingestJob(input: IngestionInput) {
+  const result = await ingestJobPipeline(input);
+  revalidatePath("/");
+  return result;
+}
+

@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { User } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import ProfileDrawer from "./ProfileDrawer";
 
 interface CandidateProfileButtonProps {
@@ -8,32 +11,24 @@ interface CandidateProfileButtonProps {
 }
 
 export default function CandidateProfileButton({
-  className = "group flex items-center gap-2 px-3.5 py-2 rounded-lg border border-neutral-800 bg-[#0D0D0D] text-neutral-400 hover:text-white hover:border-neutral-700 transition-all text-xs font-semibold cursor-pointer",
+  className,
 }: CandidateProfileButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <>
-      <button
-        type="button"
+      <Button
+        variant="outline"
+        size="sm"
         onClick={() => setIsOpen(true)}
-        className={className}
+        className={cn(
+          "group text-xs font-semibold text-zinc-300 hover:text-zinc-100 border-zinc-800 bg-zinc-900 hover:bg-zinc-800 hover:border-zinc-700",
+          className
+        )}
       >
-        <svg
-          className="w-4 h-4 text-neutral-500 group-hover:text-purple-400 transition-colors"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-          />
-        </svg>
+        <User className="h-3.5 w-3.5 text-zinc-400 group-hover:text-violet-400 transition-colors" />
         <span>Candidate Profile</span>
-      </button>
+      </Button>
 
       <ProfileDrawer
         isOpen={isOpen}
@@ -42,3 +37,4 @@ export default function CandidateProfileButton({
     </>
   );
 }
+

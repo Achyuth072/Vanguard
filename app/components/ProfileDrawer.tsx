@@ -2,6 +2,16 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
+  Loader2,
+  Check,
+  AlertCircle,
+  Plus,
+  Trash2,
+  ChevronDown,
+  Copy,
+  X,
+} from "lucide-react";
+import {
   getCandidateProfile,
   updateCandidateProfile,
 } from "@/app/actions/candidate";
@@ -13,6 +23,19 @@ import type {
   MasterSkillCategory,
   RemoteStatus,
 } from "@/types/candidate";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 interface ProfileDrawerProps {
   isOpen: boolean;
@@ -31,13 +54,16 @@ const SKILL_CATEGORIES: MasterSkillCategory[] = [
   "DOMAIN",
 ];
 
-const CATEGORY_COLORS: Record<MasterSkillCategory, string> = {
-  LANGUAGE: "bg-blue-950/60 border-blue-800 text-blue-300",
-  FRAMEWORK: "bg-purple-950/60 border-purple-800 text-purple-300",
-  DATABASE: "bg-emerald-950/60 border-emerald-800 text-emerald-300",
-  CLOUD: "bg-amber-950/60 border-amber-800 text-amber-300",
-  TOOL: "bg-pink-950/60 border-pink-800 text-pink-300",
-  DOMAIN: "bg-cyan-950/60 border-cyan-800 text-cyan-300",
+const CATEGORY_BADGE_VARIANTS: Record<
+  MasterSkillCategory,
+  "blue" | "violet" | "emerald" | "amber" | "destructive" | "secondary"
+> = {
+  LANGUAGE: "blue",
+  FRAMEWORK: "violet",
+  DATABASE: "emerald",
+  CLOUD: "amber",
+  TOOL: "secondary",
+  DOMAIN: "violet",
 };
 
 export default function ProfileDrawer({
@@ -108,18 +134,6 @@ export default function ProfileDrawer({
       loadProfile();
     }
   }, [isOpen, loadProfile]);
-
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape" && isOpen) {
-        onClose();
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
 
   async function handleSave() {
     setIsSaving(true);
@@ -299,1097 +313,1062 @@ export default function ProfileDrawer({
       : profile.skills.filter((s) => s.category === selectedSkillCategory);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
-
-      <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-        <div className="w-screen max-w-4xl bg-[#0A0A0A] border-l border-neutral-800 text-white shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-200">
-          {/* Drawer Header */}
-          <div className="p-6 border-b border-neutral-800 bg-[#0E0E0E] shrink-0 space-y-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded bg-purple-950/60 border border-purple-800 text-purple-400 font-bold">
-                    Candidate Master Facts
-                  </span>
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded border bg-neutral-900 text-neutral-400 border-neutral-800">
-                    {profile.projects.length} Projects • {profile.skills.length} Skills • {profile.experiences.length} Roles
-                  </span>
-                </div>
-                <h2 className="text-xl font-bold text-white tracking-tight">
-                  {profile.name || "Candidate Profile"}
-                </h2>
-                <p className="text-xs text-neutral-400">
-                  Verified facts repository for automated resume tailoring & question answering.
-                </p>
+    <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-2xl lg:max-w-4xl p-0 flex flex-col h-full bg-zinc-900 border-l border-zinc-800 text-zinc-100 shadow-none gap-0 overflow-hidden"
+      >
+        {/* Drawer Header */}
+        <SheetHeader className="p-6 border-b border-zinc-800 bg-zinc-900 shrink-0 space-y-4 text-left">
+          <div className="flex items-start justify-between gap-4 pr-6">
+            <div className="space-y-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="violet" className="font-mono uppercase tracking-wider text-[10px]">
+                  Candidate Master Facts
+                </Badge>
+                <Badge variant="secondary" className="font-mono text-[10px]">
+                  {profile.projects.length} Projects • {profile.skills.length} Skills • {profile.experiences.length} Roles
+                </Badge>
               </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white text-black hover:bg-neutral-200 transition-all text-xs font-bold disabled:opacity-50 cursor-pointer shadow-sm"
-                >
-                  {isSaving ? (
-                    <>
-                      <svg className="animate-spin h-3.5 w-3.5 text-black" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      <span>Saving...</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span>Save Profile</span>
-                    </>
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
-                  aria-label="Close drawer"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
+              <SheetTitle className="text-xl font-bold tracking-tight text-zinc-100">
+                {profile.name || "Candidate Profile"}
+              </SheetTitle>
+              <SheetDescription className="text-xs text-zinc-400">
+                Verified facts repository for automated resume tailoring &amp; question answering.
+              </SheetDescription>
             </div>
 
-            {/* Notification Alerts */}
-            {errorMessage && (
-              <div className="p-3 rounded-lg bg-rose-950/40 border border-rose-800 text-rose-300 text-xs flex items-center gap-2">
-                <svg className="w-4 h-4 shrink-0 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>{errorMessage}</span>
-              </div>
-            )}
-
-            {successMessage && (
-              <div className="p-3 rounded-lg bg-emerald-950/40 border border-emerald-800 text-emerald-300 text-xs flex items-center gap-2">
-                <svg className="w-4 h-4 shrink-0 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                </svg>
-                <span>{successMessage}</span>
-              </div>
-            )}
-
-            {/* Navigation Tabs */}
-            <div className="flex rounded-lg bg-[#141414] p-1 border border-neutral-800 text-xs font-semibold overflow-x-auto">
-              <button
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
                 type="button"
-                onClick={() => setActiveTab("general")}
-                className={`flex-1 min-w-[120px] py-1.5 rounded-md flex items-center justify-center gap-1.5 transition-all ${
-                  activeTab === "general"
-                    ? "bg-purple-950/70 border border-purple-800/80 text-purple-300 shadow-sm font-bold"
-                    : "text-neutral-400 hover:text-neutral-200"
-                }`}
+                size="sm"
+                onClick={handleSave}
+                disabled={isSaving}
+                className="font-bold text-xs"
               >
-                <span>General & Target</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab("projects")}
-                className={`flex-1 min-w-[120px] py-1.5 rounded-md flex items-center justify-center gap-1.5 transition-all ${
-                  activeTab === "projects"
-                    ? "bg-purple-950/70 border border-purple-800/80 text-purple-300 shadow-sm font-bold"
-                    : "text-neutral-400 hover:text-neutral-200"
-                }`}
-              >
-                <span>Master Projects</span>
-                <span className="px-1.5 py-0.2 rounded-full bg-neutral-800 text-neutral-400 font-mono text-[10px]">
-                  {profile.projects.length}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab("experiences")}
-                className={`flex-1 min-w-[120px] py-1.5 rounded-md flex items-center justify-center gap-1.5 transition-all ${
-                  activeTab === "experiences"
-                    ? "bg-purple-950/70 border border-purple-800/80 text-purple-300 shadow-sm font-bold"
-                    : "text-neutral-400 hover:text-neutral-200"
-                }`}
-              >
-                <span>Work Experience</span>
-                <span className="px-1.5 py-0.2 rounded-full bg-neutral-800 text-neutral-400 font-mono text-[10px]">
-                  {profile.experiences.length}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab("skills")}
-                className={`flex-1 min-w-[120px] py-1.5 rounded-md flex items-center justify-center gap-1.5 transition-all ${
-                  activeTab === "skills"
-                    ? "bg-purple-950/70 border border-purple-800/80 text-purple-300 shadow-sm font-bold"
-                    : "text-neutral-400 hover:text-neutral-200"
-                }`}
-              >
-                <span>Skills Repository</span>
-                <span className="px-1.5 py-0.2 rounded-full bg-neutral-800 text-neutral-400 font-mono text-[10px]">
-                  {profile.skills.length}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab("resume")}
-                className={`flex-1 min-w-[120px] py-1.5 rounded-md flex items-center justify-center gap-1.5 transition-all ${
-                  activeTab === "resume"
-                    ? "bg-purple-950/70 border border-purple-800/80 text-purple-300 shadow-sm font-bold"
-                    : "text-neutral-400 hover:text-neutral-200"
-                }`}
-              >
-                <span>Base Resume Text</span>
-              </button>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-3.5 w-3.5 text-emerald-600" />
+                    <span>Save Profile</span>
+                  </>
+                )}
+              </Button>
             </div>
           </div>
 
-          {/* Drawer Body Content */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {isLoading ? (
-              <div className="h-64 flex items-center justify-center text-neutral-500 text-xs">
-                <div className="flex items-center gap-2">
-                  <svg className="animate-spin h-4 w-4 text-purple-400" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  <span>Loading candidate master facts...</span>
-                </div>
+          {/* Notification Alerts */}
+          {errorMessage && (
+            <div className="p-3 rounded-md bg-red-950/50 border border-red-800 text-red-300 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
+          {successMessage && (
+            <div className="p-3 rounded-md bg-emerald-950/50 border border-emerald-800 text-emerald-300 text-xs flex items-center gap-2">
+              <Check className="w-4 h-4 shrink-0 text-emerald-400" />
+              <span>{successMessage}</span>
+            </div>
+          )}
+
+          {/* Navigation Tabs */}
+          <div className="flex rounded-lg bg-zinc-950 p-1 border border-zinc-800 text-xs font-semibold overflow-x-auto gap-1">
+            <button
+              type="button"
+              onClick={() => setActiveTab("general")}
+              className={cn(
+                "flex-1 min-w-[110px] py-1.5 px-2 rounded-md flex items-center justify-center gap-1.5 transition-all text-xs",
+                activeTab === "general"
+                  ? "bg-zinc-800 text-zinc-100 shadow-none font-semibold"
+                  : "text-zinc-400 hover:text-zinc-200"
+              )}
+            >
+              <span>General &amp; Target</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("projects")}
+              className={cn(
+                "flex-1 min-w-[110px] py-1.5 px-2 rounded-md flex items-center justify-center gap-1.5 transition-all text-xs",
+                activeTab === "projects"
+                  ? "bg-zinc-800 text-zinc-100 shadow-none font-semibold"
+                  : "text-zinc-400 hover:text-zinc-200"
+              )}
+            >
+              <span>Master Projects</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 font-mono text-[10px]">
+                {profile.projects.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("experiences")}
+              className={cn(
+                "flex-1 min-w-[110px] py-1.5 px-2 rounded-md flex items-center justify-center gap-1.5 transition-all text-xs",
+                activeTab === "experiences"
+                  ? "bg-zinc-800 text-zinc-100 shadow-none font-semibold"
+                  : "text-zinc-400 hover:text-zinc-200"
+              )}
+            >
+              <span>Work Experience</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 font-mono text-[10px]">
+                {profile.experiences.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("skills")}
+              className={cn(
+                "flex-1 min-w-[110px] py-1.5 px-2 rounded-md flex items-center justify-center gap-1.5 transition-all text-xs",
+                activeTab === "skills"
+                  ? "bg-zinc-800 text-zinc-100 shadow-none font-semibold"
+                  : "text-zinc-400 hover:text-zinc-200"
+              )}
+            >
+              <span>Skills Repository</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 font-mono text-[10px]">
+                {profile.skills.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("resume")}
+              className={cn(
+                "flex-1 min-w-[110px] py-1.5 px-2 rounded-md flex items-center justify-center gap-1.5 transition-all text-xs",
+                activeTab === "resume"
+                  ? "bg-zinc-800 text-zinc-100 shadow-none font-semibold"
+                  : "text-zinc-400 hover:text-zinc-200"
+              )}
+            >
+              <span>Base Resume</span>
+            </button>
+          </div>
+        </SheetHeader>
+
+        {/* Drawer Body Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {isLoading ? (
+            <div className="h-64 flex items-center justify-center text-zinc-500 text-xs">
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin text-violet-400" />
+                <span>Loading candidate master facts...</span>
               </div>
-            ) : (
-              <>
-                {/* 1. GENERAL & TARGET PREFERENCES TAB */}
-                {activeTab === "general" && (
-                  <div className="space-y-6">
-                    <div className="bg-[#111] p-5 rounded-xl border border-neutral-800 space-y-4">
-                      <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-purple-400"></span>
-                        Primary Profile Information
-                      </h3>
+            </div>
+          ) : (
+            <>
+              {/* 1. GENERAL & TARGET PREFERENCES TAB */}
+              {activeTab === "general" && (
+                <div className="space-y-6">
+                  <div className="bg-zinc-950 p-5 rounded-lg border border-zinc-800 space-y-4">
+                    <h3 className="text-sm font-semibold text-zinc-100 tracking-tight flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-violet-400" />
+                      Primary Profile Information
+                    </h3>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-[11px] uppercase tracking-wider font-semibold text-neutral-400 mb-1">
-                            Candidate Name
-                          </label>
-                          <input
-                            type="text"
-                            value={profile.name}
-                            onChange={(e) =>
-                              setProfile((prev) => ({ ...prev, name: e.target.value }))
-                            }
-                            placeholder="e.g. Alex Builder"
-                            className="w-full bg-[#161616] border border-neutral-800 rounded-lg p-2.5 text-xs text-white placeholder-neutral-600 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-[11px] uppercase tracking-wider font-semibold text-neutral-400 mb-1">
-                            Target Role
-                          </label>
-                          <input
-                            type="text"
-                            value={profile.targetRole}
-                            onChange={(e) =>
-                              setProfile((prev) => ({
-                                ...prev,
-                                targetRole: e.target.value,
-                              }))
-                            }
-                            placeholder="e.g. Senior Software Engineer"
-                            className="w-full bg-[#161616] border border-neutral-800 rounded-lg p-2.5 text-xs text-white placeholder-neutral-600 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none"
-                          />
-                        </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-medium text-zinc-400">
+                          Candidate Name
+                        </label>
+                        <Input
+                          type="text"
+                          value={profile.name}
+                          onChange={(e) =>
+                            setProfile((prev) => ({ ...prev, name: e.target.value }))
+                          }
+                          placeholder="e.g. Alex Builder"
+                        />
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div>
-                          <label className="block text-[11px] uppercase tracking-wider font-semibold text-neutral-400 mb-1">
-                            Min. Expected Salary ($ / yr)
-                          </label>
-                          <input
-                            type="number"
-                            value={profile.minSalary || ""}
-                            onChange={(e) =>
-                              setProfile((prev) => ({
-                                ...prev,
-                                minSalary: Math.max(0, parseInt(e.target.value, 10) || 0),
-                              }))
-                            }
-                            placeholder="e.g. 120000"
-                            className="w-full bg-[#161616] border border-neutral-800 rounded-lg p-2.5 text-xs text-white placeholder-neutral-600 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none font-mono"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-[11px] uppercase tracking-wider font-semibold text-neutral-400 mb-1">
-                            Years of Experience
-                          </label>
-                          <input
-                            type="number"
-                            value={profile.yearsOfExperience || ""}
-                            onChange={(e) =>
-                              setProfile((prev) => ({
-                                ...prev,
-                                yearsOfExperience: Math.max(
-                                  0,
-                                  parseInt(e.target.value, 10) || 0
-                                ),
-                              }))
-                            }
-                            placeholder="e.g. 5"
-                            className="w-full bg-[#161616] border border-neutral-800 rounded-lg p-2.5 text-xs text-white placeholder-neutral-600 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none font-mono"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-[11px] uppercase tracking-wider font-semibold text-neutral-400 mb-1">
-                            Remote Preference
-                          </label>
-                          <select
-                            value={profile.remotePreference}
-                            onChange={(e) =>
-                              setProfile((prev) => ({
-                                ...prev,
-                                remotePreference: e.target.value,
-                              }))
-                            }
-                            className="w-full bg-[#161616] border border-neutral-800 rounded-lg p-2.5 text-xs text-white focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none"
-                          >
-                            <option value="ANY">Any / Flexible</option>
-                            <option value="REMOTE_ONLY">Remote Only</option>
-                            <option value="HYBRID">Hybrid</option>
-                            <option value="ONSITE">On-site Only</option>
-                          </select>
-                        </div>
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-medium text-zinc-400">
+                          Target Role
+                        </label>
+                        <Input
+                          type="text"
+                          value={profile.targetRole}
+                          onChange={(e) =>
+                            setProfile((prev) => ({
+                              ...prev,
+                              targetRole: e.target.value,
+                            }))
+                          }
+                          placeholder="e.g. Senior Software Engineer"
+                        />
                       </div>
                     </div>
 
-                    {/* Preferred Locations */}
-                    <div className="bg-[#111] p-5 rounded-xl border border-neutral-800 space-y-4">
-                      <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-medium text-zinc-400">
+                          Min. Expected Salary ($ / yr)
+                        </label>
+                        <Input
+                          type="number"
+                          value={profile.minSalary || ""}
+                          onChange={(e) =>
+                            setProfile((prev) => ({
+                              ...prev,
+                              minSalary: Math.max(0, parseInt(e.target.value, 10) || 0),
+                            }))
+                          }
+                          placeholder="e.g. 120000"
+                          className="font-mono"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-medium text-zinc-400">
+                          Years of Experience
+                        </label>
+                        <Input
+                          type="number"
+                          value={profile.yearsOfExperience || ""}
+                          onChange={(e) =>
+                            setProfile((prev) => ({
+                              ...prev,
+                              yearsOfExperience: Math.max(
+                                0,
+                                parseInt(e.target.value, 10) || 0
+                              ),
+                            }))
+                          }
+                          placeholder="e.g. 5"
+                          className="font-mono"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-medium text-zinc-400">
+                          Remote Preference
+                        </label>
+                        <select
+                          value={profile.remotePreference}
+                          onChange={(e) =>
+                            setProfile((prev) => ({
+                              ...prev,
+                              remotePreference: e.target.value,
+                            }))
+                          }
+                          className="flex h-9 w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-1 text-sm text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+                        >
+                          <option value="ANY">Any / Flexible</option>
+                          <option value="REMOTE_ONLY">Remote Only</option>
+                          <option value="HYBRID">Hybrid</option>
+                          <option value="ONSITE">On-site Only</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Preferred Locations */}
+                  <div className="bg-zinc-950 p-5 rounded-lg border border-zinc-800 space-y-4">
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-semibold text-zinc-100 tracking-tight flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-cyan-400" />
                         Location Preferences
                       </h3>
-                      <p className="text-xs text-neutral-400">
+                      <p className="text-xs text-zinc-400">
                         Add geographic hubs, cities, or &quot;Remote&quot; to evaluate job location matches.
                       </p>
+                    </div>
 
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={newLocationInput}
-                          onChange={(e) => setNewLocationInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              handleAddLocation();
-                            }
-                          }}
-                          placeholder="e.g. Bengaluru, San Francisco, Remote..."
-                          className="flex-1 bg-[#161616] border border-neutral-800 rounded-lg p-2.5 text-xs text-white placeholder-neutral-600 focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleAddLocation}
-                          className="px-4 py-2.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-semibold transition-colors"
-                        >
-                          Add Hub
-                        </button>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="text"
+                        value={newLocationInput}
+                        onChange={(e) => setNewLocationInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddLocation();
+                          }
+                        }}
+                        placeholder="e.g. Bengaluru, San Francisco, Remote..."
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleAddLocation}
+                        className="h-9"
+                      >
+                        Add Hub
+                      </Button>
+                    </div>
 
-                      <div className="flex flex-wrap gap-2 pt-1">
-                        {profile.preferredLocations.length === 0 ? (
-                          <span className="text-xs text-neutral-500 italic">
-                            No preferred locations set (flexible anywhere).
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {profile.preferredLocations.length === 0 ? (
+                        <span className="text-xs text-zinc-500 italic">
+                          No preferred locations set (flexible anywhere).
+                        </span>
+                      ) : (
+                        profile.preferredLocations.map((loc, idx) => (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs font-medium"
+                          >
+                            <span>{loc}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveLocation(idx)}
+                              className="text-zinc-500 hover:text-zinc-200 transition-colors"
+                              aria-label={`Remove location ${loc}`}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
                           </span>
-                        ) : (
-                          profile.preferredLocations.map((loc, idx) => (
-                            <span
-                              key={idx}
-                              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-950/40 border border-cyan-800/80 text-cyan-300 text-xs font-medium"
-                            >
-                              <span>{loc}</span>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveLocation(idx)}
-                                className="hover:text-cyan-100 p-0.5 rounded-full"
-                                aria-label={`Remove location ${loc}`}
-                              >
-                                &times;
-                              </button>
-                            </span>
-                          ))
-                        )}
-                      </div>
+                        ))
+                      )}
                     </div>
                   </div>
-                )}
+                </div>
+              )}
 
-                {/* 2. MASTER PROJECTS TAB */}
-                {activeTab === "projects" && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-sm font-bold text-white tracking-tight">
-                          Master Project Catalog
-                        </h3>
-                        <p className="text-xs text-neutral-400">
-                          Add rich projects with metrics, bullet points, and tech stacks. AI selects the top 2-3 most relevant for each application.
-                        </p>
-                      </div>
-                      <button
+              {/* 2. MASTER PROJECTS TAB */}
+              {activeTab === "projects" && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-semibold text-zinc-100 tracking-tight">
+                        Master Project Catalog
+                      </h3>
+                      <p className="text-xs text-zinc-400">
+                        Add rich projects with metrics, bullet points, and tech stacks. AI selects the top 2-3 most relevant for each application.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAddProject}
+                      className="gap-1.5"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Master Project</span>
+                    </Button>
+                  </div>
+
+                  {profile.projects.length === 0 ? (
+                    <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-8 text-center space-y-3">
+                      <p className="text-xs text-zinc-400">
+                        No master projects added yet. Add projects to enable AI resume tailoring.
+                      </p>
+                      <Button
                         type="button"
+                        size="sm"
                         onClick={handleAddProject}
-                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-purple-950/80 border border-purple-800 hover:bg-purple-900 text-purple-300 text-xs font-bold transition-all"
                       >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-                        </svg>
-                        <span>Add Master Project</span>
-                      </button>
+                        Create First Project
+                      </Button>
                     </div>
-
-                    {profile.projects.length === 0 ? (
-                      <div className="bg-[#111] border border-neutral-800 rounded-xl p-8 text-center space-y-3">
-                        <p className="text-xs text-neutral-400">
-                          No master projects added yet. Add projects to enable AI resume tailoring.
-                        </p>
-                        <button
-                          type="button"
-                          onClick={handleAddProject}
-                          className="px-4 py-2 rounded-lg bg-white text-black hover:bg-neutral-200 text-xs font-bold"
-                        >
-                          Create First Project
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {profile.projects.map((proj) => {
-                          const isExpanded = expandedProjectId === proj.id;
-                          return (
+                  ) : (
+                    <div className="space-y-3">
+                      {profile.projects.map((proj) => {
+                        const isExpanded = expandedProjectId === proj.id;
+                        return (
+                          <div
+                            key={proj.id}
+                            className="bg-zinc-950 border border-zinc-800 rounded-lg overflow-hidden transition-all"
+                          >
+                            {/* Project Header */}
                             <div
-                              key={proj.id}
-                              className="bg-[#111] border border-neutral-800 rounded-xl overflow-hidden transition-all"
+                              onClick={() =>
+                                setExpandedProjectId(isExpanded ? null : proj.id)
+                              }
+                              className="p-4 flex items-center justify-between cursor-pointer hover:bg-zinc-900/60 transition-colors"
                             >
-                              {/* Project Header */}
-                              <div
-                                onClick={() =>
-                                  setExpandedProjectId(isExpanded ? null : proj.id)
-                                }
-                                className="p-4 flex items-center justify-between cursor-pointer hover:bg-neutral-900/40 transition-colors"
-                              >
-                                <div className="space-y-1">
-                                  <div className="flex items-center gap-2">
-                                    <h4 className="text-sm font-bold text-white">
-                                      {proj.title || "Untitled Project"}
-                                    </h4>
-                                    {proj.company && (
-                                      <span className="text-xs text-neutral-400">
-                                        @ {proj.company}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-neutral-500">
-                                    {proj.technologies.slice(0, 4).map((t, idx) => (
-                                      <span
-                                        key={idx}
-                                        className="px-1.5 py-0.2 rounded bg-neutral-800 text-neutral-300 font-mono text-[10px]"
-                                      >
-                                        {t}
-                                      </span>
-                                    ))}
-                                    {proj.technologies.length > 4 && (
-                                      <span className="text-[10px] text-neutral-500">
-                                        +{proj.technologies.length - 4} more
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-
-                                <div className="flex items-center gap-3">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleRemoveProject(proj.id);
-                                    }}
-                                    className="text-neutral-500 hover:text-rose-400 p-1 rounded transition-colors"
-                                    title="Delete project"
-                                  >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                  </button>
-                                  <svg
-                                    className={`w-4 h-4 text-neutral-400 transition-transform ${
-                                      isExpanded ? "rotate-180" : ""
-                                    }`}
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                                  </svg>
-                                </div>
-                              </div>
-
-                              {/* Project Expanded Editor */}
-                              {isExpanded && (
-                                <div className="p-5 border-t border-neutral-800/80 bg-[#0D0D0D] space-y-4">
-                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                    <div>
-                                      <label className="block text-[10px] uppercase font-semibold text-neutral-400 mb-1">
-                                        Project Title *
-                                      </label>
-                                      <input
-                                        type="text"
-                                        value={proj.title}
-                                        onChange={(e) =>
-                                          handleUpdateProject(proj.id, {
-                                            title: e.target.value,
-                                          })
-                                        }
-                                        className="w-full bg-[#161616] border border-neutral-800 rounded-lg p-2 text-xs text-white focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none"
-                                      />
-                                    </div>
-
-                                    <div>
-                                      <label className="block text-[10px] uppercase font-semibold text-neutral-400 mb-1">
-                                        Company / Context
-                                      </label>
-                                      <input
-                                        type="text"
-                                        value={proj.company}
-                                        onChange={(e) =>
-                                          handleUpdateProject(proj.id, {
-                                            company: e.target.value,
-                                          })
-                                        }
-                                        placeholder="e.g. Pulse or Independent"
-                                        className="w-full bg-[#161616] border border-neutral-800 rounded-lg p-2 text-xs text-white focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none"
-                                      />
-                                    </div>
-
-                                    <div>
-                                      <label className="block text-[10px] uppercase font-semibold text-neutral-400 mb-1">
-                                        Your Role
-                                      </label>
-                                      <input
-                                        type="text"
-                                        value={proj.role}
-                                        onChange={(e) =>
-                                          handleUpdateProject(proj.id, {
-                                            role: e.target.value,
-                                          })
-                                        }
-                                        placeholder="e.g. Lead Engineer"
-                                        className="w-full bg-[#161616] border border-neutral-800 rounded-lg p-2 text-xs text-white focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none"
-                                      />
-                                    </div>
-                                  </div>
-
-                                  <div>
-                                    <label className="block text-[10px] uppercase font-semibold text-neutral-400 mb-1">
-                                      Project Description & Scope
-                                    </label>
-                                    <textarea
-                                      rows={2}
-                                      value={proj.description}
-                                      onChange={(e) =>
-                                        handleUpdateProject(proj.id, {
-                                          description: e.target.value,
-                                        })
-                                      }
-                                      placeholder="Brief architectural overview of what you built and why..."
-                                      className="w-full bg-[#161616] border border-neutral-800 rounded-lg p-2 text-xs text-white focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none resize-none"
-                                    />
-                                  </div>
-
-                                  <div>
-                                    <label className="block text-[10px] uppercase font-semibold text-neutral-400 mb-1">
-                                      Technologies (Comma-separated)
-                                    </label>
-                                    <input
-                                      type="text"
-                                      value={proj.technologies.join(", ")}
-                                      onChange={(e) =>
-                                        handleUpdateProject(proj.id, {
-                                          technologies: updateStringArray(
-                                            proj.technologies,
-                                            e.target.value,
-                                            ","
-                                          ),
-                                        })
-                                      }
-                                      placeholder="TypeScript, Next.js, Prisma, PostgreSQL, Redis..."
-                                      className="w-full bg-[#161616] border border-neutral-800 rounded-lg p-2 text-xs text-white font-mono focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none"
-                                    />
-                                  </div>
-
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div>
-                                      <label className="block text-[10px] uppercase font-semibold text-neutral-400 mb-1">
-                                        Measurable Metrics (One per line)
-                                      </label>
-                                      <textarea
-                                        rows={3}
-                                        value={proj.metrics.join("\n")}
-                                        onChange={(e) =>
-                                          handleUpdateProject(proj.id, {
-                                            metrics: updateStringArray(
-                                              proj.metrics,
-                                              e.target.value,
-                                              "\n"
-                                            ),
-                                          })
-                                        }
-                                        placeholder="Cut API p99 latency by 65%&#10;Saved $12k/mo in cloud infrastructure"
-                                        className="w-full bg-[#161616] border border-neutral-800 rounded-lg p-2 text-xs text-white font-mono focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none resize-none"
-                                      />
-                                    </div>
-
-                                    <div>
-                                      <label className="block text-[10px] uppercase font-semibold text-neutral-400 mb-1">
-                                        Highlights / Bullet Points (One per line)
-                                      </label>
-                                      <textarea
-                                        rows={3}
-                                        value={proj.highlights.join("\n")}
-                                        onChange={(e) =>
-                                          handleUpdateProject(proj.id, {
-                                            highlights: updateStringArray(
-                                              proj.highlights,
-                                              e.target.value,
-                                              "\n"
-                                            ),
-                                          })
-                                        }
-                                        placeholder="Architected offline-first database schema&#10;Integrated zero-cost LLM fallback pipeline"
-                                        className="w-full bg-[#161616] border border-neutral-800 rounded-lg p-2 text-xs text-white focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none resize-none"
-                                      />
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* 3. WORK EXPERIENCES TAB */}
-                {activeTab === "experiences" && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-sm font-bold text-white tracking-tight">
-                          Work Experience Records
-                        </h3>
-                        <p className="text-xs text-neutral-400">
-                          Structured career timeline used to formulate tailored executive summaries and answer behavioral prompts.
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleAddExperience}
-                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-purple-950/80 border border-purple-800 hover:bg-purple-900 text-purple-300 text-xs font-bold transition-all"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-                        </svg>
-                        <span>Add Experience</span>
-                      </button>
-                    </div>
-
-                    {profile.experiences.length === 0 ? (
-                      <div className="bg-[#111] border border-neutral-800 rounded-xl p-8 text-center space-y-3">
-                        <p className="text-xs text-neutral-400">
-                          No work experience records found.
-                        </p>
-                        <button
-                          type="button"
-                          onClick={handleAddExperience}
-                          className="px-4 py-2 rounded-lg bg-white text-black hover:bg-neutral-200 text-xs font-bold"
-                        >
-                          Add First Role
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {profile.experiences.map((exp) => {
-                          const isExpanded = expandedExpId === exp.id;
-                          return (
-                            <div
-                              key={exp.id}
-                              className="bg-[#111] border border-neutral-800 rounded-xl overflow-hidden transition-all"
-                            >
-                              <div
-                                onClick={() =>
-                                  setExpandedExpId(isExpanded ? null : exp.id)
-                                }
-                                className="p-4 flex items-center justify-between cursor-pointer hover:bg-neutral-900/40 transition-colors"
-                              >
-                                <div className="space-y-1">
-                                  <div className="flex items-center gap-2">
-                                    <h4 className="text-sm font-bold text-white">
-                                      {exp.title}
-                                    </h4>
-                                    <span className="text-xs text-neutral-400">
-                                      @ {exp.company}
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="text-sm font-semibold text-zinc-100">
+                                    {proj.title || "Untitled Project"}
+                                  </h4>
+                                  {proj.company && (
+                                    <span className="text-xs text-zinc-400">
+                                      @ {proj.company}
                                     </span>
-                                    {exp.isCurrent && (
-                                      <span className="px-1.5 py-0.2 rounded bg-emerald-950 border border-emerald-800 text-emerald-400 text-[10px] font-bold">
-                                        Current
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="text-[11px] text-neutral-500 flex items-center gap-2">
-                                    {exp.location && <span>{exp.location}</span>}
-                                    {exp.remoteStatus && <span>• {exp.remoteStatus}</span>}
-                                    {exp.startDate && (
-                                      <span>
-                                        • {exp.startDate} - {exp.isCurrent ? "Present" : exp.endDate || "N/A"}
-                                      </span>
-                                    )}
-                                  </div>
+                                  )}
                                 </div>
-
-                                <div className="flex items-center gap-3">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleRemoveExperience(exp.id);
-                                    }}
-                                    className="text-neutral-500 hover:text-rose-400 p-1 rounded transition-colors"
-                                    title="Delete experience"
-                                  >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                  </button>
-                                  <svg
-                                    className={`w-4 h-4 text-neutral-400 transition-transform ${
-                                      isExpanded ? "rotate-180" : ""
-                                    }`}
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                                  </svg>
+                                <div className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-500">
+                                  {proj.technologies.slice(0, 4).map((t, idx) => (
+                                    <Badge
+                                      key={idx}
+                                      variant="secondary"
+                                      className="font-mono text-[10px] py-0 px-1.5"
+                                    >
+                                      {t}
+                                    </Badge>
+                                  ))}
+                                  {proj.technologies.length > 4 && (
+                                    <span className="text-[10px] text-zinc-500">
+                                      +{proj.technologies.length - 4} more
+                                    </span>
+                                  )}
                                 </div>
                               </div>
 
-                              {isExpanded && (
-                                <div className="p-5 border-t border-neutral-800/80 bg-[#0D0D0D] space-y-4">
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div>
-                                      <label className="block text-[10px] uppercase font-semibold text-neutral-400 mb-1">
-                                        Company Name *
-                                      </label>
-                                      <input
-                                        type="text"
-                                        value={exp.company}
-                                        onChange={(e) =>
-                                          handleUpdateExperience(exp.id, {
-                                            company: e.target.value,
-                                          })
-                                        }
-                                        className="w-full bg-[#161616] border border-neutral-800 rounded-lg p-2 text-xs text-white focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none"
-                                      />
-                                    </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveProject(proj.id);
+                                  }}
+                                  className="text-zinc-500 hover:text-red-400 hover:bg-zinc-900"
+                                  title="Delete project"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                                <ChevronDown
+                                  className={cn(
+                                    "w-4 h-4 text-zinc-400 transition-transform",
+                                    isExpanded && "rotate-180"
+                                  )}
+                                />
+                              </div>
+                            </div>
 
-                                    <div>
-                                      <label className="block text-[10px] uppercase font-semibold text-neutral-400 mb-1">
-                                        Job Title *
-                                      </label>
-                                      <input
-                                        type="text"
-                                        value={exp.title}
-                                        onChange={(e) =>
-                                          handleUpdateExperience(exp.id, {
-                                            title: e.target.value,
-                                          })
-                                        }
-                                        className="w-full bg-[#161616] border border-neutral-800 rounded-lg p-2 text-xs text-white focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none"
-                                      />
-                                    </div>
-                                  </div>
-
-                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                    <div>
-                                      <label className="block text-[10px] uppercase font-semibold text-neutral-400 mb-1">
-                                        Location
-                                      </label>
-                                      <input
-                                        type="text"
-                                        value={exp.location}
-                                        onChange={(e) =>
-                                          handleUpdateExperience(exp.id, {
-                                            location: e.target.value,
-                                          })
-                                        }
-                                        placeholder="e.g. San Francisco, CA"
-                                        className="w-full bg-[#161616] border border-neutral-800 rounded-lg p-2 text-xs text-white focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none"
-                                      />
-                                    </div>
-
-                                    <div>
-                                      <label className="block text-[10px] uppercase font-semibold text-neutral-400 mb-1">
-                                        Workplace Mode
-                                      </label>
-                                      <select
-                                        value={exp.remoteStatus}
-                                        onChange={(e) =>
-                                          handleUpdateExperience(exp.id, {
-                                            remoteStatus: e.target.value as RemoteStatus,
-                                          })
-                                        }
-                                        className="w-full bg-[#161616] border border-neutral-800 rounded-lg p-2 text-xs text-white focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none"
-                                      >
-                                        <option value="REMOTE">Remote</option>
-                                        <option value="HYBRID">Hybrid</option>
-                                        <option value="ONSITE">Onsite</option>
-                                        <option value="UNKNOWN">Unknown / Other</option>
-                                      </select>
-                                    </div>
-
-                                    <div className="flex items-center pt-5">
-                                      <label className="flex items-center gap-2 cursor-pointer text-xs text-neutral-300">
-                                        <input
-                                          type="checkbox"
-                                          checked={exp.isCurrent}
-                                          onChange={(e) =>
-                                            handleUpdateExperience(exp.id, {
-                                              isCurrent: e.target.checked,
-                                            })
-                                          }
-                                          className="rounded border-neutral-800 text-purple-600 focus:ring-purple-500 bg-[#161616]"
-                                        />
-                                        <span>Currently Working Here</span>
-                                      </label>
-                                    </div>
-                                  </div>
-
-                                  <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                      <label className="block text-[10px] uppercase font-semibold text-neutral-400 mb-1">
-                                        Start Date
-                                      </label>
-                                      <input
-                                        type="text"
-                                        value={exp.startDate || ""}
-                                        onChange={(e) =>
-                                          handleUpdateExperience(exp.id, {
-                                            startDate: e.target.value,
-                                          })
-                                        }
-                                        placeholder="e.g. 2021-01"
-                                        className="w-full bg-[#161616] border border-neutral-800 rounded-lg p-2 text-xs text-white font-mono focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none"
-                                      />
-                                    </div>
-
-                                    <div>
-                                      <label className="block text-[10px] uppercase font-semibold text-neutral-400 mb-1">
-                                        End Date
-                                      </label>
-                                      <input
-                                        type="text"
-                                        disabled={exp.isCurrent}
-                                        value={exp.isCurrent ? "Present" : exp.endDate || ""}
-                                        onChange={(e) =>
-                                          handleUpdateExperience(exp.id, {
-                                            endDate: e.target.value,
-                                          })
-                                        }
-                                        placeholder="e.g. 2023-12"
-                                        className="w-full bg-[#161616] border border-neutral-800 rounded-lg p-2 text-xs text-white font-mono focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none disabled:opacity-50"
-                                      />
-                                    </div>
-                                  </div>
-
-                                  <div>
-                                    <label className="block text-[10px] uppercase font-semibold text-neutral-400 mb-1">
-                                      Key Responsibilities & Highlights (One per line)
+                            {/* Project Expanded Editor */}
+                            {isExpanded && (
+                              <div className="p-5 border-t border-zinc-800 bg-zinc-900/40 space-y-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                  <div className="space-y-1">
+                                    <label className="block text-xs font-medium text-zinc-400">
+                                      Project Title *
                                     </label>
-                                    <textarea
-                                      rows={3}
-                                      value={exp.highlights.join("\n")}
+                                    <Input
+                                      type="text"
+                                      value={proj.title}
                                       onChange={(e) =>
-                                        handleUpdateExperience(exp.id, {
-                                          highlights: updateStringArray(
-                                            exp.highlights,
+                                        handleUpdateProject(proj.id, {
+                                          title: e.target.value,
+                                        })
+                                      }
+                                    />
+                                  </div>
+
+                                  <div className="space-y-1">
+                                    <label className="block text-xs font-medium text-zinc-400">
+                                      Company / Context
+                                    </label>
+                                    <Input
+                                      type="text"
+                                      value={proj.company}
+                                      onChange={(e) =>
+                                        handleUpdateProject(proj.id, {
+                                          company: e.target.value,
+                                        })
+                                      }
+                                      placeholder="e.g. Pulse or Independent"
+                                    />
+                                  </div>
+
+                                  <div className="space-y-1">
+                                    <label className="block text-xs font-medium text-zinc-400">
+                                      Your Role
+                                    </label>
+                                    <Input
+                                      type="text"
+                                      value={proj.role}
+                                      onChange={(e) =>
+                                        handleUpdateProject(proj.id, {
+                                          role: e.target.value,
+                                        })
+                                      }
+                                      placeholder="e.g. Lead Engineer"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="space-y-1">
+                                  <label className="block text-xs font-medium text-zinc-400">
+                                    Project Description &amp; Scope
+                                  </label>
+                                  <Textarea
+                                    rows={2}
+                                    value={proj.description}
+                                    onChange={(e) =>
+                                      handleUpdateProject(proj.id, {
+                                        description: e.target.value,
+                                      })
+                                    }
+                                    placeholder="Brief architectural overview of what you built and why..."
+                                  />
+                                </div>
+
+                                <div className="space-y-1">
+                                  <label className="block text-xs font-medium text-zinc-400">
+                                    Technologies (Comma-separated)
+                                  </label>
+                                  <Input
+                                    type="text"
+                                    value={proj.technologies.join(", ")}
+                                    onChange={(e) =>
+                                      handleUpdateProject(proj.id, {
+                                        technologies: updateStringArray(
+                                          proj.technologies,
+                                          e.target.value,
+                                          ","
+                                        ),
+                                      })
+                                    }
+                                    placeholder="TypeScript, Next.js, Prisma, PostgreSQL, Redis..."
+                                    className="font-mono"
+                                  />
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  <div className="space-y-1">
+                                    <label className="block text-xs font-medium text-zinc-400">
+                                      Measurable Metrics (One per line)
+                                    </label>
+                                    <Textarea
+                                      rows={3}
+                                      value={proj.metrics.join("\n")}
+                                      onChange={(e) =>
+                                        handleUpdateProject(proj.id, {
+                                          metrics: updateStringArray(
+                                            proj.metrics,
                                             e.target.value,
                                             "\n"
                                           ),
                                         })
                                       }
-                                      placeholder="Led team of 6 engineers across product initiatives&#10;Built and shipped multi-tenant backend"
-                                      className="w-full bg-[#161616] border border-neutral-800 rounded-lg p-2 text-xs text-white focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none resize-none"
+                                      placeholder="Cut API p99 latency by 65%&#10;Saved $12k/mo in cloud infrastructure"
+                                      className="font-mono text-xs"
+                                    />
+                                  </div>
+
+                                  <div className="space-y-1">
+                                    <label className="block text-xs font-medium text-zinc-400">
+                                      Highlights / Bullet Points (One per line)
+                                    </label>
+                                    <Textarea
+                                      rows={3}
+                                      value={proj.highlights.join("\n")}
+                                      onChange={(e) =>
+                                        handleUpdateProject(proj.id, {
+                                          highlights: updateStringArray(
+                                            proj.highlights,
+                                            e.target.value,
+                                            "\n"
+                                          ),
+                                        })
+                                      }
+                                      placeholder="Architected offline-first database schema&#10;Integrated zero-cost LLM fallback pipeline"
+                                      className="text-xs"
                                     />
                                   </div>
                                 </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
 
-                {/* 4. SKILLS REPOSITORY TAB */}
-                {activeTab === "skills" && (
-                  <div className="space-y-5">
+              {/* 3. WORK EXPERIENCES TAB */}
+              {activeTab === "experiences" && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-bold text-white tracking-tight">
-                        Master Skills Repository
+                      <h3 className="text-sm font-semibold text-zinc-100 tracking-tight">
+                        Work Experience Records
                       </h3>
-                      <p className="text-xs text-neutral-400">
-                        Categorized skills with years of experience. Anti-hallucination engines strictly match against these entries.
+                      <p className="text-xs text-zinc-400">
+                        Structured career timeline used to formulate tailored executive summaries and answer behavioral prompts.
                       </p>
                     </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAddExperience}
+                      className="gap-1.5"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Experience</span>
+                    </Button>
+                  </div>
 
-                    {/* Add Skill Form */}
-                    <div className="bg-[#111] p-4 rounded-xl border border-neutral-800 space-y-3">
-                      <h4 className="text-xs font-bold text-neutral-300 uppercase tracking-wider">
-                        Add New Skill
-                      </h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                        <div className="sm:col-span-2">
-                          <label className="block text-[10px] uppercase font-semibold text-neutral-400 mb-1">
-                            Skill Name *
-                          </label>
-                          <input
-                            type="text"
-                            value={newSkillName}
-                            onChange={(e) => setNewSkillName(e.target.value)}
+                  {profile.experiences.length === 0 ? (
+                    <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-8 text-center space-y-3">
+                      <p className="text-xs text-zinc-400">
+                        No work experience records found.
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleAddExperience}
+                      >
+                        Add First Role
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {profile.experiences.map((exp) => {
+                        const isExpanded = expandedExpId === exp.id;
+                        return (
+                          <div
+                            key={exp.id}
+                            className="bg-zinc-950 border border-zinc-800 rounded-lg overflow-hidden transition-all"
+                          >
+                            <div
+                              onClick={() =>
+                                setExpandedExpId(isExpanded ? null : exp.id)
+                              }
+                              className="p-4 flex items-center justify-between cursor-pointer hover:bg-zinc-900/60 transition-colors"
+                            >
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="text-sm font-semibold text-zinc-100">
+                                    {exp.title}
+                                  </h4>
+                                  <span className="text-xs text-zinc-400">
+                                    @ {exp.company}
+                                  </span>
+                                  {exp.isCurrent && (
+                                    <Badge variant="emerald" className="text-[10px] py-0">
+                                      Current
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="text-xs text-zinc-500 flex items-center gap-2">
+                                  {exp.location && <span>{exp.location}</span>}
+                                  {exp.remoteStatus && <span>• {exp.remoteStatus}</span>}
+                                  {exp.startDate && (
+                                    <span>
+                                      • {exp.startDate} - {exp.isCurrent ? "Present" : exp.endDate || "N/A"}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveExperience(exp.id);
+                                  }}
+                                  className="text-zinc-500 hover:text-red-400 hover:bg-zinc-900"
+                                  title="Delete experience"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                                <ChevronDown
+                                  className={cn(
+                                    "w-4 h-4 text-zinc-400 transition-transform",
+                                    isExpanded && "rotate-180"
+                                  )}
+                                />
+                              </div>
+                            </div>
+
+                            {isExpanded && (
+                              <div className="p-5 border-t border-zinc-800 bg-zinc-900/40 space-y-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  <div className="space-y-1">
+                                    <label className="block text-xs font-medium text-zinc-400">
+                                      Company Name *
+                                    </label>
+                                    <Input
+                                      type="text"
+                                      value={exp.company}
+                                      onChange={(e) =>
+                                        handleUpdateExperience(exp.id, {
+                                          company: e.target.value,
+                                        })
+                                      }
+                                    />
+                                  </div>
+
+                                  <div className="space-y-1">
+                                    <label className="block text-xs font-medium text-zinc-400">
+                                      Job Title *
+                                    </label>
+                                    <Input
+                                      type="text"
+                                      value={exp.title}
+                                      onChange={(e) =>
+                                        handleUpdateExperience(exp.id, {
+                                          title: e.target.value,
+                                        })
+                                      }
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                  <div className="space-y-1">
+                                    <label className="block text-xs font-medium text-zinc-400">
+                                      Location
+                                    </label>
+                                    <Input
+                                      type="text"
+                                      value={exp.location}
+                                      onChange={(e) =>
+                                        handleUpdateExperience(exp.id, {
+                                          location: e.target.value,
+                                        })
+                                      }
+                                      placeholder="e.g. San Francisco, CA"
+                                    />
+                                  </div>
+
+                                  <div className="space-y-1">
+                                    <label className="block text-xs font-medium text-zinc-400">
+                                      Workplace Mode
+                                    </label>
+                                    <select
+                                      value={exp.remoteStatus}
+                                      onChange={(e) =>
+                                        handleUpdateExperience(exp.id, {
+                                          remoteStatus: e.target.value as RemoteStatus,
+                                        })
+                                      }
+                                      className="flex h-9 w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-1 text-sm text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+                                    >
+                                      <option value="REMOTE">Remote</option>
+                                      <option value="HYBRID">Hybrid</option>
+                                      <option value="ONSITE">Onsite</option>
+                                      <option value="UNKNOWN">Unknown / Other</option>
+                                    </select>
+                                  </div>
+
+                                  <div className="flex items-center pt-5">
+                                    <label className="flex items-center gap-2 cursor-pointer text-xs text-zinc-300">
+                                      <input
+                                        type="checkbox"
+                                        checked={exp.isCurrent}
+                                        onChange={(e) =>
+                                          handleUpdateExperience(exp.id, {
+                                            isCurrent: e.target.checked,
+                                          })
+                                        }
+                                        className="rounded border-zinc-800 text-violet-500 focus:ring-violet-400 bg-zinc-950"
+                                      />
+                                      <span>Currently Working Here</span>
+                                    </label>
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div className="space-y-1">
+                                    <label className="block text-xs font-medium text-zinc-400">
+                                      Start Date
+                                    </label>
+                                    <Input
+                                      type="text"
+                                      value={exp.startDate || ""}
+                                      onChange={(e) =>
+                                        handleUpdateExperience(exp.id, {
+                                          startDate: e.target.value,
+                                        })
+                                      }
+                                      placeholder="e.g. 2021-01"
+                                      className="font-mono"
+                                    />
+                                  </div>
+
+                                  <div className="space-y-1">
+                                    <label className="block text-xs font-medium text-zinc-400">
+                                      End Date
+                                    </label>
+                                    <Input
+                                      type="text"
+                                      disabled={exp.isCurrent}
+                                      value={exp.isCurrent ? "Present" : exp.endDate || ""}
+                                      onChange={(e) =>
+                                        handleUpdateExperience(exp.id, {
+                                          endDate: e.target.value,
+                                        })
+                                      }
+                                      placeholder="e.g. 2023-12"
+                                      className="font-mono disabled:opacity-50"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="space-y-1">
+                                  <label className="block text-xs font-medium text-zinc-400">
+                                    Key Responsibilities &amp; Highlights (One per line)
+                                  </label>
+                                  <Textarea
+                                    rows={3}
+                                    value={exp.highlights.join("\n")}
+                                    onChange={(e) =>
+                                      handleUpdateExperience(exp.id, {
+                                        highlights: updateStringArray(
+                                          exp.highlights,
+                                          e.target.value,
+                                          "\n"
+                                        ),
+                                      })
+                                    }
+                                    placeholder="Led team of 6 engineers across product initiatives&#10;Built and shipped multi-tenant backend"
+                                    className="text-xs"
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 4. SKILLS REPOSITORY TAB */}
+              {activeTab === "skills" && (
+                <div className="space-y-5">
+                  <div>
+                    <h3 className="text-sm font-semibold text-zinc-100 tracking-tight">
+                      Master Skills Repository
+                    </h3>
+                    <p className="text-xs text-zinc-400">
+                      Categorized skills with years of experience. Anti-hallucination engines strictly match against these entries.
+                    </p>
+                  </div>
+
+                  {/* Add Skill Form */}
+                  <div className="bg-zinc-950 p-4 rounded-lg border border-zinc-800 space-y-3">
+                    <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+                      Add New Skill
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                      <div className="sm:col-span-2 space-y-1">
+                        <label className="block text-xs font-medium text-zinc-400">
+                          Skill Name *
+                        </label>
+                        <Input
+                          type="text"
+                          value={newSkillName}
+                          onChange={(e) => setNewSkillName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleAddSkill();
+                            }
+                          }}
+                          placeholder="e.g. React, TypeScript, Docker..."
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="block text-xs font-medium text-zinc-400">
+                          Category
+                        </label>
+                        <select
+                          value={newSkillCategory}
+                          onChange={(e) =>
+                            setNewSkillCategory(
+                              e.target.value as MasterSkillCategory
+                            )
+                          }
+                          className="flex h-9 w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-1 text-sm text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+                        >
+                          {SKILL_CATEGORIES.map((cat) => (
+                            <option key={cat} value={cat}>
+                              {cat}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="block text-xs font-medium text-zinc-400">
+                          Years Exp. (Opt)
+                        </label>
+                        <div className="flex gap-2">
+                          <Input
+                            type="number"
+                            value={newSkillYears}
+                            onChange={(e) => setNewSkillYears(e.target.value)}
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
                                 e.preventDefault();
                                 handleAddSkill();
                               }
                             }}
-                            placeholder="e.g. React, TypeScript, Docker..."
-                            className="w-full bg-[#161616] border border-neutral-800 rounded-lg p-2 text-xs text-white focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                            placeholder="e.g. 4"
+                            className="font-mono"
                           />
-                        </div>
-
-                        <div>
-                          <label className="block text-[10px] uppercase font-semibold text-neutral-400 mb-1">
-                            Category
-                          </label>
-                          <select
-                            value={newSkillCategory}
-                            onChange={(e) =>
-                              setNewSkillCategory(
-                                e.target.value as MasterSkillCategory
-                              )
-                            }
-                            className="w-full bg-[#161616] border border-neutral-800 rounded-lg p-2 text-xs text-white focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={handleAddSkill}
+                            className="h-9 shrink-0"
                           >
-                            {SKILL_CATEGORIES.map((cat) => (
-                              <option key={cat} value={cat}>
-                                {cat}
-                              </option>
-                            ))}
-                          </select>
+                            Add
+                          </Button>
                         </div>
+                      </div>
+                    </div>
+                  </div>
 
-                        <div>
-                          <label className="block text-[10px] uppercase font-semibold text-neutral-400 mb-1">
-                            Years Exp. (Opt)
-                          </label>
-                          <div className="flex gap-2">
-                            <input
-                              type="number"
-                              value={newSkillYears}
-                              onChange={(e) => setNewSkillYears(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  handleAddSkill();
-                                }
-                              }}
-                              placeholder="e.g. 4"
-                              className="w-full bg-[#161616] border border-neutral-800 rounded-lg p-2 text-xs text-white font-mono focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none"
-                            />
+                  {/* Category Filter Chips */}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <Button
+                      type="button"
+                      variant={selectedSkillCategory === "ALL" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSelectedSkillCategory("ALL")}
+                      className="rounded-full h-7 text-xs px-3"
+                    >
+                      All ({profile.skills.length})
+                    </Button>
+
+                    {SKILL_CATEGORIES.map((cat) => {
+                      const count = profile.skills.filter(
+                        (s) => s.category === cat
+                      ).length;
+                      return (
+                        <Button
+                          key={cat}
+                          type="button"
+                          variant={selectedSkillCategory === cat ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setSelectedSkillCategory(cat)}
+                          className="rounded-full h-7 text-xs px-3"
+                        >
+                          {cat} ({count})
+                        </Button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Skills Grid */}
+                  <div className="bg-zinc-950 p-5 rounded-lg border border-zinc-800">
+                    {filteredSkills.length === 0 ? (
+                      <p className="text-xs text-zinc-500 italic text-center py-4">
+                        No skills found in this category.
+                      </p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {filteredSkills.map((skill) => (
+                          <Badge
+                            key={skill.name}
+                            variant={CATEGORY_BADGE_VARIANTS[skill.category] || "secondary"}
+                            className="gap-1.5 py-1 px-2.5 text-xs font-normal"
+                          >
+                            <span>{skill.name}</span>
+                            {skill.yearsOfExperience !== null &&
+                              skill.yearsOfExperience !== undefined && (
+                                <span className="font-mono text-[10px] opacity-75">
+                                  {skill.yearsOfExperience}y
+                                </span>
+                              )}
                             <button
                               type="button"
-                              onClick={handleAddSkill}
-                              className="px-3 py-2 rounded-lg bg-white text-black font-bold text-xs hover:bg-neutral-200 transition-colors shrink-0"
+                              onClick={() => handleRemoveSkill(skill.name)}
+                              className="hover:opacity-100 opacity-60 hover:text-red-300 font-bold ml-0.5"
+                              title={`Remove ${skill.name}`}
                             >
-                              Add
+                              <X className="h-3 w-3" />
                             </button>
-                          </div>
-                        </div>
+                          </Badge>
+                        ))}
                       </div>
-                    </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
-                    {/* Category Filter Chips */}
-                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                      <button
+              {/* 5. BASE RESUME TEXT TAB */}
+              {activeTab === "resume" && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-semibold text-zinc-100 tracking-tight">
+                        Raw Resume / Markdown Bio
+                      </h3>
+                      <p className="text-xs text-zinc-400">
+                        Full textual biography and resume text. Used for deep grounding and semantic matching.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-mono text-zinc-500">
+                        {profile.resumeText.length} chars
+                      </span>
+                      <Button
                         type="button"
-                        onClick={() => setSelectedSkillCategory("ALL")}
-                        className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
-                          selectedSkillCategory === "ALL"
-                            ? "bg-neutral-200 text-black font-bold"
-                            : "bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800"
-                        }`}
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(profile.resumeText);
+                          setSuccessMessage("Resume text copied to clipboard!");
+                          setTimeout(() => setSuccessMessage(null), 2000);
+                        }}
+                        className="gap-1.5"
                       >
-                        All ({profile.skills.length})
-                      </button>
-
-                      {SKILL_CATEGORIES.map((cat) => {
-                        const count = profile.skills.filter(
-                          (s) => s.category === cat
-                        ).length;
-                        return (
-                          <button
-                            key={cat}
-                            type="button"
-                            onClick={() => setSelectedSkillCategory(cat)}
-                            className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
-                              selectedSkillCategory === cat
-                                ? "bg-purple-600 text-white font-bold"
-                                : "bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800"
-                            }`}
-                          >
-                            {cat} ({count})
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {/* Skills Grid */}
-                    <div className="bg-[#111] p-5 rounded-xl border border-neutral-800">
-                      {filteredSkills.length === 0 ? (
-                        <p className="text-xs text-neutral-500 italic text-center py-4">
-                          No skills found in this category.
-                        </p>
-                      ) : (
-                        <div className="flex flex-wrap gap-2">
-                          {filteredSkills.map((skill) => (
-                            <span
-                              key={skill.name}
-                              className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg border text-xs font-medium ${
-                                CATEGORY_COLORS[skill.category] ||
-                                "bg-neutral-900 border-neutral-800 text-neutral-300"
-                              }`}
-                            >
-                              <span>{skill.name}</span>
-                              {skill.yearsOfExperience !== null &&
-                                skill.yearsOfExperience !== undefined && (
-                                  <span className="font-mono text-[10px] opacity-80">
-                                    {skill.yearsOfExperience}y
-                                  </span>
-                                )}
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveSkill(skill.name)}
-                                className="hover:opacity-100 opacity-60 hover:text-rose-300 font-bold ml-0.5"
-                                title={`Remove ${skill.name}`}
-                              >
-                                &times;
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Copy</span>
+                      </Button>
                     </div>
                   </div>
-                )}
 
-                {/* 5. BASE RESUME TEXT TAB */}
-                {activeTab === "resume" && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-sm font-bold text-white tracking-tight">
-                          Raw Resume / Markdown Bio
-                        </h3>
-                        <p className="text-xs text-neutral-400">
-                          Full textual biography and resume text. Used for deep grounding and semantic matching.
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-mono text-neutral-500">
-                          {profile.resumeText.length} chars
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(profile.resumeText);
-                            setSuccessMessage("Resume text copied to clipboard!");
-                            setTimeout(() => setSuccessMessage(null), 2000);
-                          }}
-                          className="px-2.5 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-semibold transition-colors flex items-center gap-1"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                          </svg>
-                          <span>Copy</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="bg-[#111] p-4 rounded-xl border border-neutral-800 space-y-2">
-                      <textarea
-                        rows={18}
-                        value={profile.resumeText}
-                        onChange={(e) =>
-                          setProfile((prev) => ({
-                            ...prev,
-                            resumeText: e.target.value,
-                          }))
-                        }
-                        placeholder="Paste your full unformatted resume text or Markdown summary here..."
-                        className="w-full bg-[#0A0A0A] border border-neutral-800 rounded-lg p-4 text-xs text-neutral-200 placeholder-neutral-600 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none font-mono leading-relaxed resize-none"
-                      />
-                    </div>
+                  <div className="bg-zinc-950 p-4 rounded-lg border border-zinc-800 space-y-2">
+                    <Textarea
+                      rows={18}
+                      value={profile.resumeText}
+                      onChange={(e) =>
+                        setProfile((prev) => ({
+                          ...prev,
+                          resumeText: e.target.value,
+                        }))
+                      }
+                      placeholder="Paste your full unformatted resume text or Markdown summary here..."
+                      className="font-mono text-xs text-zinc-200 placeholder:text-zinc-600 focus-visible:ring-violet-400 leading-relaxed resize-none p-4"
+                    />
                   </div>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* Drawer Footer */}
-          <div className="p-4 border-t border-neutral-800 bg-[#0E0E0E] flex items-center justify-between shrink-0 text-xs text-neutral-500">
-            <span>Profile ID: {profile.id}</span>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-3.5 py-1.5 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-300 hover:text-white transition-colors"
-              >
-                Close
-              </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={isSaving}
-                className="px-4 py-1.5 rounded-lg bg-white text-black font-bold hover:bg-neutral-200 transition-colors disabled:opacity-50"
-              >
-                {isSaving ? "Saving..." : "Save Changes"}
-              </button>
-            </div>
-          </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
-      </div>
-    </div>
+
+        {/* Drawer Footer */}
+        <SheetFooter className="p-4 border-t border-zinc-800 bg-zinc-900 flex flex-row items-center justify-between shrink-0 text-xs text-zinc-500">
+          <span className="font-mono text-[11px]">Profile ID: {profile.id}</span>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onClose}
+            >
+              Close
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleSave}
+              disabled={isSaving}
+            >
+              {isSaving ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }

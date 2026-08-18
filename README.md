@@ -73,8 +73,9 @@ cp .env.example .env
 ```
 
 Configure your API keys in `.env`:
-- `OPENROUTER_API_KEY`: OpenRouter API key for free-tier models (primary)
-- `GOOGLE_GENERATIVE_AI_API_KEY`: Google Gemini API key (fallback)
+- `GEMINI_API_KEY`: Google Gemini API key (comma-separated keys supported for automatic rotation and 429 failover)
+- `GROQ_API_KEY`: Groq API key for fast Llama 3.3 inference (comma-separated keys supported)
+- `OPENROUTER_API_KEY`: OpenRouter API key for free-tier model routing (optional fallback)
 
 ### 3. Initialize Database
 

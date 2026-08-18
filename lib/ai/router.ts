@@ -85,32 +85,155 @@ export interface JobContext {
 export interface AIRouterOptions {
   primaryModel?: LanguageModel;
   fallbackModel?: LanguageModel;
+  models?: LanguageModel[];
   weights?: FitScoreWeights;
   conversionInsights?: string;
 }
 
-export function getOpenRouterModel(): LanguageModel {
-  const apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || "";
-  const baseURL = process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1";
-  const modelName = process.env.OPENROUTER_MODEL || "meta-llama/llama-3.3-70b-instruct:free";
+export interface ConfiguredModelCandidate {
+  providerName: string;
+  modelName: string;
+  model: LanguageModel;
+  keyMask: string;
+}
+
+export function parseApiKeys(envValue?: string): string[] {
+  if (!envValue) return [];
+  return envValue
+    .split(",")
+    .map((k) => k.trim())
+    .filter((k) => k.length > 0);
+}
+
+export function maskKey(key: string): string {
+  if (!key) return "***";
+  if (key.length <= 8) return "***";
+  return `${key.slice(0, 4)}...${key.slice(-4)}`;
+}
+
+export function getGroqModel(apiKey?: string, modelName?: string): LanguageModel {
+  const resolvedKey = apiKey || parseApiKeys(process.env.GROQ_API_KEY)[0] || "";
+  const resolvedModel = modelName || process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+  const baseURL = process.env.GROQ_BASE_URL || "https://api.groq.com/openai/v1";
 
   const client = createOpenAI({
-    apiKey,
+    apiKey: resolvedKey,
     baseURL,
   });
 
-  return client(modelName);
+  return client(resolvedModel);
 }
 
-export function getGeminiModel(): LanguageModel {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
-  const modelName = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+export function getOpenRouterModel(apiKey?: string, modelName?: string): LanguageModel {
+  const resolvedKey =
+    apiKey ||
+    parseApiKeys(process.env.OPENROUTER_API_KEY)[0] ||
+    parseApiKeys(process.env.OPENAI_API_KEY)[0] ||
+    "";
+  const baseURL = process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1";
+  const resolvedModel =
+    modelName || process.env.OPENROUTER_MODEL || "openrouter/free";
 
-  const client = createGoogleGenerativeAI({
-    apiKey,
+  const client = createOpenAI({
+    apiKey: resolvedKey,
+    baseURL,
   });
 
-  return client(modelName);
+  return client(resolvedModel);
+}
+
+export function getGeminiModel(apiKey?: string, modelName?: string): LanguageModel {
+  const resolvedKey =
+    apiKey ||
+    parseApiKeys(process.env.GEMINI_API_KEY)[0] ||
+    parseApiKeys(process.env.GOOGLE_API_KEY)[0] ||
+    parseApiKeys(process.env.GOOGLE_GENERATIVE_AI_API_KEY)[0] ||
+    "";
+  const resolvedModel = modelName || process.env.GEMINI_MODEL || "gemini-3.7-flash";
+
+  const client = createGoogleGenerativeAI({
+    apiKey: resolvedKey,
+  });
+
+  return client(resolvedModel);
+}
+
+let rotationCursor = 0;
+
+export function resetRotationCursor(): void {
+  rotationCursor = 0;
+}
+
+export function getAllConfiguredModels(): ConfiguredModelCandidate[] {
+  const candidates: ConfiguredModelCandidate[] = [];
+
+  // 1. Groq keys
+  const groqKeys = parseApiKeys(process.env.GROQ_API_KEY);
+  const groqModel = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+  for (const key of groqKeys) {
+    candidates.push({
+      providerName: "Groq",
+      modelName: groqModel,
+      model: getGroqModel(key, groqModel),
+      keyMask: maskKey(key),
+    });
+  }
+
+  // 2. Google Gemini keys
+  const geminiKeys = [
+    ...parseApiKeys(process.env.GEMINI_API_KEY),
+    ...parseApiKeys(process.env.GOOGLE_API_KEY),
+    ...parseApiKeys(process.env.GOOGLE_GENERATIVE_AI_API_KEY),
+  ];
+  const uniqueGeminiKeys = Array.from(new Set(geminiKeys));
+  const geminiModel = process.env.GEMINI_MODEL || "gemini-3.7-flash";
+  for (const key of uniqueGeminiKeys) {
+    candidates.push({
+      providerName: "Google Gemini",
+      modelName: geminiModel,
+      model: getGeminiModel(key, geminiModel),
+      keyMask: maskKey(key),
+    });
+  }
+
+  // 3. OpenRouter keys
+  const openRouterKeys = [
+    ...parseApiKeys(process.env.OPENROUTER_API_KEY),
+    ...parseApiKeys(process.env.OPENAI_API_KEY),
+  ];
+  const uniqueOpenRouterKeys = Array.from(new Set(openRouterKeys));
+  const openRouterModel =
+    process.env.OPENROUTER_MODEL || "openrouter/free";
+  for (const key of uniqueOpenRouterKeys) {
+    candidates.push({
+      providerName: "OpenRouter",
+      modelName: openRouterModel,
+      model: getOpenRouterModel(key, openRouterModel),
+      keyMask: maskKey(key),
+    });
+  }
+
+  if (candidates.length === 0) {
+    return [
+      {
+        providerName: "OpenRouter",
+        modelName: openRouterModel,
+        model: getOpenRouterModel(),
+        keyMask: "***",
+      },
+      {
+        providerName: "Google Gemini",
+        modelName: geminiModel,
+        model: getGeminiModel(),
+        keyMask: "***",
+      },
+    ];
+  }
+
+  const cursor = rotationCursor % candidates.length;
+  const rotated = [...candidates.slice(cursor), ...candidates.slice(0, cursor)];
+  rotationCursor = (rotationCursor + 1) % candidates.length;
+  return rotated;
 }
 
 export async function generateStructuredWithFallback<T>({
@@ -123,38 +246,52 @@ export async function generateStructuredWithFallback<T>({
   prompt: string;
   system?: string;
   options?: AIRouterOptions;
-  }): Promise<T> {
-  const primary = options?.primaryModel || getOpenRouterModel();
-  const fallback = options?.fallbackModel || getGeminiModel();
+}): Promise<T> {
+  let modelCandidates: Array<{ name: string; model: LanguageModel }>;
 
-  try {
-    const result = await generateObject({
-      model: primary,
-      schema,
-      system,
-      prompt,
-    });
-    return result.object;
-  } catch (primaryError) {
-    console.warn("Primary AI provider failed, attempting fallback:", primaryError);
+  if (options?.models && options.models.length > 0) {
+    modelCandidates = options.models.map((m, idx) => ({
+      name: `Explicit Option Model #${idx + 1}`,
+      model: m,
+    }));
+  } else if (options?.primaryModel || options?.fallbackModel) {
+    modelCandidates = [];
+    if (options.primaryModel) {
+      modelCandidates.push({ name: "Primary Model", model: options.primaryModel });
+    }
+    if (options.fallbackModel) {
+      modelCandidates.push({ name: "Fallback Model", model: options.fallbackModel });
+    }
+  } else {
+    modelCandidates = getAllConfiguredModels().map((c) => ({
+      name: `${c.providerName} (${c.modelName} [${c.keyMask}])`,
+      model: c.model,
+    }));
+  }
+
+  const errors: string[] = [];
+
+  for (let i = 0; i < modelCandidates.length; i++) {
+    const candidate = modelCandidates[i];
     try {
-      const fallbackResult = await generateObject({
-        model: fallback,
+      const result = await generateObject({
+        model: candidate.model,
         schema,
         system,
         prompt,
       });
-      return fallbackResult.object;
-    } catch (fallbackError) {
-      throw new Error(
-        `All AI providers failed. Primary error: ${
-          primaryError instanceof Error ? primaryError.message : String(primaryError)
-        }. Fallback error: ${
-          fallbackError instanceof Error ? fallbackError.message : String(fallbackError)
-        }`
+      return result.object;
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      errors.push(`${candidate.name}: ${errMsg}`);
+      console.warn(
+        `AI provider ${candidate.name} failed (${i + 1}/${modelCandidates.length}), attempting next provider in pool:`,
+        errMsg
       );
     }
   }
+
+  throw new Error(`All AI providers failed. Errors:\n- ${errors.join("\n- ")}`);
 }
 
 export function buildCandidateFactSheet(candidate: CandidateContext): string {

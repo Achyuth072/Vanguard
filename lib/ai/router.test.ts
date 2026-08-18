@@ -11,6 +11,8 @@ import {
   scoreJobFit,
   extractJobDetails,
   tailorApplicationSummary,
+  parseApiKeys,
+  maskKey,
   type CandidateContext,
   type JobContext,
 } from "./router";
@@ -314,6 +316,74 @@ describe("Provider Fallback & Error Handling", () => {
         return true;
       }
     );
+  });
+
+  it("cascades across 3 models in the pool (e.g. Groq -> Gemini -> OpenRouter) until one succeeds", async () => {
+    let groqCalled = false;
+    let geminiCalled = false;
+    let openRouterCalled = false;
+
+    const mockGroq = createMockModel({
+      shouldThrow: true,
+      errorMessage: "Groq 429 Rate Limit",
+      onCall: () => {
+        groqCalled = true;
+      },
+    });
+
+    const mockGemini = createMockModel({
+      shouldThrow: true,
+      errorMessage: "Gemini 503 Overloaded",
+      onCall: () => {
+        geminiCalled = true;
+      },
+    });
+
+    const mockOpenRouter = createMockModel({
+      generateOutput: {
+        score: 91,
+        recommendation: "APPLY",
+        skillsFit: 95,
+        experienceFit: 90,
+        domainFit: 85,
+        trajectoryFit: 90,
+        strengths: ["Llama-3.3-70B Match"],
+        gaps: [],
+        risks: [],
+        reasoning: "Third provider in pool succeeded.",
+      },
+      onCall: () => {
+        openRouterCalled = true;
+      },
+    });
+
+    const result = await generateStructuredWithFallback({
+      schema: FitScoreSchema,
+      prompt: "Evaluate candidate fit",
+      options: {
+        models: [mockGroq, mockGemini, mockOpenRouter],
+      },
+    });
+
+    assert.strictEqual(groqCalled, true);
+    assert.strictEqual(geminiCalled, true);
+    assert.strictEqual(openRouterCalled, true);
+    assert.strictEqual(result.score, 91);
+    assert.strictEqual(result.reasoning, "Third provider in pool succeeded.");
+  });
+
+  it("parses comma-separated API keys and masks sensitive substrings", () => {
+    assert.deepStrictEqual(parseApiKeys(""), []);
+    assert.deepStrictEqual(parseApiKeys("   "), []);
+    assert.deepStrictEqual(parseApiKeys("key1"), ["key1"]);
+    assert.deepStrictEqual(
+      parseApiKeys(" gsk_1234567890abcdef , gsk_0987654321fedcba  "),
+      ["gsk_1234567890abcdef", "gsk_0987654321fedcba"]
+    );
+
+    assert.strictEqual(maskKey(""), "***");
+    assert.strictEqual(maskKey("short"), "***");
+    assert.strictEqual(maskKey("gsk_1234567890abcdef"), "gsk_...cdef");
   });
 });
 

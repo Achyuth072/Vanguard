@@ -1,6 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
-import { chromium, type BrowserContext, type Page } from "playwright";
+import {
+  chromium,
+  type BrowserContext,
+  type Frame,
+  type Page,
+  type Response as PlaywrightResponse,
+} from "playwright";
 import {
   generateInPageExtractorScript,
   mapFormFields,
@@ -500,11 +506,230 @@ export async function extractFieldsFromLivePage(page: Page): Promise<NormalizedF
 }
 
 /**
+ * Checks whether the page contains an active anti-bot challenge (Cloudflare, hCaptcha, reCAPTCHA).
+ */
+export async function checkForBotChallenge(page: Page): Promise<boolean> {
+  try {
+    const title = await page.title().catch(() => "");
+    if (
+      title.includes("Just a moment...") ||
+      title.includes("Attention Required!") ||
+      title.includes("Security Check")
+    ) {
+      return true;
+    }
+
+    const hasChallengeElement = await page.evaluate(() => {
+      const selectors = [
+        "iframe[src*='cloudflare']",
+        "iframe[src*='turnstile']",
+        "iframe[src*='hcaptcha']",
+        "iframe[src*='recaptcha']",
+        ".cf-turnstile",
+        ".cf-challenge-form",
+        "#challenge-stage",
+        ".h-captcha",
+        ".g-recaptcha",
+        "#px-captcha",
+      ];
+      for (const sel of selectors) {
+        if (document.querySelector(sel)) return true;
+      }
+      return false;
+    });
+
+    return Boolean(hasChallengeElement);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Checks whether the page or URL indicates successful form submission.
+ */
+export async function checkForSubmissionSuccess(page: Page): Promise<boolean> {
+  try {
+    const currentUrl = page.url();
+
+    // Check HTTP/HTTPS URLs (ignore data: and about: URIs for URL matching)
+    if (currentUrl.startsWith("http://") || currentUrl.startsWith("https://")) {
+      const successUrlPattern = /(?:confirmation|thank-you|thank_you|thanks|submitted|application-submitted|app-submitted|success|complete|jobs\/applied)/i;
+      if (successUrlPattern.test(currentUrl)) {
+        return true;
+      }
+    }
+
+    const hasSuccessText = await page.evaluate(() => {
+      // Look for confirmation headings / banners
+      const confirmationHeading = Array.from(document.querySelectorAll("h1, h2, h3, p, div, span")).some((el) => {
+        // Exclude interactive buttons and inputs
+        if (el.tagName === "BUTTON" || el.tagName === "INPUT" || el.tagName === "LABEL") {
+          return false;
+        }
+        const text = el.textContent?.trim() || "";
+        const patterns = [
+          /^thank you for applying/i,
+          /^thank you for your application/i,
+          /^application (?:has been |was )?(?:successfully )?(?:submitted|received)/i,
+          /^your application (?:has been |was )?(?:successfully )?(?:submitted|received)/i,
+          /^(?:we have|we've) received your application/i,
+        ];
+        return patterns.some((p) => p.test(text));
+      });
+
+      return confirmationHeading;
+    });
+
+    return Boolean(hasSuccessText);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Attaches hybrid submission and bot challenge listeners to a live page.
+ */
+export function setupSubmissionMonitoring(
+  page: Page,
+  options: BrowserRunnerOptions,
+  onDetected?: (event: RunnerProgressEvent) => void
+): { cleanup: () => void; isSubmitted: () => boolean } {
+  let submitted = false;
+
+  const handleSubmitted = async (reasonUrl?: string) => {
+    if (submitted) return;
+    submitted = true;
+
+    // Auto-update application status in DB if jobId is provided
+    if (options.jobId && options.autoMarkApplied !== false) {
+      try {
+        const { updateJobStatus } = await import("@/lib/data");
+        await updateJobStatus(options.jobId, "APPLIED", {
+          source: "browser-automation-hybrid-detection",
+          submittedUrl: reasonUrl || page.url(),
+        });
+      } catch {
+        // Ignored if test job ID is synthetic or unpersisted
+      }
+    }
+
+    if (options.onSubmitted) {
+      try {
+        await options.onSubmitted({
+          jobId: options.jobId,
+          url: reasonUrl || page.url(),
+          timestamp: new Date().toISOString(),
+        });
+      } catch {}
+    }
+
+    const event: RunnerProgressEvent = {
+      jobId: options.jobId,
+      state: "SUBMITTED",
+      step: 6,
+      totalSteps: 6,
+      message: "Application submission detected and confirmed. Status updated to APPLIED.",
+      timestamp: new Date().toISOString(),
+      payload: {
+        url: options.url,
+        submissionDetected: true,
+        submissionUrl: reasonUrl || page.url(),
+      },
+    };
+
+    if (options.onProgress) {
+      options.onProgress(event);
+    }
+    if (onDetected) {
+      onDetected(event);
+    }
+  };
+
+  const navListener = async (frame: Frame) => {
+    try {
+      if (frame === page.mainFrame()) {
+        const isSuccess = await checkForSubmissionSuccess(page);
+        if (isSuccess) {
+          await handleSubmitted(page.url());
+          return;
+        }
+
+        const isBot = await checkForBotChallenge(page);
+        if (isBot && options.onProgress && !submitted) {
+          options.onProgress({
+            jobId: options.jobId,
+            state: "BOT_CHECK_PAUSED",
+            step: 6,
+            totalSteps: 6,
+            message: "Bot-detection challenge active. Please complete verification in the open Chrome window.",
+            timestamp: new Date().toISOString(),
+            payload: {
+              url: page.url(),
+              botCheckDetected: true,
+            },
+          });
+        }
+      }
+    } catch {}
+  };
+
+  const responseListener = async (response: PlaywrightResponse) => {
+    try {
+      const req = response.request();
+      const method = req.method();
+      const status = response.status();
+      const url = response.url();
+
+      if ((method === "POST" || method === "PUT") && status >= 200 && status < 303) {
+        if (/(?:apply|application|candidate|submit|job-applications)/i.test(url)) {
+          // Wait briefly for post-submit navigation or DOM message
+          await page.waitForTimeout(500).catch(() => {});
+          const isSuccess = await checkForSubmissionSuccess(page);
+          if (isSuccess) {
+            await handleSubmitted(url);
+          }
+        }
+      }
+    } catch {}
+  };
+
+  page.on("framenavigated", navListener);
+  page.on("response", responseListener);
+
+  const intervalId = setInterval(async () => {
+    try {
+      if (!submitted && !page.isClosed()) {
+        const isSuccess = await checkForSubmissionSuccess(page);
+        if (isSuccess) {
+          await handleSubmitted(page.url());
+        }
+      }
+    } catch {}
+  }, 250);
+
+  if (typeof intervalId.unref === "function") {
+    intervalId.unref();
+  }
+
+  const cleanup = () => {
+    clearInterval(intervalId);
+    page.off("framenavigated", navListener);
+    page.off("response", responseListener);
+  };
+
+  return {
+    cleanup,
+    isSubmitted: () => submitted,
+  };
+}
+
+/**
  * Core Playwright Automation Orchestrator class.
  */
 export class PlaywrightBrowserRunner {
   private context: BrowserContext | null = null;
   private ownContext = false;
+  private activeCleanup: (() => void) | null = null;
 
   constructor(public defaultOptions: Partial<BrowserRunnerOptions> = {}) {}
 
@@ -577,6 +802,19 @@ export class PlaywrightBrowserRunner {
       // Brief settling time for client-side frameworks (Greenhouse/Lever/Ashby)
       await page.waitForTimeout(1000);
 
+      // Check for bot verification challenge
+      const isBotChallenge = await checkForBotChallenge(page);
+      if (isBotChallenge) {
+        this.emitProgress(
+          options,
+          "BOT_CHECK_PAUSED",
+          2,
+          totalSteps,
+          "Bot-detection challenge detected. Please complete verification in the open browser window.",
+          { botCheckDetected: true }
+        );
+      }
+
       // Step 3: SCANNING_DOM
       this.emitProgress(
         options,
@@ -603,6 +841,8 @@ export class PlaywrightBrowserRunner {
           totalFields: liveFields.length,
           filledCount: mappingOutcome.mappedFields.length,
           unmappedCount: mappingOutcome.unmappedFields.length,
+          mappedFields: mappingOutcome.mappedFields,
+          unmappedFields: mappingOutcome.unmappedFields,
         }
       );
 
@@ -649,6 +889,10 @@ export class PlaywrightBrowserRunner {
         );
       }
 
+      // Setup hybrid submission monitoring on page
+      const monitoring = setupSubmissionMonitoring(page, options);
+      this.activeCleanup = monitoring.cleanup;
+
       this.emitProgress(
         options,
         "AWAITING_HUMAN_REVIEW",
@@ -659,18 +903,29 @@ export class PlaywrightBrowserRunner {
           platform: mappingOutcome.platform,
           filledCount: fillResults.filter((r) => r.status === "filled").length,
           unmappedCount: mappingOutcome.unmappedFields.length,
+          mappedFields: mappingOutcome.mappedFields,
+          unmappedFields: mappingOutcome.unmappedFields,
         }
       );
+
+      // If a wait timeout is requested, wait for submission or timeout
+      if (options.waitForSubmissionTimeout && options.waitForSubmissionTimeout > 0) {
+        const start = Date.now();
+        while (Date.now() - start < options.waitForSubmissionTimeout && !monitoring.isSubmitted()) {
+          await page.waitForTimeout(250);
+        }
+      }
 
       return {
         jobId: options.jobId,
         url: options.url,
         platform: mappingOutcome.platform,
-        status: "awaiting_review",
+        status: monitoring.isSubmitted() ? "submitted" : "awaiting_review",
         filledFields: fillResults,
         unmappedFields: mappingOutcome.unmappedFields,
         totalFields: liveFields.length,
         resumesUploaded: finalResumesUploaded,
+        submissionDetected: monitoring.isSubmitted(),
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -701,6 +956,10 @@ export class PlaywrightBrowserRunner {
    * Closes browser context if owned by this instance.
    */
   async close(): Promise<void> {
+    if (this.activeCleanup) {
+      this.activeCleanup();
+      this.activeCleanup = null;
+    }
     if (this.context && this.ownContext) {
       await this.context.close().catch(() => {});
       this.context = null;

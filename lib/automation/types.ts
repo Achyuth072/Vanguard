@@ -157,6 +157,11 @@ export interface RunnerProgressEvent {
     unmappedCount?: number;
     error?: string;
     field?: string;
+    mappedFields?: FormFieldMapping[];
+    unmappedFields?: NormalizedFormField[];
+    submissionDetected?: boolean;
+    submissionUrl?: string;
+    botCheckDetected?: boolean;
     [key: string]: unknown;
   };
 }
@@ -187,6 +192,9 @@ export interface BrowserRunnerOptions {
   browserContext?: BrowserContext;
   skipInspectionHighlight?: boolean;
   skipScrollToReview?: boolean;
+  autoMarkApplied?: boolean;
+  onSubmitted?: (details: { jobId?: string; url: string; timestamp: string }) => Promise<void> | void;
+  waitForSubmissionTimeout?: number;
 }
 
 export interface BrowserRunnerOutcome {
@@ -198,6 +206,7 @@ export interface BrowserRunnerOutcome {
   unmappedFields: NormalizedFormField[];
   totalFields: number;
   resumesUploaded: number;
+  submissionDetected?: boolean;
   error?: string;
 }
 

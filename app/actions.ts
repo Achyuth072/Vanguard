@@ -128,7 +128,9 @@ export async function updateJobStatusAction(
 ) {
   const { updateJobStatus } = await import("@/lib/data");
   const updated = await updateJobStatus(jobId, newStatus, payload);
-  revalidatePath("/");
+  try {
+    revalidatePath("/");
+  } catch {}
   return { success: true, job: updated };
 }
 

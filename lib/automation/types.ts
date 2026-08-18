@@ -1,3 +1,5 @@
+import type { BrowserContext } from "playwright";
+
 export interface FormFieldOption {
   value: string;
   label: string;
@@ -128,3 +130,80 @@ export interface FormMapperOptions {
   platformHint?: "greenhouse" | "lever" | "ashby" | "unknown";
   synthesizeCustomAnswers?: boolean;
 }
+
+export type RunnerState =
+  | "STARTING_BROWSER"
+  | "NAVIGATING"
+  | "SCANNING_DOM"
+  | "FILLING_FIELDS"
+  | "HIGHLIGHTING_INSPECTION"
+  | "AWAITING_HUMAN_REVIEW"
+  | "BOT_CHECK_PAUSED"
+  | "SUBMITTED"
+  | "ERROR";
+
+export interface RunnerProgressEvent {
+  jobId?: string;
+  state: RunnerState;
+  step: number;
+  totalSteps?: number;
+  message: string;
+  timestamp: string;
+  payload?: {
+    url?: string;
+    platform?: string;
+    filledCount?: number;
+    totalFields?: number;
+    unmappedCount?: number;
+    error?: string;
+    field?: string;
+    [key: string]: unknown;
+  };
+}
+
+export interface FieldFillResult {
+  field: string;
+  selector: string;
+  status: "filled" | "skipped" | "error";
+  tier: MappingTier;
+  action?: FormActionType;
+  value?: string;
+  error?: string;
+}
+
+export interface BrowserRunnerOptions {
+  jobId?: string;
+  url: string;
+  candidateData: CandidateProfilePayload;
+  userDataDir?: string;
+  channel?: string;
+  headless?: boolean;
+  slowMo?: number;
+  humanTypingDelay?: number;
+  viewport?: { width: number; height: number };
+  timeout?: number;
+  resumePath?: string;
+  onProgress?: (event: RunnerProgressEvent) => void;
+  browserContext?: BrowserContext;
+  skipInspectionHighlight?: boolean;
+  skipScrollToReview?: boolean;
+}
+
+export interface BrowserRunnerOutcome {
+  jobId?: string;
+  url: string;
+  platform?: "greenhouse" | "lever" | "ashby" | "unknown";
+  status: "awaiting_review" | "submitted" | "error";
+  filledFields: FieldFillResult[];
+  unmappedFields: NormalizedFormField[];
+  totalFields: number;
+  resumesUploaded: number;
+  error?: string;
+}
+
+export interface InspectionHighlightColors {
+  green: string;
+  amber: string;
+  red: string;
+}
+

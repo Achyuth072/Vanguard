@@ -2,14 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import type { LanguageModel } from "ai";
 import {
   splitFullName,
   composeFullName,
   normalizePhoneE164,
   extractFormFieldsFromHtml,
   mapFormFromHtml,
-  mapFormFields,
-  matchTier1Deterministic,
   matchTier2Semantic,
   generateInPageExtractorScript,
 } from "./form-mapper";
@@ -279,7 +278,7 @@ test("Two-Tiered ATS Form Field Mapper", async (t) => {
           async doStream() {
             throw new Error("Not implemented");
           },
-        } as any,
+        } as unknown as LanguageModel,
       },
     });
 

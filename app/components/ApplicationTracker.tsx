@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { EnrichedJob } from "@/lib/data";
 import { updateJobStatusAction } from "../actions";
 import DraftButton from "./DraftButton";
+import EditJobModal from "./EditJobModal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -34,6 +35,9 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [draggedJobId, setDraggedJobId] = useState<string | null>(null);
   const [dragOverStageId, setDragOverStageId] = useState<string | null>(null);
+  const [selectedEditJob, setSelectedEditJob] = useState<EnrichedJob | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
 
   // Normalize status for grouping (handles INTERVIEW / INTERVIEWING)
   const normalizeStatus = (status: string) => {
@@ -250,7 +254,23 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
                             )}
                           </div>
 
-                          <div className="flex justify-end">
+                          <div className="flex items-center justify-between gap-1.5">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              onClick={() => {
+                                setSelectedEditJob(job);
+                                setIsEditModalOpen(true);
+                              }}
+                              className="h-7 w-7 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 shrink-0 border border-zinc-800"
+                              title="Edit Job Details"
+                              aria-label={`Edit ${job.title} details`}
+                            >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </Button>
                             <DraftButton company={job.company} role={job.title} />
                           </div>
                         </div>
@@ -263,7 +283,18 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
           );
         })}
       </div>
+
+      <EditJobModal
+        job={selectedEditJob}
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedEditJob(null);
+        }}
+        onSuccess={onStatusUpdated}
+      />
     </div>
   );
 }
+
 

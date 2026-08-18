@@ -154,6 +154,55 @@ export async function updateJobStatus(
   return await prisma.job.findUniqueOrThrow({ where: { id: jobId } });
 }
 
+export interface UpdateJobInput {
+  title?: string;
+  company?: string;
+  location?: string;
+  remoteStatus?: string;
+  salaryMin?: number | null;
+  salaryMax?: number | null;
+  employmentType?: string;
+  description?: string;
+  url?: string;
+}
+
+export async function updateJob(
+  jobId: string,
+  input: UpdateJobInput,
+  prisma: typeof db = db
+) {
+  const updateData: Partial<UpdateJobInput> = {};
+  if (input.title !== undefined) updateData.title = input.title;
+  if (input.company !== undefined) updateData.company = input.company;
+  if (input.location !== undefined) updateData.location = input.location;
+  if (input.remoteStatus !== undefined) updateData.remoteStatus = input.remoteStatus;
+  if (input.salaryMin !== undefined) updateData.salaryMin = input.salaryMin;
+  if (input.salaryMax !== undefined) updateData.salaryMax = input.salaryMax;
+  if (input.employmentType !== undefined) updateData.employmentType = input.employmentType;
+  if (input.description !== undefined) updateData.description = input.description;
+  if (input.url !== undefined) updateData.url = input.url;
+
+  const updated = await prisma.job.update({
+    where: { id: jobId },
+    data: updateData,
+  });
+
+  try {
+    await prisma.event.create({
+      data: {
+        entityType: "JOB",
+        entityId: jobId,
+        eventType: "DETAILS_UPDATED",
+        payload: JSON.stringify(updateData),
+      },
+    });
+  } catch (err) {
+    console.error("Failed to log DETAILS_UPDATED event:", err);
+  }
+
+  return updated;
+}
+
 export async function addJob(job: {
   companyName: string;
   role: string;
@@ -171,4 +220,5 @@ export async function addJob(job: {
     },
   });
 }
+
 

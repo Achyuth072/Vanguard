@@ -177,8 +177,31 @@ export async function ghostJobAction(jobId: string) {
   return await updateJobStatusAction(jobId, "GHOSTED");
 }
 
+export async function updateJobDetailsAction(
+  jobId: string,
+  input: {
+    title?: string;
+    company?: string;
+    location?: string;
+    remoteStatus?: string;
+    salaryMin?: number | null;
+    salaryMax?: number | null;
+    employmentType?: string;
+    description?: string;
+    url?: string;
+  }
+) {
+  const { updateJob } = await import("@/lib/data");
+  const updated = await updateJob(jobId, input);
+  try {
+    revalidatePath("/");
+  } catch {}
+  return { success: true, job: updated };
+}
+
 export async function withdrawJobAction(jobId: string) {
   return await updateJobStatusAction(jobId, "WITHDRAWN");
 }
+
 
 

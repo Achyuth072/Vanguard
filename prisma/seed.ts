@@ -1,113 +1,167 @@
+import fs from "node:fs";
+import path from "node:path";
 import { db } from "../lib/db";
 import {
   serializeCandidateProfile,
   type CandidateProfile,
 } from "../types/candidate";
 
+function loadResumeMarkdown(): string {
+  const primaryPath = path.join(process.cwd(), ".scratch", "Resume", "Achyuth.md");
+  if (fs.existsSync(primaryPath)) {
+    return fs.readFileSync(primaryPath, "utf-8");
+  }
+  const resumeDir = path.join(process.cwd(), ".scratch", "Resume");
+  if (fs.existsSync(resumeDir)) {
+    const mdFiles = fs.readdirSync(resumeDir).filter((f) => f.endsWith(".md"));
+    if (mdFiles.length > 0) {
+      return fs.readFileSync(path.join(resumeDir, mdFiles[0]), "utf-8");
+    }
+  }
+  return "";
+}
+
 export async function seed() {
   const defaultCandidateId = "candidate-default";
 
+  const resumeMarkdown = loadResumeMarkdown();
+
   const profileData: CandidateProfile = {
     id: defaultCandidateId,
-    name: "Default Candidate",
-    targetRole: "Software Engineer",
+    name: "Achyuth S",
+    targetRole: "Full Stack Engineer",
     minSalary: 0,
-    yearsOfExperience: 4,
+    yearsOfExperience: 2,
     remotePreference: "ANY",
-    preferredLocations: ["Remote", "Bengaluru", "San Francisco"],
+    preferredLocations: ["Remote", "Bengaluru", "India"],
     skills: [
-      { name: "TypeScript", category: "LANGUAGE", yearsOfExperience: 4 },
-      { name: "JavaScript", category: "LANGUAGE", yearsOfExperience: 5 },
-      { name: "Python", category: "LANGUAGE", yearsOfExperience: 3 },
-      { name: "SQL", category: "LANGUAGE", yearsOfExperience: 3 },
-      { name: "React", category: "FRAMEWORK", yearsOfExperience: 4 },
-      { name: "Next.js", category: "FRAMEWORK", yearsOfExperience: 3 },
-      { name: "Node.js", category: "FRAMEWORK", yearsOfExperience: 4 },
-      { name: "TailwindCSS", category: "FRAMEWORK", yearsOfExperience: 2 },
-      { name: "PostgreSQL", category: "DATABASE", yearsOfExperience: 3 },
-      { name: "SQLite", category: "DATABASE", yearsOfExperience: 3 },
-      { name: "Prisma", category: "DATABASE", yearsOfExperience: 2 },
-      { name: "AWS", category: "CLOUD", yearsOfExperience: 2 },
-      { name: "Docker", category: "CLOUD", yearsOfExperience: 2 },
-      { name: "Git", category: "TOOL", yearsOfExperience: 5 },
-      { name: "AI Agents / LLMs", category: "DOMAIN", yearsOfExperience: 2 },
-      { name: "Full-Stack Web Development", category: "DOMAIN", yearsOfExperience: 4 },
+      { name: "JavaScript", category: "LANGUAGE", yearsOfExperience: 2 },
+      { name: "TypeScript", category: "LANGUAGE", yearsOfExperience: 2 },
+      { name: "Python", category: "LANGUAGE", yearsOfExperience: 1 },
+      { name: "Java", category: "LANGUAGE", yearsOfExperience: 1 },
+      { name: "SQL", category: "LANGUAGE", yearsOfExperience: 2 },
+      { name: "React.js", category: "FRAMEWORK", yearsOfExperience: 2 },
+      { name: "Next.js", category: "FRAMEWORK", yearsOfExperience: 2 },
+      { name: "Node.js", category: "FRAMEWORK", yearsOfExperience: 2 },
+      { name: "Tailwind CSS", category: "FRAMEWORK", yearsOfExperience: 2 },
+      { name: "Spring Boot", category: "FRAMEWORK", yearsOfExperience: 1 },
+      { name: "PostgreSQL", category: "DATABASE", yearsOfExperience: 2 },
+      { name: "Prisma", category: "DATABASE", yearsOfExperience: 1 },
+      { name: "Supabase", category: "DATABASE", yearsOfExperience: 1 },
+      { name: "IndexedDB", category: "DATABASE", yearsOfExperience: 1 },
+      { name: "MS SQL", category: "DATABASE", yearsOfExperience: 1 },
+      { name: "Full-Stack Web Development", category: "DOMAIN", yearsOfExperience: 2 },
+      { name: "AI Agents / LLMs", category: "DOMAIN", yearsOfExperience: 1 },
+      { name: "PWA / Offline-First", category: "DOMAIN", yearsOfExperience: 1 },
     ],
     projects: [
       {
-        id: "proj-pulse",
-        title: "Pulse Career Copilot",
+        id: "proj-kagelin",
+        title: "Kagelin",
         company: "Personal",
-        role: "Lead Developer",
-        startDate: "2024-01",
+        role: "Lead Engineer",
+        startDate: "2026-02",
         endDate: null,
-        technologies: ["TypeScript", "Next.js", "Prisma", "SQLite", "Vercel AI SDK"],
+        technologies: [
+          "Next.js 16",
+          "React 19",
+          "Supabase",
+          "IndexedDB",
+          "PWA",
+          "Zustand",
+          "Tailwind CSS v4",
+          "Framer Motion",
+          "WebDAV",
+        ],
         highlights: [
-          "Built deterministic filter engine with millisecond throughput",
-          "Implemented provider-agnostic LLM router with zero operating cost fallback",
-          "Designed local SQLite storage with automated export/import backup",
+          "Built an offline-first productivity PWA (tasks, habits, focus timer, calendar) with a tri-layer architecture (Service Workers, IndexedDB, optimistic UI), enabling full functionality without an account or network dependency.",
+          "Designed a privacy-first sync engine supporting bidirectional WebDAV/CalDAV sync, Google Calendar and Outlook integration, encrypted .zip backups, and universal .ics export/import.",
+          "Optimized rendering performance to 60fps by isolating high-frequency state via Zustand and reducing view logic complexity from O(N * M) to O(N).",
+          "Developed a high-density, keyboard-driven UI (Cmd+K command palette) with flat-DOM drag-and-drop (@dnd-kit) and a consistent design system using Tailwind CSS v4 and Framer Motion.",
         ],
         metrics: [
-          "Processed 500+ jobs with zero data loss",
-          "Reduced job screening time by 85%",
+          "60fps render performance via isolated Zustand state",
+          "100% offline-first functionality without account dependency",
         ],
         description:
-          "Local-first AI career companion for discovering, scoring, and tracking relevant software engineering roles.",
+          "Offline-first productivity PWA with tri-layer local-first architecture and bidirectional calendar/WebDAV sync.",
       },
       {
-        id: "proj-telemetry",
-        title: "Realtime Telemetry Dashboard",
-        company: "TechCorp",
-        role: "Senior Fullstack Engineer",
-        startDate: "2022-06",
-        endDate: "2023-12",
-        technologies: ["React", "TypeScript", "Node.js", "PostgreSQL", "TailwindCSS"],
+        id: "proj-pulse",
+        title: "Agentic Career CRM (Pulse)",
+        company: "Personal",
+        role: "Lead Engineer",
+        startDate: "2025-12",
+        endDate: null,
+        technologies: [
+          "Next.js 14",
+          "Gemini AI",
+          "Prisma",
+          "PostgreSQL",
+          "Tailwind CSS",
+          "TypeScript",
+        ],
         highlights: [
-          "Architected streaming data visualization pipeline for high-volume telemetry",
-          "Optimized PostgreSQL query latency by 40% via indexing and connection pooling",
+          "Built an AI-driven CRM with a RAG pipeline to parse resumes and generate context-aware outreach using the Gemini API, automating the initial recruitment funnel.",
+          "Implemented server-side workflows using Next.js Server Actions for background automation and low-latency updates, reducing client-side processing overhead.",
+          "Designed relational data models with Prisma and PostgreSQL to manage structured candidate tracking, outreach history, and complex recruitment pipelines.",
+          "Developed a responsive, dark-mode-first UI with Tailwind CSS, optimized for high-density information layouts and streamlined productivity workflows.",
         ],
         metrics: [
-          "Handled 10M+ daily events with 99.99% uptime",
-          "Improved frontend render performance by 60%",
+          "Automated resume parsing & context-aware outreach generation",
+          "Low-latency background processing with Next.js Server Actions",
         ],
         description:
-          "High-throughput real-time enterprise telemetry dashboard and analytics service.",
+          "AI-driven career CRM with RAG pipeline to parse resumes and generate context-aware outreach using Gemini API.",
       },
     ],
     experiences: [
       {
-        id: "exp-techcorp",
-        company: "TechCorp",
-        title: "Senior Fullstack Engineer",
-        location: "Bengaluru, India",
-        remoteStatus: "HYBRID",
-        startDate: "2022-06",
-        endDate: "2024-01",
+        id: "exp-she-drives",
+        company: "She Drives",
+        title: "Core Developer",
+        location: "Remote",
+        remoteStatus: "REMOTE",
+        startDate: "2025-05",
+        endDate: "2025-11",
         isCurrent: false,
         highlights: [
-          "Led a squad of 4 engineers building enterprise cloud dashboards",
-          "Architected TypeScript backend services and Next.js applications",
-          "Instituted automated end-to-end testing and CI/CD pipelines",
+          "Sole in-house developer, collaborating directly with founders to guide technical direction.",
+          "Architected the MVP for a safety-centric female ride-hailing platform, defining schemas and user flows.",
+          "Executed rapid development cycles to reduce time-to-market through focused feature prioritization.",
+          "Owned deployment and production iteration cycles.",
         ],
       },
       {
-        id: "exp-innovate",
-        company: "Innovate Labs",
-        title: "Software Engineer",
-        location: "Remote",
-        remoteStatus: "REMOTE",
-        startDate: "2020-08",
-        endDate: "2022-05",
+        id: "exp-brandanswers-junior",
+        company: "BRANDanswers",
+        title: "Junior Frontend Engineer",
+        location: "Bengaluru, India",
+        remoteStatus: "ONSITE",
+        startDate: "2023-01",
+        endDate: "2023-09",
         isCurrent: false,
         highlights: [
-          "Built scalable full-stack web applications in React and Node.js",
-          "Integrated third-party APIs and webhook notification infrastructure",
-          "Authored internal developer tooling for database migrations",
+          "Built frontend architecture for the CUET Mentor platform using React.js, improving load times by 20%.",
+          "Converted Figma designs into reusable, pixel-perfect components improving user retention.",
+        ],
+      },
+      {
+        id: "exp-brandanswers-intern",
+        company: "BRANDanswers",
+        title: "Full Stack Developer Intern",
+        location: "Bengaluru, India",
+        remoteStatus: "ONSITE",
+        startDate: "2022-04",
+        endDate: "2022-09",
+        isCurrent: false,
+        highlights: [
+          "Developed a full-stack inventory system using Next.js and Spring Boot REST APIs.",
+          "Designed normalized MS SQL schemas and implemented JWT-based authentication.",
         ],
       },
     ],
-    resumeText:
-      "Full-stack Software Engineer with 4+ years of experience building modern web applications, scalable backend APIs, and AI workflows using TypeScript, Next.js, Node.js, React, and PostgreSQL/SQLite.",
+    resumeText: resumeMarkdown,
   };
 
   const serialized = serializeCandidateProfile(profileData);

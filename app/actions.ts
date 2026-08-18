@@ -144,7 +144,39 @@ export async function applyJobAction(jobId: string) {
   return await updateJobStatusAction(jobId, "APPLIED");
 }
 
-export async function archiveJobAction(jobId: string) {
-  return await updateJobStatusAction(jobId, "ARCHIVED");
+export async function recordRejectionAction(
+  jobId: string,
+  options: {
+    rejectionStage: string;
+    rejectionReason: string;
+    note?: string;
+  }
+) {
+  return await updateJobStatusAction(jobId, "REJECTED", {
+    rejectionStage: options.rejectionStage,
+    rejectionReason: options.rejectionReason,
+    note: options.note,
+  });
 }
+
+export async function screenJobAction(jobId: string) {
+  return await updateJobStatusAction(jobId, "SCREENING");
+}
+
+export async function interviewJobAction(jobId: string) {
+  return await updateJobStatusAction(jobId, "INTERVIEW");
+}
+
+export async function offerJobAction(jobId: string) {
+  return await updateJobStatusAction(jobId, "OFFER");
+}
+
+export async function ghostJobAction(jobId: string) {
+  return await updateJobStatusAction(jobId, "GHOSTED");
+}
+
+export async function withdrawJobAction(jobId: string) {
+  return await updateJobStatusAction(jobId, "WITHDRAWN");
+}
+
 

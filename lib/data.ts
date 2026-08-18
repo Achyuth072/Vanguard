@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { transitionApplicationStatus, type TransitionOptions } from "@/lib/lifecycle/service";
 
 export interface EnrichedFitScore {
   id: string;
@@ -18,6 +19,10 @@ export interface EnrichedApplication {
   id: string;
   status: string;
   appliedAt: Date | null;
+  firstResponseAt: Date | null;
+  responseTimeDays: number | null;
+  rejectionStage: string | null;
+  rejectionReason: string | null;
   resumeVersion: string;
   tailoredNotes: string;
   tailoredResume?: string;
@@ -92,6 +97,10 @@ export async function getJobs(): Promise<EnrichedJob[]> {
           id: job.application.id,
           status: job.application.status,
           appliedAt: job.application.appliedAt,
+          firstResponseAt: job.application.firstResponseAt,
+          responseTimeDays: job.application.responseTimeDays,
+          rejectionStage: job.application.rejectionStage,
+          rejectionReason: job.application.rejectionReason,
           resumeVersion: job.application.resumeVersion,
           tailoredNotes: job.application.tailoredNotes,
           tailoredResume: job.application.tailoredResume,
@@ -132,64 +141,17 @@ export async function updateJobStatus(
   payload?: Record<string, unknown>,
   prisma: typeof db = db
 ) {
-  const currentJob = await prisma.job.findUnique({
-    where: { id: jobId },
-    include: { application: true },
-  });
+  const options: TransitionOptions = {
+    rejectionStage: payload?.rejectionStage as string | undefined,
+    rejectionReason: payload?.rejectionReason as string | undefined,
+    note: payload?.note as string | undefined,
+    appliedAt: payload?.appliedAt as Date | undefined,
+    firstResponseAt: payload?.firstResponseAt as Date | undefined,
+    metadata: payload,
+  };
 
-  if (!currentJob) {
-    throw new Error(`Job not found with id: ${jobId}`);
-  }
-
-  const previousStatus = currentJob.status;
-
-  const updatedJob = await prisma.job.update({
-    where: { id: jobId },
-    data: { status: newStatus },
-  });
-
-  const applicationStatuses = [
-    "SHORTLISTED",
-    "PREPARED",
-    "APPLIED",
-    "INTERVIEW",
-    "OFFER",
-    "REJECTED",
-    "WITHDRAWN",
-  ];
-
-  if (applicationStatuses.includes(newStatus.toUpperCase())) {
-    const normalizedStatus = newStatus.toUpperCase();
-    const isApplied = normalizedStatus === "APPLIED";
-
-    await prisma.application.upsert({
-      where: { jobId },
-      create: {
-        jobId,
-        status: normalizedStatus,
-        appliedAt: isApplied ? new Date() : null,
-      },
-      update: {
-        status: normalizedStatus,
-        ...(isApplied && !currentJob.application?.appliedAt ? { appliedAt: new Date() } : {}),
-      },
-    });
-  }
-
-  await prisma.event.create({
-    data: {
-      entityType: "Job",
-      entityId: jobId,
-      eventType: "STATUS_TRANSITION",
-      payload: JSON.stringify({
-        previousStatus,
-        newStatus,
-        ...(payload || {}),
-      }),
-    },
-  });
-
-  return updatedJob;
+  await transitionApplicationStatus(jobId, newStatus, options, prisma);
+  return await prisma.job.findUniqueOrThrow({ where: { id: jobId } });
 }
 
 export async function addJob(job: {

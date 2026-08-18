@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import type { EnrichedJob } from "@/lib/data";
 import type { TailoredResume, ApplicationAnswer } from "@/types/tailoring";
 import { prepareApplication, getApplicationData } from "@/app/actions/tailoring";
-import { updateJobStatusAction } from "@/app/actions";
+import { updateJobStatusAction, recordRejectionAction } from "@/app/actions";
 import TailoredResumeEditor from "./TailoredResumeEditor";
 import QuestionAnswersList from "./QuestionAnswersList";
 import SubDimensionScores from "./SubDimensionScores";
@@ -17,6 +17,26 @@ interface ApplicationPreparationDrawerProps {
 }
 
 type DrawerTab = "resume" | "answers" | "status";
+
+const REJECTION_STAGE_OPTIONS = [
+  { value: "RESUME_SCREEN", label: "Resume Screen (Pre-contact)" },
+  { value: "ASSESSMENT", label: "Online Assessment / Take-home" },
+  { value: "PHONE_SCREEN", label: "Recruiter / Phone Screen" },
+  { value: "TECHNICAL_INTERVIEW", label: "Technical / Live Coding Round" },
+  { value: "FINAL_ROUND", label: "Final Round / Panel" },
+  { value: "OFFER_STAGE", label: "Offer Stage / Negotiation" },
+  { value: "POSITION_CANCELLED", label: "Position Cancelled / Closed" },
+];
+
+const REJECTION_REASON_OPTIONS = [
+  { value: "SKILLS_GAP", label: "Skills Gap (Missing required tech)" },
+  { value: "EXPERIENCE_MISMATCH", label: "Experience / Seniority Mismatch" },
+  { value: "LOCATION_POLICY", label: "Location / Relocation / Remote Policy" },
+  { value: "COMPENSATION_MISMATCH", label: "Compensation / Budget Mismatch" },
+  { value: "VISA_RESTRICTION", label: "Visa / Work Authorization Restriction" },
+  { value: "CANDIDATE_WITHDREW", label: "Candidate Withdrew" },
+  { value: "UNKNOWN", label: "Unknown / General Feedback" },
+];
 
 export default function ApplicationPreparationDrawer({
   job,
@@ -34,6 +54,13 @@ export default function ApplicationPreparationDrawer({
   const [applicationStatus, setApplicationStatus] = useState<string>(job?.status || "SHORTLISTED");
   const [applicationId, setApplicationId] = useState<string>(job?.application?.id || "");
 
+  // Rejection Dialog State
+  const [showRejectionModal, setShowRejectionModal] = useState(false);
+  const [selectedRejectionStage, setSelectedRejectionStage] = useState<string>("RESUME_SCREEN");
+  const [selectedRejectionReason, setSelectedRejectionReason] = useState<string>("SKILLS_GAP");
+  const [rejectionNotes, setRejectionNotes] = useState<string>("");
+  const [isSubmittingRejection, setIsSubmittingRejection] = useState(false);
+
   const loadData = useCallback(async () => {
     if (!job) return;
     setIsLoading(true);
@@ -49,6 +76,12 @@ export default function ApplicationPreparationDrawer({
       setApplicationStatus(data.application?.status || job.status);
       if (data.application?.id) {
         setApplicationId(data.application.id);
+      }
+      if (data.application?.rejectionStage) {
+        setSelectedRejectionStage(data.application.rejectionStage);
+      }
+      if (data.application?.rejectionReason) {
+        setSelectedRejectionReason(data.application.rejectionReason);
       }
     } catch (err: unknown) {
       console.error("Failed to load application data:", err);
@@ -68,12 +101,16 @@ export default function ApplicationPreparationDrawer({
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape" && isOpen) {
-        onClose();
+        if (showRejectionModal) {
+          setShowRejectionModal(false);
+        } else {
+          onClose();
+        }
       }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, showRejectionModal]);
 
   if (!isOpen || !job) return null;
 
@@ -98,15 +135,40 @@ export default function ApplicationPreparationDrawer({
     }
   }
 
-  async function handleStatusChange(newStatus: string) {
+  async function handleStatusChange(newStatus: string, payload?: Record<string, unknown>) {
     if (!job) return;
+    if (newStatus === "REJECTED" && !payload) {
+      setShowRejectionModal(true);
+      return;
+    }
+
     try {
-      await updateJobStatusAction(job.id, newStatus);
+      await updateJobStatusAction(job.id, newStatus, payload);
       setApplicationStatus(newStatus);
       if (onStatusUpdated) onStatusUpdated();
     } catch (err: unknown) {
       console.error("Status update error:", err);
       setError(err instanceof Error ? err.message : "Failed to update status");
+    }
+  }
+
+  async function handleConfirmRejection() {
+    if (!job) return;
+    setIsSubmittingRejection(true);
+    try {
+      await recordRejectionAction(job.id, {
+        rejectionStage: selectedRejectionStage,
+        rejectionReason: selectedRejectionReason,
+        note: rejectionNotes || undefined,
+      });
+      setApplicationStatus("REJECTED");
+      setShowRejectionModal(false);
+      if (onStatusUpdated) onStatusUpdated();
+    } catch (err: unknown) {
+      console.error("Failed to record rejection:", err);
+      setError(err instanceof Error ? err.message : "Failed to record rejection");
+    } finally {
+      setIsSubmittingRejection(false);
     }
   }
 
@@ -339,6 +401,57 @@ export default function ApplicationPreparationDrawer({
 
                 {activeTab === "status" && (
                   <div className="space-y-6">
+                    {/* Lifecycle Telemetry / Latency Card */}
+                    {(job.application?.appliedAt || job.application?.firstResponseAt || job.application?.rejectionStage) && (
+                      <div className="bg-[#111] p-4 rounded-xl border border-neutral-800 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-xs font-bold text-white tracking-tight flex items-center gap-2">
+                            <span>⏱️</span>
+                            <span>Application Lifecycle Telemetry</span>
+                          </h4>
+                          {job.application?.responseTimeDays !== null && job.application?.responseTimeDays !== undefined && (
+                            <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800 text-emerald-400">
+                              ⚡ {job.application.responseTimeDays} days response latency
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                          <div className="bg-[#161616] p-2.5 rounded-lg border border-neutral-800/80">
+                            <span className="text-[10px] text-neutral-500 font-mono block">Applied Date</span>
+                            <span className="text-neutral-200 font-semibold font-mono text-[11px]">
+                              {job.application.appliedAt
+                                ? new Date(job.application.appliedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                                : "—"}
+                            </span>
+                          </div>
+
+                          <div className="bg-[#161616] p-2.5 rounded-lg border border-neutral-800/80">
+                            <span className="text-[10px] text-neutral-500 font-mono block">First Response</span>
+                            <span className="text-neutral-200 font-semibold font-mono text-[11px]">
+                              {job.application.firstResponseAt
+                                ? new Date(job.application.firstResponseAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                                : "Awaiting response"}
+                            </span>
+                          </div>
+
+                          <div className="bg-[#161616] p-2.5 rounded-lg border border-neutral-800/80">
+                            <span className="text-[10px] text-neutral-500 font-mono block">Rejection Stage</span>
+                            <span className="text-rose-400 font-semibold font-mono text-[11px] truncate block">
+                              {job.application.rejectionStage ? job.application.rejectionStage.replace(/_/g, " ") : "N/A"}
+                            </span>
+                          </div>
+
+                          <div className="bg-[#161616] p-2.5 rounded-lg border border-neutral-800/80">
+                            <span className="text-[10px] text-neutral-500 font-mono block">Rejection Reason</span>
+                            <span className="text-amber-400 font-semibold font-mono text-[11px] truncate block">
+                              {job.application.rejectionReason ? job.application.rejectionReason.replace(/_/g, " ") : "N/A"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="bg-[#111] p-5 rounded-xl border border-neutral-800 space-y-4">
                       <div>
                         <h3 className="text-sm font-bold text-white tracking-tight">
@@ -354,9 +467,12 @@ export default function ApplicationPreparationDrawer({
                           { id: "SHORTLISTED", label: "Shortlisted", color: "hover:border-indigo-700" },
                           { id: "PREPARED", label: "Prepared", color: "hover:border-cyan-700" },
                           { id: "APPLIED", label: "Mark Applied", color: "hover:border-blue-700 font-bold" },
+                          { id: "SCREENING", label: "Screening", color: "hover:border-sky-700" },
                           { id: "INTERVIEW", label: "Interviewing", color: "hover:border-purple-700" },
                           { id: "OFFER", label: "Offer Received", color: "hover:border-emerald-700" },
                           { id: "REJECTED", label: "Rejected", color: "hover:border-rose-900" },
+                          { id: "GHOSTED", label: "Ghosted", color: "hover:border-neutral-700" },
+                          { id: "WITHDRAWN", label: "Withdrawn", color: "hover:border-neutral-700" },
                         ].map((stage) => {
                           const isActive = applicationStatus.toUpperCase() === stage.id;
                           return (
@@ -406,6 +522,102 @@ export default function ApplicationPreparationDrawer({
           </div>
         </div>
       </div>
+
+      {/* Rejection Modal Dialog */}
+      {showRejectionModal && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-[#121212] border border-neutral-800 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 text-white">
+            <div className="flex items-start justify-between gap-2 border-b border-neutral-800/80 pb-3">
+              <div>
+                <h3 className="text-base font-bold text-rose-400 flex items-center gap-2">
+                  <span>🛑</span>
+                  <span>Record Application Rejection</span>
+                </h3>
+                <p className="text-xs text-neutral-400 mt-0.5">
+                  Capture structured outcome signals to calibrate ranking weights and improve future job matches.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRejectionModal(false)}
+                className="p-1 rounded text-neutral-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3.5 text-xs">
+              {/* Rejection Stage Dropdown */}
+              <div className="space-y-1.5">
+                <label className="font-semibold text-neutral-300">
+                  Rejection Stage <span className="text-rose-400">*</span>
+                </label>
+                <select
+                  value={selectedRejectionStage}
+                  onChange={(e) => setSelectedRejectionStage(e.target.value)}
+                  className="w-full bg-[#1c1c1c] border border-neutral-700 text-white rounded-lg p-2.5 outline-none focus:border-rose-500"
+                >
+                  {REJECTION_STAGE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Rejection Reason Dropdown */}
+              <div className="space-y-1.5">
+                <label className="font-semibold text-neutral-300">
+                  Primary Rejection Reason <span className="text-rose-400">*</span>
+                </label>
+                <select
+                  value={selectedRejectionReason}
+                  onChange={(e) => setSelectedRejectionReason(e.target.value)}
+                  className="w-full bg-[#1c1c1c] border border-neutral-700 text-white rounded-lg p-2.5 outline-none focus:border-rose-500"
+                >
+                  {REJECTION_REASON_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Rejection Notes */}
+              <div className="space-y-1.5">
+                <label className="font-semibold text-neutral-300">
+                  Recruiter Feedback / Notes (Optional)
+                </label>
+                <textarea
+                  rows={3}
+                  value={rejectionNotes}
+                  onChange={(e) => setRejectionNotes(e.target.value)}
+                  placeholder="e.g. Requires 5+ years with Golang; team restructured."
+                  className="w-full bg-[#1c1c1c] border border-neutral-700 text-white rounded-lg p-2.5 outline-none focus:border-rose-500 placeholder:text-neutral-600 font-mono text-[11px]"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-neutral-800/80">
+              <button
+                type="button"
+                onClick={() => setShowRejectionModal(false)}
+                className="px-4 py-2 rounded-lg border border-neutral-700 bg-[#1c1c1c] text-neutral-300 hover:text-white text-xs font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmRejection}
+                disabled={isSubmittingRejection}
+                className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isSubmittingRejection ? "Saving..." : "Confirm & Save Rejection"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

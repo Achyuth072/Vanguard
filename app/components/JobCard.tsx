@@ -76,12 +76,15 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
     const s = job.status.toUpperCase();
     let style = "bg-neutral-900 text-neutral-400 border-neutral-800";
 
-    if (s === "SHORTLISTED") style = "bg-indigo-950/50 text-indigo-300 border-indigo-800";
+    if (s === "SHORTLISTED" || s === "DRAFT") style = "bg-indigo-950/50 text-indigo-300 border-indigo-800";
     else if (s === "PREPARED") style = "bg-cyan-950/50 text-cyan-300 border-cyan-800";
     else if (s === "APPLIED") style = "bg-blue-950/50 text-blue-300 border-blue-800";
+    else if (s === "SCREENING") style = "bg-sky-950/50 text-sky-300 border-sky-800";
     else if (s === "INTERVIEW" || s === "INTERVIEWING") style = "bg-purple-950/50 text-purple-300 border-purple-800";
     else if (s === "OFFER") style = "bg-emerald-950/50 text-emerald-300 border-emerald-800 font-bold";
     else if (s === "REJECTED") style = "bg-rose-950/50 text-rose-400 border-rose-900";
+    else if (s === "GHOSTED") style = "bg-neutral-900/90 text-neutral-400 border-neutral-800";
+    else if (s === "WITHDRAWN") style = "bg-neutral-900/80 text-neutral-500 border-neutral-800";
     else if (s === "ARCHIVED" || s === "IGNORED") style = "bg-neutral-900/80 text-neutral-500 border-neutral-800";
     else if (s === "FILTERED_OUT") style = "bg-red-950/30 text-red-400 border-red-950";
 

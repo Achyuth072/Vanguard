@@ -76,9 +76,10 @@ async function handleAutomationStream(params: StreamRequestParams, request: Next
       };
 
       // Handle client disconnect / cancellation
-      request.signal.addEventListener("abort", () => {
-        // Stream aborted by client
-      });
+      const abortHandler = () => {
+        runner.close().catch(() => {});
+      };
+      request.signal.addEventListener("abort", abortHandler, { once: true });
 
       try {
         await runner.run({
@@ -103,6 +104,7 @@ async function handleAutomationStream(params: StreamRequestParams, request: Next
           payload: { error: errorMsg, droppedEventsCount },
         });
       } finally {
+        request.signal.removeEventListener("abort", abortHandler);
         try {
           controller.close();
         } catch {}

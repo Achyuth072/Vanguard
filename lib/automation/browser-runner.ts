@@ -702,8 +702,13 @@ export function setupSubmissionMonitoring(
     } catch {}
   };
 
+  const closeListener = () => {
+    cleanup();
+  };
+
   page.on("framenavigated", navListener);
   page.on("response", responseListener);
+  page.on("close", closeListener);
 
   const intervalId = setInterval(async () => {
     try {
@@ -724,6 +729,7 @@ export function setupSubmissionMonitoring(
     clearInterval(intervalId);
     page.off("framenavigated", navListener);
     page.off("response", responseListener);
+    page.off("close", closeListener);
   };
 
   return {

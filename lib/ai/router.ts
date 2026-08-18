@@ -88,6 +88,7 @@ export interface AIRouterOptions {
   models?: LanguageModel[];
   weights?: FitScoreWeights;
   conversionInsights?: string;
+  temperature?: number;
 }
 
 export interface ConfiguredModelCandidate {
@@ -148,7 +149,7 @@ export function getGeminiModel(apiKey?: string, modelName?: string): LanguageMod
     parseApiKeys(process.env.GOOGLE_API_KEY)[0] ||
     parseApiKeys(process.env.GOOGLE_GENERATIVE_AI_API_KEY)[0] ||
     "";
-  const resolvedModel = modelName || process.env.GEMINI_MODEL || "gemini-3.7-flash";
+  const resolvedModel = modelName || process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
   const client = createGoogleGenerativeAI({
     apiKey: resolvedKey,
@@ -166,7 +167,25 @@ export function resetRotationCursor(): void {
 export function getAllConfiguredModels(): ConfiguredModelCandidate[] {
   const candidates: ConfiguredModelCandidate[] = [];
 
-  // 1. Groq keys
+  // Prioritized Provider Order:
+  // 1. Google Gemini (primary: fast, generous free tier, highly consistent structured output)
+  const geminiKeys = [
+    ...parseApiKeys(process.env.GEMINI_API_KEY),
+    ...parseApiKeys(process.env.GOOGLE_API_KEY),
+    ...parseApiKeys(process.env.GOOGLE_GENERATIVE_AI_API_KEY),
+  ];
+  const uniqueGeminiKeys = Array.from(new Set(geminiKeys));
+  const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  for (const key of uniqueGeminiKeys) {
+    candidates.push({
+      providerName: "Google Gemini",
+      modelName: geminiModel,
+      model: getGeminiModel(key, geminiModel),
+      keyMask: maskKey(key),
+    });
+  }
+
+  // 2. Groq (fast fallback)
   const groqKeys = parseApiKeys(process.env.GROQ_API_KEY);
   const groqModel = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
   for (const key of groqKeys) {
@@ -178,24 +197,7 @@ export function getAllConfiguredModels(): ConfiguredModelCandidate[] {
     });
   }
 
-  // 2. Google Gemini keys
-  const geminiKeys = [
-    ...parseApiKeys(process.env.GEMINI_API_KEY),
-    ...parseApiKeys(process.env.GOOGLE_API_KEY),
-    ...parseApiKeys(process.env.GOOGLE_GENERATIVE_AI_API_KEY),
-  ];
-  const uniqueGeminiKeys = Array.from(new Set(geminiKeys));
-  const geminiModel = process.env.GEMINI_MODEL || "gemini-3.7-flash";
-  for (const key of uniqueGeminiKeys) {
-    candidates.push({
-      providerName: "Google Gemini",
-      modelName: geminiModel,
-      model: getGeminiModel(key, geminiModel),
-      keyMask: maskKey(key),
-    });
-  }
-
-  // 3. OpenRouter keys
+  // 3. OpenRouter (general fallback pool)
   const openRouterKeys = parseApiKeys(process.env.OPENROUTER_API_KEY);
   const uniqueOpenRouterKeys = Array.from(new Set(openRouterKeys));
   const openRouterModel =
@@ -212,24 +214,21 @@ export function getAllConfiguredModels(): ConfiguredModelCandidate[] {
   if (candidates.length === 0) {
     return [
       {
-        providerName: "OpenRouter",
-        modelName: openRouterModel,
-        model: getOpenRouterModel(),
-        keyMask: "***",
-      },
-      {
         providerName: "Google Gemini",
         modelName: geminiModel,
         model: getGeminiModel(),
         keyMask: "***",
       },
+      {
+        providerName: "OpenRouter",
+        modelName: openRouterModel,
+        model: getOpenRouterModel(),
+        keyMask: "***",
+      },
     ];
   }
 
-  const cursor = rotationCursor % candidates.length;
-  const rotated = [...candidates.slice(cursor), ...candidates.slice(0, cursor)];
-  rotationCursor = (rotationCursor + 1) % candidates.length;
-  return rotated;
+  return candidates;
 }
 
 export async function generateStructuredWithFallback<T>({
@@ -275,6 +274,7 @@ export async function generateStructuredWithFallback<T>({
         schema,
         system,
         prompt,
+        temperature: options?.temperature ?? 0,
       });
       return result.object;
     } catch (err) {
@@ -343,11 +343,17 @@ CRITICAL INVARIANTS:
 1. Ground your evaluation strictly in the provided candidate facts and job requirements.
 2. Never invent, hallucinate, or assume any skills, credentials, metrics, or experiences not explicitly present in the candidate profile.
 3. If a job requirement is not evidenced in the candidate facts, record it as a gap.
-4. Evaluate four orthogonal sub-dimensions (0–100):
-   - skillsFit: Alignment between verified candidate technical/soft skills and mandatory job requirements.
-   - experienceFit: Alignment of seniority, years of relevant experience, and scope of past responsibilities.
-   - domainFit: Industry vertical alignment (e.g. Fintech, Healthcare, Developer Tools, B2B SaaS).
-   - trajectoryFit: Growth suitability (natural career step vs lateral vs overqualified).
+4. CALIBRATION & SCORING RUBRIC:
+   - skillsFit (0–100):
+     * If the candidate matches the primary programming languages and core frameworks requested for the role, start from a baseline of 80–90.
+     * Deduct 10–15 points only for missing MANDATORY core languages or architectural requirements.
+     * Deduct at most 3–5 points total for missing secondary libraries, unmentioned testing frameworks (e.g. Jest/Vitest), or explicitly marked "nice-to-have" / preferred tools.
+   - experienceFit (0–100):
+     * Directly compare years of experience and seniority level. If candidate meets or exceeds the required years, score 80–95.
+   - domainFit (0–100):
+     * Assess transferable domain knowledge. If candidate built complex full-stack web applications, baseline is 70–80 even if specific niche domain (e.g., fleet management or specialized data grids) is unlisted. Cap domain deduction to at most 15 points unless the role strictly requires a licensed/regulated vertical (e.g. healthcare compliance, high-frequency trading).
+   - trajectoryFit (0–100):
+     * Score natural career progression (e.g., mid-level engineer advancing into senior or specialist frontend).
 5. Provide a clear reasoning string and optional dimension rationale.
 6. Score ranges:
    - APPLY (80-100): High alignment across critical requirements, minimal gaps.

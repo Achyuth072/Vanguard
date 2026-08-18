@@ -26,8 +26,8 @@ const ALLOWED_TRANSITIONS: Record<string, string[]> = {
   DISCOVERED: ["DRAFT", "SHORTLISTED", "PREPARED", "APPLIED", "FILTERED_OUT", "ARCHIVED", "IGNORED"],
   FILTERED_OUT: ["DISCOVERED", "SHORTLISTED", "ARCHIVED", "IGNORED"],
   DRAFT: ["SHORTLISTED", "PREPARED", "APPLIED", "WITHDRAWN", "ARCHIVED", "IGNORED", "REJECTED"],
-  SHORTLISTED: ["DRAFT", "PREPARED", "APPLIED", "WITHDRAWN", "ARCHIVED", "IGNORED", "REJECTED"],
-  PREPARED: ["DRAFT", "SHORTLISTED", "APPLIED", "WITHDRAWN", "ARCHIVED", "IGNORED", "REJECTED"],
+  SHORTLISTED: ["DRAFT", "PREPARED", "APPLIED", "SCREENING", "INTERVIEW", "INTERVIEWING", "OFFER", "WITHDRAWN", "ARCHIVED", "IGNORED", "REJECTED", "GHOSTED"],
+  PREPARED: ["DRAFT", "SHORTLISTED", "APPLIED", "SCREENING", "INTERVIEW", "INTERVIEWING", "OFFER", "WITHDRAWN", "ARCHIVED", "IGNORED", "REJECTED", "GHOSTED"],
   APPLIED: ["SCREENING", "INTERVIEW", "INTERVIEWING", "OFFER", "REJECTED", "WITHDRAWN", "GHOSTED", "ARCHIVED"],
   SCREENING: ["INTERVIEW", "INTERVIEWING", "OFFER", "REJECTED", "WITHDRAWN", "GHOSTED", "ARCHIVED"],
   INTERVIEW: ["SCREENING", "OFFER", "REJECTED", "WITHDRAWN", "GHOSTED", "ARCHIVED"],
@@ -87,7 +87,10 @@ export async function transitionApplicationStatus(
   let rejectionReason: string | null = existingApp?.rejectionReason || null;
 
   // Handle appliedAt timestamp
-  if (normalizedTarget === "APPLIED") {
+  if (
+    normalizedTarget === "APPLIED" ||
+    (POST_APPLIED_STATUSES.has(normalizedTarget) && !appliedAt && normalizedTarget !== "REJECTED" && normalizedTarget !== "WITHDRAWN")
+  ) {
     if (!appliedAt || options.appliedAt) {
       appliedAt = options.appliedAt || new Date();
     }
@@ -100,6 +103,7 @@ export async function transitionApplicationStatus(
       responseTimeDays = calculateResponseTimeDays(appliedAt, firstResponseAt);
     }
   }
+
 
   // Handle rejection fields
   if (normalizedTarget === "REJECTED") {

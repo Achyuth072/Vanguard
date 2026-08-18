@@ -30,6 +30,7 @@
 - **Zero-Cost Inference**: AI consumption operates at ₹0/month by utilizing OpenRouter free models as primary with automatic failover to Google Gemini free tier.
 - **No Hallucinated Credentials**: AI tailoring must never invent skills, metrics, experiences, or credentials not present in the candidate profile.
 - **Human-in-the-Loop Execution**: The agent automates administrative ingestion, filtering, scoring, and drafting; final submission remains strictly human-initiated.
+- **Interactive Kanban Pipeline**: Active tracking stages are rendered as fixed-width, horizontally scrollable columns with native Drag-and-Drop stage transitions and audit event logging.
 
 ### Terminology Rules & Avoided Synonyms
 

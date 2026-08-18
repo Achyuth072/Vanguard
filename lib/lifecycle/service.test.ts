@@ -59,13 +59,18 @@ test("Application Lifecycle Service & State Machine", async (t) => {
   await t.test("isValidTransition validates permitted and forbidden transitions", () => {
     assert.equal(isValidTransition("DISCOVERED", "SHORTLISTED"), true);
     assert.equal(isValidTransition("SHORTLISTED", "PREPARED"), true);
+    assert.equal(isValidTransition("SHORTLISTED", "INTERVIEW"), true);
     assert.equal(isValidTransition("PREPARED", "APPLIED"), true);
+    assert.equal(isValidTransition("PREPARED", "SCREENING"), true);
+    assert.equal(isValidTransition("PREPARED", "INTERVIEW"), true);
+    assert.equal(isValidTransition("PREPARED", "OFFER"), true);
     assert.equal(isValidTransition("APPLIED", "SCREENING"), true);
     assert.equal(isValidTransition("APPLIED", "INTERVIEW"), true);
     assert.equal(isValidTransition("APPLIED", "REJECTED"), true);
     assert.equal(isValidTransition("SCREENING", "OFFER"), true);
     assert.equal(isValidTransition("DISCOVERED", "OFFER"), false);
   });
+
 
   await t.test("transitions through progressive lifecycle states", async () => {
     // 1. SHORTLISTED

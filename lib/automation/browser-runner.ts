@@ -396,7 +396,16 @@ export async function fillFormFields(
         (!mapping.action && mapping.value !== undefined)
       ) {
         const val = mapping.value ?? "";
-        await emulateHumanTyping(page, selector, val, typingDelay);
+        // Fast-path: Tier 1 deterministic fields (<50ms instantaneous fill),
+        // use character-by-character typing with delay for Tier 2 custom answers
+        if (mapping.tier === 1 && typingDelay <= 20) {
+          const locator = page.locator(selector).first();
+          await locator.scrollIntoViewIfNeeded({ timeout: 2000 }).catch(() => {});
+          await locator.fill(val);
+          await locator.dispatchEvent("change").catch(() => {});
+        } else {
+          await emulateHumanTyping(page, selector, val, typingDelay);
+        }
 
         results.push({
           field: mapping.field,

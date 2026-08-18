@@ -12,12 +12,16 @@ import {
   attachResumeFile,
   emulateHumanTyping,
   extractFieldsFromLivePage,
+  checkForSubmissionSuccess,
+  setupSubmissionMonitoring,
+  fillFormFields,
   PlaywrightBrowserRunner,
   runBrowserAutomation,
 } from "./browser-runner";
 import type {
   CandidateProfilePayload,
   FieldFillResult,
+  FormFieldMapping,
   NormalizedFormField,
   RunnerProgressEvent,
 } from "./types";
@@ -308,7 +312,163 @@ test("Playwright Persistent Browser Automation & PDF Upload Engine", async (t) =
       assert.equal(outcome.resumesUploaded, 1);
     });
 
+    await t.test("checkForSubmissionSuccess detects confirmation headings and thank-you DOM elements", async () => {
+      await page!.setContent(`
+        <div class="confirmation-page">
+          <h1>Thank you for applying!</h1>
+          <p>We have received your application and will review it shortly.</p>
+        </div>
+      `);
+
+      const isSuccess = await checkForSubmissionSuccess(page!);
+      assert.equal(isSuccess, true);
+
+      // Negative check on form page
+      await page!.setContent(`
+        <form>
+          <input name="name" type="text" />
+          <button type="submit">Submit Application</button>
+        </form>
+      `);
+
+      const notSuccess = await checkForSubmissionSuccess(page!);
+      assert.equal(notSuccess, false);
+    });
+
+    await t.test("setupSubmissionMonitoring detects DOM confirmation and triggers callback", async () => {
+      await page!.setContent(`
+        <form id="job-form">
+          <input name="email" type="email" value="jane@example.com" />
+        </form>
+      `);
+
+      let emittedSubmitted = false;
+      const monitoring = setupSubmissionMonitoring(
+        page!,
+        {
+          jobId: "test-monitored-job",
+          url: "https://example.com/apply",
+          candidateData: candidatePayload,
+          autoMarkApplied: false,
+          onProgress: (evt) => {
+            if (evt.state === "SUBMITTED") {
+              emittedSubmitted = true;
+            }
+          },
+        },
+        () => {
+          emittedSubmitted = true;
+        }
+      );
+
+      // Simulate submission landing on confirmation page
+      await page!.setContent(`
+        <div class="application-success">
+          <h2>Application successfully submitted</h2>
+        </div>
+      `);
+
+      // Wait a moment for monitoring check
+      await new Promise((resolve) => setTimeout(resolve, 350));
+
+      assert.equal(emittedSubmitted, true);
+      assert.equal(monitoring.isSubmitted(), true);
+      monitoring.cleanup();
+    });
+
+    await t.test("fillFormFields uses fast-path instantaneous fill for Tier 1 deterministic fields", async () => {
+      await page!.setContent(`
+        <form>
+          <input id="first_name" name="first_name" type="text" />
+          <input id="email" name="email" type="email" />
+        </form>
+      `);
+
+      const mappings: FormFieldMapping[] = [
+        {
+          field: "firstName",
+          selector: "#first_name",
+          confidence: 1.0,
+          tier: 1,
+          matchType: "label-regex",
+          action: "fill",
+          value: "Jane",
+        },
+        {
+          field: "email",
+          selector: "#email",
+          confidence: 1.0,
+          tier: 1,
+          matchType: "autocomplete",
+          action: "fill",
+          value: "jane.doe@example.com",
+        },
+      ];
+
+      const startTime = Date.now();
+      const { results } = await fillFormFields(page!, mappings, candidatePayload, {
+        humanTypingDelay: 10, // Even with delay requested, tier 1 fast path should fill instantly
+      });
+      const elapsed = Date.now() - startTime;
+
+      assert.equal(results.length, 2);
+      assert.equal(results[0].status, "filled");
+      assert.equal(results[1].status, "filled");
+
+      const firstNameVal = await page!.$eval("#first_name", (el) => (el as HTMLInputElement).value);
+      const emailVal = await page!.$eval("#email", (el) => (el as HTMLInputElement).value);
+
+      assert.equal(firstNameVal, "Jane");
+      assert.equal(emailVal, "jane.doe@example.com");
+      assert.ok(elapsed < 500, `Expected fast fill elapsed time < 500ms, got ${elapsed}ms`);
+    });
+
     // Cleanup browser context
     await browserContext.close().catch(() => {});
   }
+
+  await t.test("Persistent context retains cookies across re-instantiation in the same profile directory", async () => {
+    const sessionProfileDir = path.resolve(process.cwd(), ".scratch/test-session-profile");
+    if (!fs.existsSync(sessionProfileDir)) {
+      fs.mkdirSync(sessionProfileDir, { recursive: true });
+    }
+
+    try {
+      // 1. Launch first session, navigate or set a cookie with explicit url
+      const ctx1 = await chromium.launchPersistentContext(sessionProfileDir, {
+        headless: true,
+        args: ["--disable-blink-features=AutomationControlled"],
+      });
+
+      await ctx1.addCookies([
+        {
+          name: "pulse_session_test",
+          value: "auth_token_xyz123",
+          url: "https://example.com",
+          expires: Math.floor(Date.now() / 1000) + 3600,
+        },
+      ]);
+
+      const cookies1 = await ctx1.cookies("https://example.com");
+      assert.ok(cookies1.some((c) => c.name === "pulse_session_test" && c.value === "auth_token_xyz123"));
+      await ctx1.close();
+
+      // 2. Launch second session with the same profile directory and assert cookie persists
+      const ctx2 = await chromium.launchPersistentContext(sessionProfileDir, {
+        headless: true,
+        args: ["--disable-blink-features=AutomationControlled"],
+      });
+
+      const cookies2 = await ctx2.cookies("https://example.com");
+      assert.ok(
+        cookies2.some((c) => c.name === "pulse_session_test" && c.value === "auth_token_xyz123"),
+        "Expected persistent profile cookies to survive across browser sessions"
+      );
+      await ctx2.close();
+    } finally {
+      try {
+        fs.rmSync(sessionProfileDir, { recursive: true, force: true });
+      } catch {}
+    }
+  });
 });

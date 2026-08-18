@@ -9,7 +9,7 @@ export * from "./types";
 
 export function calculateResponseTimeDays(appliedAt: Date, responseAt: Date): number {
   const diffMs = responseAt.getTime() - appliedAt.getTime();
-  return Math.max(0, Number((diffMs / (1000 * 60 * 60 * 24)).toFixed(2)));
+  return Math.max(0, Math.round((diffMs / (1000 * 60 * 60 * 24)) * 100) / 100);
 }
 
 const POST_APPLIED_STATUSES = new Set([
@@ -118,7 +118,7 @@ export async function transitionApplicationStatus(
   });
 
   // Check if target is an Application status
-  const isAppStatus = (APPLICATION_STATUSES as readonly string[]).includes(normalizedTarget) || normalizedTarget === "PREPARED";
+  const isAppStatus = (APPLICATION_STATUSES as readonly string[]).includes(normalizedTarget);
 
   if (isAppStatus) {
     await prisma.application.upsert({

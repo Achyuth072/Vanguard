@@ -4,6 +4,8 @@ import { useState } from "react";
 import type { EnrichedJob } from "@/lib/data";
 import { updateJobStatusAction } from "../actions";
 import DraftButton from "./DraftButton";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface ApplicationTrackerProps {
   jobs: EnrichedJob[];
@@ -11,15 +13,21 @@ interface ApplicationTrackerProps {
   onOpenPreparation?: (job: EnrichedJob) => void;
 }
 
-const PIPELINE_STAGES = [
-  { id: "SHORTLISTED", label: "Shortlisted", color: "border-indigo-800 text-indigo-400 bg-indigo-950/30" },
-  { id: "PREPARED", label: "Prepared", color: "border-cyan-800 text-cyan-400 bg-cyan-950/30" },
-  { id: "APPLIED", label: "Applied", color: "border-blue-800 text-blue-400 bg-blue-950/30" },
-  { id: "SCREENING", label: "Screening", color: "border-sky-800 text-sky-400 bg-sky-950/30" },
-  { id: "INTERVIEW", label: "Interview", color: "border-purple-800 text-purple-400 bg-purple-950/30" },
-  { id: "OFFER", label: "Offer", color: "border-emerald-800 text-emerald-400 bg-emerald-950/30" },
-  { id: "REJECTED", label: "Rejected", color: "border-rose-900 text-rose-400 bg-rose-950/30" },
-  { id: "GHOSTED", label: "Ghosted", color: "border-neutral-800 text-neutral-400 bg-neutral-950/40" },
+interface PipelineStage {
+  id: string;
+  label: string;
+  variant: "default" | "secondary" | "destructive" | "outline" | "emerald" | "amber" | "violet" | "blue";
+}
+
+const PIPELINE_STAGES: PipelineStage[] = [
+  { id: "SHORTLISTED", label: "Shortlisted", variant: "violet" },
+  { id: "PREPARED", label: "Prepared", variant: "blue" },
+  { id: "APPLIED", label: "Applied", variant: "blue" },
+  { id: "SCREENING", label: "Screening", variant: "blue" },
+  { id: "INTERVIEW", label: "Interview", variant: "violet" },
+  { id: "OFFER", label: "Offer", variant: "emerald" },
+  { id: "REJECTED", label: "Rejected", variant: "destructive" },
+  { id: "GHOSTED", label: "Ghosted", variant: "secondary" },
 ];
 
 export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPreparation }: ApplicationTrackerProps) {
@@ -95,9 +103,9 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold tracking-tight text-white">Application Pipeline</h2>
-          <p className="text-xs text-neutral-400 mt-0.5">
-            Active tracking stages with automatic audit event logging. Drag cards between columns to change status. Total active: {pipelineJobs.length}
+          <h2 className="text-lg font-semibold tracking-tight text-zinc-100">Application Pipeline</h2>
+          <p className="text-xs text-zinc-400 mt-0.5">
+            Active tracking stages with automatic audit event logging. Drag cards between columns to change status. Total active: <span className="tabular-nums font-mono font-medium text-zinc-300">{pipelineJobs.length}</span>
           </p>
         </div>
       </div>
@@ -114,18 +122,18 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
               onDragOver={(e) => handleDragOver(e, stage.id)}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, stage.id)}
-              className={`w-72 min-w-[288px] max-w-[288px] shrink-0 snap-start bg-[#0D0D0D] border rounded-xl p-3 flex flex-col min-h-[440px] transition-all duration-150 ${
+              className={`w-72 min-w-[288px] max-w-[288px] shrink-0 snap-start bg-zinc-900 border rounded-lg p-3 flex flex-col min-h-[460px] transition-colors ${
                 isTargeted
-                  ? "border-purple-500/80 bg-purple-950/20 ring-2 ring-purple-500/30"
-                  : "border-neutral-900"
+                  ? "border-violet-500 bg-zinc-800/90 ring-1 ring-violet-400/50"
+                  : "border-zinc-800"
               }`}
             >
               {/* Column Header */}
-              <div className="flex items-center justify-between mb-3 pb-2 border-b border-neutral-800/80">
-                <span className={`text-[11px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${stage.color}`}>
+              <div className="flex items-center justify-between mb-3 pb-2 border-b border-zinc-800">
+                <Badge variant={stage.variant} className="text-[10px] uppercase tracking-wider font-semibold">
                   {stage.label}
-                </span>
-                <span className="text-xs font-mono text-neutral-400 font-bold bg-neutral-900 px-2 py-0.5 rounded-full border border-neutral-800">
+                </Badge>
+                <span className="text-xs font-mono text-zinc-400 font-semibold bg-zinc-950 px-2 py-0.5 rounded border border-zinc-800 tabular-nums">
                   {stageJobs.length}
                 </span>
               </div>
@@ -134,10 +142,10 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
               <div className="space-y-3 flex-1 overflow-y-auto pr-0.5">
                 {stageJobs.length === 0 ? (
                   <div
-                    className={`h-32 flex flex-col items-center justify-center text-xs italic border border-dashed rounded-lg transition-colors ${
+                    className={`h-32 flex flex-col items-center justify-center text-xs italic border border-dashed rounded-md transition-colors ${
                       isTargeted
-                        ? "border-purple-500/50 text-purple-300 bg-purple-950/10"
-                        : "border-neutral-900 text-neutral-700"
+                        ? "border-violet-500/50 text-violet-300 bg-zinc-950/40"
+                        : "border-zinc-800/80 text-zinc-600"
                     }`}
                   >
                     <span>{isTargeted ? "Drop to move here" : "No jobs"}</span>
@@ -154,66 +162,70 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
                         draggable={!isUpdating}
                         onDragStart={(e) => handleDragStart(e, job.id)}
                         onDragEnd={handleDragEnd}
-                        className={`bg-[#141414] border rounded-lg p-3 space-y-2.5 shadow-sm transition-all text-xs cursor-grab active:cursor-grabbing ${
+                        className={`bg-zinc-950 border rounded-md p-3 space-y-2.5 transition-colors text-xs cursor-grab active:cursor-grabbing ${
                           isDragging
-                            ? "opacity-40 scale-[0.98] border-purple-500/50 bg-[#1a1625]"
+                            ? "opacity-40 border-violet-500/50 bg-zinc-900"
                             : isUpdating
-                            ? "opacity-50 pointer-events-none border-neutral-800"
-                            : "border-neutral-800/90 hover:border-neutral-700 hover:bg-[#171717]"
+                            ? "opacity-50 pointer-events-none border-zinc-800"
+                            : "border-zinc-800 hover:border-zinc-700 hover:bg-zinc-950/80"
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <div className="font-bold text-white tracking-tight line-clamp-2 leading-snug">
+                          <div className="font-semibold text-zinc-100 tracking-tight line-clamp-2 leading-snug">
                             {job.title}
                           </div>
                           {score !== undefined && score !== null && (
-                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 font-mono ${
-                              score >= 80 ? "text-emerald-400 bg-emerald-950/60" : "text-amber-400 bg-amber-950/60"
-                            }`}>
+                            <Badge
+                              variant={score >= 80 ? "emerald" : score >= 60 ? "amber" : "secondary"}
+                              className="px-1.5 py-0 text-[10px] font-bold shrink-0 font-mono tabular-nums"
+                            >
                               {score}
-                            </span>
+                            </Badge>
                           )}
                         </div>
 
-                        <div className="text-neutral-400 font-medium text-[11px] truncate">
+                        <div className="text-zinc-400 font-medium text-xs truncate">
                           {job.company}
                         </div>
 
                         {job.location && (
-                          <div className="text-neutral-500 text-[10px] flex items-center gap-1 font-mono">
-                            <span>📍</span>
+                          <div className="text-zinc-500 text-[10px] flex items-center gap-1 font-mono">
+                            <svg className="w-3 h-3 text-zinc-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
                             <span className="truncate">{job.location}</span>
                           </div>
                         )}
 
                         {job.application?.appliedAt && (
-                          <div className="text-neutral-500 text-[10px] font-mono">
-                            Applied: {new Date(job.application.appliedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                          <div className="text-zinc-500 text-[10px] font-mono">
+                            Applied: <span className="tabular-nums">{new Date(job.application.appliedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
                           </div>
                         )}
 
                         <div className="flex flex-wrap gap-1.5">
                           {job.application?.responseTimeDays !== null && job.application?.responseTimeDays !== undefined && (
-                            <div className="text-[10px] font-mono text-cyan-400 bg-cyan-950/40 px-1.5 py-0.5 rounded border border-cyan-900/50">
+                            <Badge variant="blue" className="text-[10px] font-mono tabular-nums px-1.5 py-0">
                               ⚡ {job.application.responseTimeDays}d response
-                            </div>
+                            </Badge>
                           )}
 
                           {job.application?.rejectionStage && (
-                            <div className="text-[10px] font-mono text-rose-400 bg-rose-950/40 px-1.5 py-0.5 rounded border border-rose-900/50 truncate">
+                            <Badge variant="destructive" className="text-[10px] font-mono px-1.5 py-0 truncate">
                               🛑 {job.application.rejectionStage.replace(/_/g, " ")}
-                            </div>
+                            </Badge>
                           )}
                         </div>
 
                         {/* Stage Selector, Prep Trigger & Draft Button */}
-                        <div className="pt-2.5 border-t border-neutral-800/80 space-y-2">
+                        <div className="pt-2.5 border-t border-zinc-800/80 space-y-2">
                           <div className="flex items-center gap-1.5">
                             <select
                               value={normalizeStatus(job.status)}
                               onChange={(e) => handleMoveStage(job.id, e.target.value)}
                               aria-label={`Move stage for ${job.title}`}
-                              className="flex-1 bg-[#1c1c1c] border border-neutral-700 text-neutral-300 text-[10px] rounded px-2 py-1 outline-none cursor-pointer hover:border-neutral-600 transition-colors"
+                              className="flex-1 bg-zinc-900 border border-zinc-700 text-zinc-300 text-[10px] rounded px-2 py-1 outline-none cursor-pointer hover:border-zinc-600 focus-visible:border-violet-400 focus-visible:ring-1 focus-visible:ring-violet-400 transition-colors"
                             >
                               {PIPELINE_STAGES.map((s) => (
                                 <option key={s.id} value={s.id}>
@@ -223,16 +235,18 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
                             </select>
 
                             {onOpenPreparation && (
-                              <button
+                              <Button
                                 type="button"
+                                variant="outline"
+                                size="icon-sm"
                                 onClick={() => onOpenPreparation(job)}
-                                className="p-1.5 rounded bg-[#1c1c1c] border border-neutral-700 text-purple-400 hover:text-purple-300 hover:bg-neutral-800 hover:border-neutral-600 transition-colors shrink-0"
+                                className="h-7 w-7 text-violet-400 hover:text-violet-300 hover:bg-zinc-800 shrink-0 border-zinc-700"
                                 title="Open Tailored Resume & Screening Answers"
                               >
                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                                 </svg>
-                              </button>
+                              </Button>
                             )}
                           </div>
 

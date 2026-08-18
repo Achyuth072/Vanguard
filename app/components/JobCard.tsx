@@ -5,6 +5,9 @@ import type { EnrichedJob } from "@/lib/data";
 import { updateJobStatusAction } from "../actions";
 import DraftButton from "./DraftButton";
 import SubDimensionScores from "./SubDimensionScores";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface JobCardProps {
   job: EnrichedJob;
@@ -34,85 +37,79 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
     }
   }
 
-  // Determine badge colors based on score
   const getScoreBadge = () => {
     if (score === null) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-neutral-900 border border-neutral-800 text-neutral-400">
+        <Badge variant="secondary" className="gap-1.5 font-semibold text-zinc-400">
           Unscored
-        </span>
+        </Badge>
       );
     }
 
     if (score >= 80) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-950/60 border border-emerald-800/80 text-emerald-400 shadow-sm">
-          <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-          <span>{score}/100</span>
+        <Badge variant="emerald" className="gap-1.5 font-bold">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+          <span className="tabular-nums font-mono">{score}/100</span>
           <span className="text-[10px] uppercase tracking-wider text-emerald-300 font-mono">APPLY</span>
-        </span>
+        </Badge>
       );
     }
 
     if (score >= 60) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-950/60 border border-amber-800/80 text-amber-400">
-          <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-          <span>{score}/100</span>
+        <Badge variant="amber" className="gap-1.5 font-bold">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+          <span className="tabular-nums font-mono">{score}/100</span>
           <span className="text-[10px] uppercase tracking-wider text-amber-300 font-mono">REVIEW</span>
-        </span>
+        </Badge>
       );
     }
 
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-neutral-900 border border-neutral-800 text-neutral-400">
-        <span>{score}/100</span>
-        <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">IGNORE</span>
-      </span>
+      <Badge variant="secondary" className="gap-1.5 font-bold text-zinc-400">
+        <span className="tabular-nums font-mono">{score}/100</span>
+        <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono">IGNORE</span>
+      </Badge>
     );
   };
 
   const getStatusBadge = () => {
     const s = job.status.toUpperCase();
-    let style = "bg-neutral-900 text-neutral-400 border-neutral-800";
+    let variant: "default" | "secondary" | "destructive" | "outline" | "emerald" | "amber" | "violet" | "blue" = "secondary";
 
-    if (s === "SHORTLISTED" || s === "DRAFT") style = "bg-indigo-950/50 text-indigo-300 border-indigo-800";
-    else if (s === "PREPARED") style = "bg-cyan-950/50 text-cyan-300 border-cyan-800";
-    else if (s === "APPLIED") style = "bg-blue-950/50 text-blue-300 border-blue-800";
-    else if (s === "SCREENING") style = "bg-sky-950/50 text-sky-300 border-sky-800";
-    else if (s === "INTERVIEW" || s === "INTERVIEWING") style = "bg-purple-950/50 text-purple-300 border-purple-800";
-    else if (s === "OFFER") style = "bg-emerald-950/50 text-emerald-300 border-emerald-800 font-bold";
-    else if (s === "REJECTED") style = "bg-rose-950/50 text-rose-400 border-rose-900";
-    else if (s === "GHOSTED") style = "bg-neutral-900/90 text-neutral-400 border-neutral-800";
-    else if (s === "WITHDRAWN") style = "bg-neutral-900/80 text-neutral-500 border-neutral-800";
-    else if (s === "ARCHIVED" || s === "IGNORED") style = "bg-neutral-900/80 text-neutral-500 border-neutral-800";
-    else if (s === "FILTERED_OUT") style = "bg-red-950/30 text-red-400 border-red-950";
+    if (s === "SHORTLISTED" || s === "DRAFT") variant = "violet";
+    else if (s === "PREPARED") variant = "blue";
+    else if (s === "APPLIED" || s === "SCREENING") variant = "blue";
+    else if (s === "INTERVIEW" || s === "INTERVIEWING") variant = "violet";
+    else if (s === "OFFER") variant = "emerald";
+    else if (s === "REJECTED" || s === "FILTERED_OUT") variant = "destructive";
 
     return (
-      <span className={`text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded border ${style}`}>
+      <Badge variant={variant} className="text-[10px] uppercase tracking-wider font-semibold">
         {job.status}
-      </span>
+      </Badge>
     );
   };
 
   return (
-    <div className="bg-[#0A0A0A] border border-neutral-800/80 hover:border-neutral-700 transition-all rounded-xl p-5 shadow-sm group">
+    <Card className="p-5 transition-colors hover:border-zinc-700 group">
       {/* Header Row */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pb-3 border-b border-neutral-900">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pb-3 border-b border-zinc-800/80">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2.5">
-            <h3 className="text-base sm:text-lg font-bold text-white tracking-tight group-hover:text-purple-300 transition-colors">
+            <h3 className="text-base sm:text-lg font-semibold text-zinc-100 tracking-tight group-hover:text-violet-300 transition-colors">
               {job.title}
             </h3>
             {getStatusBadge()}
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-400 font-medium">
-            <span className="text-neutral-200 font-semibold">{job.company}</span>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400 font-medium">
+            <span className="text-zinc-200 font-semibold">{job.company}</span>
             {job.location && (
               <>
-                <span className="text-neutral-700">•</span>
+                <span className="text-zinc-700">•</span>
                 <span className="flex items-center gap-1">
-                  <svg className="w-3.5 h-3.5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
@@ -122,16 +119,16 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
             )}
             {job.remoteStatus && job.remoteStatus !== "UNKNOWN" && (
               <>
-                <span className="text-neutral-700">•</span>
-                <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-neutral-900 border border-neutral-800 text-neutral-300 font-mono">
+                <span className="text-zinc-700">•</span>
+                <Badge variant="secondary" className="text-[10px] uppercase tracking-wider font-mono tabular-nums px-1.5 py-0 text-zinc-300">
                   {job.remoteStatus}
-                </span>
+                </Badge>
               </>
             )}
             {(job.salaryMin || job.salaryMax) && (
               <>
-                <span className="text-neutral-700">•</span>
-                <span className="text-emerald-400 font-mono">
+                <span className="text-zinc-700">•</span>
+                <span className="text-emerald-400 font-mono tabular-nums">
                   ${job.salaryMin ? `${(job.salaryMin / 1000).toFixed(0)}k` : "0"}
                   {job.salaryMax ? ` – $${(job.salaryMax / 1000).toFixed(0)}k` : "+"}
                 </span>
@@ -139,12 +136,12 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
             )}
             {job.url && (
               <>
-                <span className="text-neutral-700">•</span>
+                <span className="text-zinc-700">•</span>
                 <a
                   href={job.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-purple-400 hover:text-purple-300 hover:underline flex items-center gap-1 font-sans"
+                  className="text-violet-400 hover:text-violet-300 hover:underline flex items-center gap-1 font-sans focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 rounded"
                 >
                   <span>Link</span>
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -176,14 +173,14 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
 
       {/* Reasoning Snippet */}
       {fitScore?.reasoning && (
-        <div className="mt-3 text-xs text-neutral-300 leading-relaxed bg-[#111] p-3 rounded-lg border border-neutral-800/60">
+        <div className="mt-3 text-xs text-zinc-300 leading-relaxed bg-zinc-950 p-3 rounded-lg border border-zinc-800">
           <div className="flex items-start gap-2">
-            <svg className="w-3.5 h-3.5 text-purple-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3.5 h-3.5 text-violet-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
             <div>
-              <span className="font-semibold text-neutral-200">Fit Reasoning: </span>
-              <span className="text-neutral-300">{fitScore.reasoning}</span>
+              <span className="font-semibold text-zinc-200">Fit Reasoning: </span>
+              <span className="text-zinc-300">{fitScore.reasoning}</span>
             </div>
           </div>
         </div>
@@ -195,10 +192,10 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
           <button
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-purple-400 transition-colors font-medium"
+            className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-violet-400 transition-colors font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 rounded"
           >
             <svg
-              className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? "rotate-90 text-purple-400" : ""}`}
+              className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? "rotate-90 text-violet-400" : ""}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -209,7 +206,7 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
           </button>
 
           {isExpanded && (
-            <div className="mt-3 p-4 rounded-lg bg-[#121212] border border-neutral-800 space-y-3.5 text-xs animate-in fade-in duration-150">
+            <div className="mt-3 p-4 rounded-lg bg-zinc-950 border border-zinc-800 space-y-3.5 text-xs animate-in fade-in duration-150">
               {/* Strengths */}
               {fitScore.strengths.length > 0 && (
                 <div>
@@ -221,9 +218,9 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {fitScore.strengths.map((str, idx) => (
-                      <span key={idx} className="px-2 py-0.5 rounded bg-emerald-950/40 border border-emerald-800/70 text-emerald-300 text-[11px]">
+                      <Badge key={idx} variant="emerald" className="text-[11px] font-normal">
                         {str}
-                      </span>
+                      </Badge>
                     ))}
                   </div>
                 </div>
@@ -240,9 +237,9 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {fitScore.gaps.map((gap, idx) => (
-                      <span key={idx} className="px-2 py-0.5 rounded bg-amber-950/40 border border-amber-800/70 text-amber-300 text-[11px]">
+                      <Badge key={idx} variant="amber" className="text-[11px] font-normal">
                         {gap}
-                      </span>
+                      </Badge>
                     ))}
                   </div>
                 </div>
@@ -251,7 +248,7 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
               {/* Risks */}
               {fitScore.risks.length > 0 && (
                 <div>
-                  <div className="flex items-center gap-1.5 text-rose-400 font-semibold mb-1.5">
+                  <div className="flex items-center gap-1.5 text-red-400 font-semibold mb-1.5">
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                     </svg>
@@ -259,9 +256,9 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {fitScore.risks.map((risk, idx) => (
-                      <span key={idx} className="px-2 py-0.5 rounded bg-rose-950/40 border border-rose-800/70 text-rose-300 text-[11px]">
+                      <Badge key={idx} variant="destructive" className="text-[11px] font-normal">
                         {risk}
-                      </span>
+                      </Badge>
                     ))}
                   </div>
                 </div>
@@ -276,24 +273,28 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
       )}
 
       {/* Action Progression Toolbar */}
-      <div className="mt-4 pt-3 border-t border-neutral-900 flex flex-wrap items-center justify-between gap-2">
-        <div className="text-[11px] text-neutral-500 font-mono">
-          Discovered: {new Date(job.discoveredAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+      <div className="mt-4 pt-3 border-t border-zinc-800/80 flex flex-wrap items-center justify-between gap-2">
+        <div className="text-[11px] text-zinc-500 font-mono">
+          Discovered: <span className="tabular-nums">{new Date(job.discoveredAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           {job.status !== "SHORTLISTED" && job.status !== "APPLIED" && job.status !== "INTERVIEW" && job.status !== "OFFER" && (
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => handleStatusChange("SHORTLISTED")}
               disabled={isUpdating}
-              className="px-2.5 py-1.5 rounded-md border border-neutral-800 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white text-xs font-semibold transition-all disabled:opacity-50"
+              className="h-7 px-2.5 text-xs font-medium"
             >
               Shortlist
-            </button>
+            </Button>
           )}
 
           {job.status !== "PREPARED" && job.status !== "APPLIED" && job.status !== "INTERVIEW" && job.status !== "OFFER" ? (
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => {
                 if (onOpenPreparation) {
                   onOpenPreparation(job);
@@ -302,48 +303,55 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
                 }
               }}
               disabled={isUpdating}
-              className="px-2.5 py-1.5 rounded-md border border-cyan-900/60 bg-cyan-950/30 hover:bg-cyan-900/50 text-cyan-300 text-xs font-semibold transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+              className="h-7 px-2.5 text-xs font-medium text-blue-300 border-blue-900/60 bg-blue-950/30 hover:bg-blue-900/50 hover:text-blue-200 cursor-pointer flex items-center gap-1.5"
             >
-              <svg className="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
               <span>Prepare Application</span>
-            </button>
+            </Button>
           ) : (
             onOpenPreparation && (
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => onOpenPreparation(job)}
-                className="px-2.5 py-1.5 rounded-md border border-purple-900/60 bg-purple-950/30 hover:bg-purple-900/50 text-purple-300 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5"
+                className="h-7 px-2.5 text-xs font-medium text-purple-300 border-purple-900/60 bg-purple-950/30 hover:bg-purple-900/50 hover:text-purple-200 cursor-pointer flex items-center gap-1.5"
               >
                 <svg className="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 <span>Tailored Materials</span>
-              </button>
+              </Button>
             )
           )}
 
           {job.status !== "APPLIED" && job.status !== "INTERVIEW" && job.status !== "OFFER" && (
-            <button
+            <Button
+              variant="default"
+              size="sm"
               onClick={() => handleStatusChange("APPLIED")}
               disabled={isUpdating}
-              className="px-2.5 py-1.5 rounded-md bg-white text-black hover:bg-neutral-200 text-xs font-bold transition-all disabled:opacity-50"
+              className="h-7 px-2.5 text-xs font-semibold"
             >
               Mark Applied
-            </button>
+            </Button>
           )}
 
           {job.status !== "ARCHIVED" && job.status !== "IGNORED" && (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => handleStatusChange("ARCHIVED")}
               disabled={isUpdating}
-              className="px-2.5 py-1.5 rounded-md border border-neutral-800 text-neutral-500 hover:text-neutral-300 hover:bg-neutral-900 text-xs transition-all disabled:opacity-50"
+              className="h-7 px-2.5 text-xs text-zinc-500 hover:text-zinc-300"
             >
               Archive
-            </button>
+            </Button>
           )}
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
+

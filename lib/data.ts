@@ -221,4 +221,11 @@ export async function addJob(job: {
   });
 }
 
+export async function deleteJob(jobId: string, prisma: typeof db = db) {
+  await prisma.event.deleteMany({ where: { entityId: jobId } });
+  await prisma.fitScore.deleteMany({ where: { jobId } });
+  await prisma.application.deleteMany({ where: { jobId } });
+  await prisma.job.delete({ where: { id: jobId } });
+}
+
 

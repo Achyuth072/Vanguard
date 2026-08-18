@@ -43,6 +43,7 @@ export default function PriorityInbox({ initialJobs }: PriorityInboxProps) {
 
   const applicationJobs = initialJobs.filter((job) => {
     const s = job.status.toUpperCase();
+    if (s === "ARCHIVED" || s === "IGNORED" || s === "FILTERED_OUT") return false;
     return (
       s === "SHORTLISTED" ||
       s === "PREPARED" ||

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { EnrichedJob } from "@/lib/data";
-import { updateJobStatusAction, rescoreJobAction } from "../actions";
+import { updateJobStatusAction, rescoreJobAction, deleteJobAction } from "../actions";
 import DraftButton from "./DraftButton";
 import SubDimensionScores from "./SubDimensionScores";
 import EditJobModal from "./EditJobModal";
@@ -396,6 +396,28 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
               Archive
             </Button>
           )}
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={async () => {
+              if (!confirm(`Delete "${job.title}" at ${job.company}? This cannot be undone.`)) return;
+              setIsUpdating(true);
+              setActionError(null);
+              try {
+                await deleteJobAction(job.id);
+                onStatusUpdated?.();
+              } catch (err) {
+                setActionError(err instanceof Error ? err.message : "Delete failed");
+              } finally {
+                setIsUpdating(false);
+              }
+            }}
+            disabled={isUpdating}
+            className="h-7 px-2.5 text-xs text-red-500/70 hover:text-red-400 hover:bg-red-950/30"
+          >
+            Delete
+          </Button>
         </div>
       </div>
 

@@ -46,9 +46,9 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
     return s;
   };
 
-  // Filter jobs that belong in the application pipeline
   const pipelineJobs = jobs.filter((job) => {
     const s = normalizeStatus(job.status);
+    if (s === "ARCHIVED" || s === "IGNORED" || s === "FILTERED_OUT") return false;
     return PIPELINE_STAGES.some((stage) => stage.id === s) || job.application !== null;
   });
 

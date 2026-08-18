@@ -220,6 +220,15 @@ export async function withdrawJobAction(jobId: string) {
   return await updateJobStatusAction(jobId, "WITHDRAWN");
 }
 
+export async function deleteJobAction(jobId: string) {
+  const { deleteJob } = await import("@/lib/data");
+  await deleteJob(jobId);
+  try {
+    revalidatePath("/");
+  } catch {}
+  return { success: true };
+}
+
 
 
 

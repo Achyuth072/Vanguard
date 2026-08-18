@@ -2,6 +2,17 @@
 
 import { useState } from "react";
 import { ingestJob } from "../actions";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 
 interface IngestModalProps {
   isOpen: boolean;
@@ -18,8 +29,6 @@ export default function IngestModal({ isOpen, onClose, onSuccess }: IngestModalP
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
-
-  if (!isOpen) return null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -60,43 +69,27 @@ export default function IngestModal({ isOpen, onClose, onSuccess }: IngestModalP
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
-      <div 
-        className="w-full max-w-lg bg-[#0D0D0D] border border-neutral-800 rounded-xl p-6 shadow-2xl space-y-5 text-white"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="ingest-modal-title"
-      >
-        <div className="flex items-center justify-between border-b border-neutral-800/80 pb-4">
-          <div>
-            <h2 id="ingest-modal-title" className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-purple-500"></span>
-              Ingest Target Job
-            </h2>
-            <p className="text-xs text-neutral-400 mt-0.5">
-              Paste JD text or enter a URL. AI extracts details & scores candidate fit automatically.
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-neutral-400 hover:text-white p-1 rounded-md hover:bg-neutral-800 transition-colors"
-            aria-label="Close dialog"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-lg border-zinc-800 bg-zinc-900 text-zinc-100 p-6">
+        <DialogHeader className="space-y-1.5 pb-2 border-b border-zinc-800/80">
+          <DialogTitle className="text-lg font-semibold tracking-tight text-zinc-100 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-violet-400" />
+            Ingest Target Job
+          </DialogTitle>
+          <DialogDescription className="text-xs text-zinc-400">
+            Paste JD text or enter a URL. AI extracts details & scores candidate fit automatically.
+          </DialogDescription>
+        </DialogHeader>
 
         {/* Mode Selector */}
-        <div className="flex rounded-lg bg-[#161616] p-1 border border-neutral-800 text-xs font-semibold">
+        <div className="flex rounded-lg bg-zinc-950 p-1 border border-zinc-800 text-xs font-semibold">
           <button
             type="button"
             onClick={() => setMode("paste")}
             className={`flex-1 py-1.5 rounded-md transition-all ${
               mode === "paste"
-                ? "bg-neutral-800 text-white shadow-sm"
-                : "text-neutral-400 hover:text-neutral-200"
+                ? "bg-zinc-800 text-zinc-100 shadow-sm"
+                : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
             Paste Job Description
@@ -106,8 +99,8 @@ export default function IngestModal({ isOpen, onClose, onSuccess }: IngestModalP
             onClick={() => setMode("url")}
             className={`flex-1 py-1.5 rounded-md transition-all ${
               mode === "url"
-                ? "bg-neutral-800 text-white shadow-sm"
-                : "text-neutral-400 hover:text-neutral-200"
+                ? "bg-zinc-800 text-zinc-100 shadow-sm"
+                : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
             Job Listing URL
@@ -135,78 +128,80 @@ export default function IngestModal({ isOpen, onClose, onSuccess }: IngestModalP
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === "paste" ? (
             <div>
-              <label className="block text-[11px] uppercase tracking-wider font-semibold text-neutral-400 mb-1.5">
+              <label className="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400 mb-1.5">
                 Job Description Text *
               </label>
-              <textarea
+              <Textarea
                 value={rawText}
                 onChange={(e) => setRawText(e.target.value)}
                 placeholder="Paste the full job posting, requirements, and responsibilities here..."
                 rows={7}
                 required
-                className="w-full bg-[#141414] border border-neutral-800 rounded-lg p-3 text-xs text-neutral-200 placeholder-neutral-600 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none resize-none font-mono"
+                className="font-mono text-xs resize-none"
               />
             </div>
           ) : (
             <div>
-              <label className="block text-[11px] uppercase tracking-wider font-semibold text-neutral-400 mb-1.5">
+              <label className="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400 mb-1.5">
                 Job Posting URL *
               </label>
-              <input
+              <Input
                 type="url"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 placeholder="https://jobs.example.com/roles/ai-engineer"
                 required
-                className="w-full bg-[#141414] border border-neutral-800 rounded-lg p-2.5 text-xs text-neutral-200 placeholder-neutral-600 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none font-mono"
+                className="font-mono text-xs"
               />
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] uppercase tracking-wider font-semibold text-neutral-500 mb-1">
+              <label className="block text-[10px] uppercase tracking-wider font-semibold text-zinc-500 mb-1">
                 Company (Optional override)
               </label>
-              <input
+              <Input
                 type="text"
                 value={company}
                 onChange={(e) => setCompany(e.target.value)}
                 placeholder="e.g. Anthropic"
-                className="w-full bg-[#141414] border border-neutral-800 rounded-lg p-2 text-xs text-neutral-200 placeholder-neutral-600 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                className="text-xs"
               />
             </div>
             <div>
-              <label className="block text-[10px] uppercase tracking-wider font-semibold text-neutral-500 mb-1">
+              <label className="block text-[10px] uppercase tracking-wider font-semibold text-zinc-500 mb-1">
                 Role Title (Optional override)
               </label>
-              <input
+              <Input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. AI Systems Engineer"
-                className="w-full bg-[#141414] border border-neutral-800 rounded-lg p-2 text-xs text-neutral-200 placeholder-neutral-600 focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                className="text-xs"
               />
             </div>
           </div>
 
-          <div className="pt-2 flex items-center justify-end gap-2.5">
-            <button
+          <DialogFooter className="pt-2">
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={onClose}
               disabled={isLoading}
-              className="px-4 py-2 rounded-lg border border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-800/60 transition-colors text-xs font-semibold"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
+              size="sm"
               disabled={isLoading}
-              className="flex items-center gap-2 px-5 py-2 rounded-lg bg-white text-black hover:bg-neutral-200 transition-all text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+              className="gap-2 font-semibold"
             >
               {isLoading ? (
                 <>
-                  <svg className="animate-spin h-3.5 w-3.5 text-black" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin h-3.5 w-3.5 text-zinc-900" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
@@ -215,10 +210,11 @@ export default function IngestModal({ isOpen, onClose, onSuccess }: IngestModalP
               ) : (
                 <span>Ingest & Evaluate</span>
               )}
-            </button>
-          </div>
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
+

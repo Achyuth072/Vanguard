@@ -139,7 +139,7 @@ function categorizeSkill(skillName: string): MasterSkillCategory {
   return "DOMAIN";
 }
 
-function calculateTenureMonths(startDateStr: string | null, endDateStr: string | null, isCurrent: boolean): number {
+function calculateTenureMonths(startDateStr?: string | null, endDateStr?: string | null, isCurrent?: boolean): number {
   if (!startDateStr) return 0;
   const [startYear, startMonth] = startDateStr.split("-").map(Number);
   let endYear: number;

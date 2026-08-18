@@ -1,32 +1,38 @@
 // lib/ai.ts
+import { type LanguageModel } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import {
+  getAllConfiguredModels,
+  getGeminiModel,
+  getGroqModel,
+  getOpenRouterModel,
+} from "@/lib/ai/router";
 
-// 1. Setup OpenAI (Works for OpenRouter too!)
-const openai = createOpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  // If using OpenRouter, uncomment this:
-  // baseURL: "https://openrouter.ai/api/v1",
-});
-
-// 2. Setup Google (Gemini)
-const google = createGoogleGenerativeAI({
-  apiKey: process.env.GOOGLE_API_KEY,
-});
-
-// 3. Setup Local (Ollama via OpenAI compatibility)
 const local = createOpenAI({
-  baseURL: "http://localhost:11434/v1", // Standard Ollama port
+  baseURL: process.env.LOCAL_AI_BASE_URL || "http://localhost:11434/v1",
   apiKey: "not-needed",
 });
 
-// Export a helper to pick the model based on ENV
-export function getModel() {
-  const provider = process.env.AI_PROVIDER || "openai";
+export function getModel(): LanguageModel {
+  const provider = (process.env.AI_PROVIDER || "").toLowerCase();
 
-  if (provider === "google") return google("gemini-2.5-flash");
-  if (provider === "local") return local("llama3"); // Make sure you pulled this model
+  if (provider === "local" || provider === "ollama") {
+    return local(process.env.LOCAL_MODEL || "llama3");
+  }
+  if (provider === "groq") {
+    return getGroqModel();
+  }
+  if (provider === "google" || provider === "gemini") {
+    return getGeminiModel();
+  }
+  if (provider === "openrouter") {
+    return getOpenRouterModel();
+  }
 
-  // Default to OpenAI (or OpenRouter)
-  return openai("gpt-5o-mini");
+  const configured = getAllConfiguredModels();
+  if (configured.length > 0 && configured[0]?.model) {
+    return configured[0].model;
+  }
+
+  return getGeminiModel();
 }

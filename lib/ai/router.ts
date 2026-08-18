@@ -128,7 +128,6 @@ export function getOpenRouterModel(apiKey?: string, modelName?: string): Languag
   const resolvedKey =
     apiKey ||
     parseApiKeys(process.env.OPENROUTER_API_KEY)[0] ||
-    parseApiKeys(process.env.OPENAI_API_KEY)[0] ||
     "";
   const baseURL = process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1";
   const resolvedModel =
@@ -197,10 +196,7 @@ export function getAllConfiguredModels(): ConfiguredModelCandidate[] {
   }
 
   // 3. OpenRouter keys
-  const openRouterKeys = [
-    ...parseApiKeys(process.env.OPENROUTER_API_KEY),
-    ...parseApiKeys(process.env.OPENAI_API_KEY),
-  ];
+  const openRouterKeys = parseApiKeys(process.env.OPENROUTER_API_KEY);
   const uniqueOpenRouterKeys = Array.from(new Set(openRouterKeys));
   const openRouterModel =
     process.env.OPENROUTER_MODEL || "openrouter/free";

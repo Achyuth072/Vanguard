@@ -66,10 +66,16 @@ test("Application Lifecycle Service & State Machine", async (t) => {
     assert.equal(isValidTransition("PREPARED", "OFFER"), true);
     assert.equal(isValidTransition("APPLIED", "SCREENING"), true);
     assert.equal(isValidTransition("APPLIED", "INTERVIEW"), true);
+    assert.equal(isValidTransition("APPLIED", "PREPARED"), true);
     assert.equal(isValidTransition("APPLIED", "REJECTED"), true);
+    assert.equal(isValidTransition("SCREENING", "PREPARED"), true);
+    assert.equal(isValidTransition("SCREENING", "SHORTLISTED"), true);
     assert.equal(isValidTransition("SCREENING", "OFFER"), true);
+    assert.equal(isValidTransition("INTERVIEW", "PREPARED"), true);
+    assert.equal(isValidTransition("OFFER", "PREPARED"), true);
     assert.equal(isValidTransition("DISCOVERED", "OFFER"), false);
   });
+
 
 
   await t.test("transitions through progressive lifecycle states", async () => {

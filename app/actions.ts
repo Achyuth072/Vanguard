@@ -189,19 +189,37 @@ export async function updateJobDetailsAction(
     employmentType?: string;
     description?: string;
     url?: string;
-  }
+  },
+  options?: { rescore?: boolean }
 ) {
   const { updateJob } = await import("@/lib/data");
   const updated = await updateJob(jobId, input);
+
+  let rescoreResult = null;
+  if (options?.rescore) {
+    const { rescoreJob } = await import("@/lib/scoring/rescore");
+    rescoreResult = await rescoreJob(jobId);
+  }
+
   try {
     revalidatePath("/");
   } catch {}
-  return { success: true, job: updated };
+  return { success: true, job: updated, rescore: rescoreResult };
+}
+
+export async function rescoreJobAction(jobId: string) {
+  const { rescoreJob } = await import("@/lib/scoring/rescore");
+  const result = await rescoreJob(jobId);
+  try {
+    revalidatePath("/");
+  } catch {}
+  return { success: true, ...result };
 }
 
 export async function withdrawJobAction(jobId: string) {
   return await updateJobStatusAction(jobId, "WITHDRAWN");
 }
+
 
 
 

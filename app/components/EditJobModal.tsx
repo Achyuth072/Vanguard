@@ -37,6 +37,7 @@ export default function EditJobModal({
   const [salaryMax, setSalaryMax] = useState<string>("");
   const [url, setUrl] = useState("");
   const [description, setDescription] = useState("");
+  const [rerunAI, setRerunAI] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -52,6 +53,7 @@ export default function EditJobModal({
       setSalaryMax(job.salaryMax !== null && job.salaryMax !== undefined ? String(job.salaryMax) : "");
       setUrl(job.url || "");
       setDescription(job.description || "");
+      setRerunAI(true);
       setError(null);
       setSuccessMessage(null);
     }
@@ -83,15 +85,16 @@ export default function EditJobModal({
         description: description.trim(),
       };
 
-      const result = await updateJobDetailsAction(job.id, payload);
+      const result = await updateJobDetailsAction(job.id, payload, { rescore: rerunAI });
 
       if (result.success) {
-        setSuccessMessage("✓ Job details updated successfully");
+        const extra = result.rescore?.fitScore ? ` (Score: ${result.rescore.fitScore.score}/100)` : "";
+        setSuccessMessage(`✓ Job details updated successfully${extra}`);
         setTimeout(() => {
           setSuccessMessage(null);
           onClose();
           if (onSuccess) onSuccess();
-        }, 800);
+        }, 900);
       } else {
         setError("Failed to update job details.");
       }
@@ -102,6 +105,7 @@ export default function EditJobModal({
       setIsLoading(false);
     }
   }
+
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -273,6 +277,20 @@ export default function EditJobModal({
             />
           </div>
 
+          {/* Row 6: Re-evaluate with AI checkbox */}
+          <div className="flex items-center gap-2.5 p-3 rounded-lg bg-zinc-950/80 border border-zinc-800">
+            <input
+              type="checkbox"
+              id="rerun-ai-fit-score"
+              checked={rerunAI}
+              onChange={(e) => setRerunAI(e.target.checked)}
+              className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 text-violet-600 focus:ring-violet-500 focus:ring-offset-zinc-950 cursor-pointer"
+            />
+            <label htmlFor="rerun-ai-fit-score" className="text-xs text-zinc-300 font-medium cursor-pointer select-none">
+              Re-evaluate candidate Fit Score with AI after saving
+            </label>
+          </div>
+
           <DialogFooter className="pt-2">
             <Button
               type="button"
@@ -295,7 +313,7 @@ export default function EditJobModal({
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  <span>Saving...</span>
+                  <span>{rerunAI ? "Evaluating & Saving..." : "Saving..."}</span>
                 </>
               ) : (
                 <span>Save Changes</span>
@@ -307,3 +325,4 @@ export default function EditJobModal({
     </Dialog>
   );
 }
+

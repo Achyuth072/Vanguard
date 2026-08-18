@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { EnrichedJob } from "@/lib/data";
-import { updateJobStatusAction } from "../actions";
+import { updateJobStatusAction, rescoreJobAction } from "../actions";
 import DraftButton from "./DraftButton";
 import SubDimensionScores from "./SubDimensionScores";
 import EditJobModal from "./EditJobModal";
@@ -20,10 +20,25 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isRescoring, setIsRescoring] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const fitScore = job.fitScore;
   const score = fitScore?.score ?? null;
+
+  async function handleRescore() {
+    setIsRescoring(true);
+    setActionError(null);
+    try {
+      await rescoreJobAction(job.id);
+      if (onStatusUpdated) onStatusUpdated();
+    } catch (err: unknown) {
+      console.error("Rescore error:", err);
+      setActionError(err instanceof Error ? err.message : "Failed to re-evaluate job");
+    } finally {
+      setIsRescoring(false);
+    }
+  }
 
   async function handleStatusChange(newStatus: string) {
     setIsUpdating(true);
@@ -38,6 +53,7 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
       setIsUpdating(false);
     }
   }
+
 
   const getScoreBadge = () => {
     if (score === null) {
@@ -155,9 +171,23 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
           </div>
         </div>
 
-        {/* Fit Score Badge, Draft Button & Edit Button */}
+        {/* Fit Score Badge, Re-evaluate Button, Edit Button & Draft Button */}
         <div className="flex items-center gap-2 self-start">
           {getScoreBadge()}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            onClick={handleRescore}
+            disabled={isRescoring}
+            className="h-8 w-8 text-zinc-400 hover:text-violet-300 hover:bg-zinc-800/80 border border-zinc-800 shrink-0"
+            title="Re-evaluate Fit Score with AI"
+            aria-label="Re-evaluate Fit Score with AI"
+          >
+            <svg className={`w-3.5 h-3.5 ${isRescoring ? "animate-spin text-violet-400" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </Button>
           <Button
             type="button"
             variant="ghost"
@@ -174,6 +204,7 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
           <DraftButton company={job.company} role={job.title} />
         </div>
       </div>
+
 
 
       {/* Sub-Dimension Score Visual Breakdown */}

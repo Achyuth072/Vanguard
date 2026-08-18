@@ -15,6 +15,7 @@ import {
   type JobContext,
   type FitScore,
 } from "@/lib/ai/router";
+import { FeedbackLoopService } from "@/lib/scoring/feedback-loop";
 
 export interface IngestionInput {
   rawText?: string;
@@ -331,7 +332,19 @@ export async function ingestJobPipeline(
     requiredExperienceYears,
   };
 
-  const fitScore = await scoreJobFit(candidateContext, jobContext, options?.aiOptions);
+  const aiOptions: AIRouterOptions = { ...(options?.aiOptions || {}) };
+  if (!aiOptions.weights || !aiOptions.conversionInsights) {
+    try {
+      const activeWeights = await FeedbackLoopService.getActiveWeights(prisma);
+      aiOptions.weights = aiOptions.weights || activeWeights.weights;
+      const insights = await FeedbackLoopService.getConversionInsights(prisma);
+      aiOptions.conversionInsights = aiOptions.conversionInsights || insights;
+    } catch {
+      // Fallback gracefully
+    }
+  }
+
+  const fitScore = await scoreJobFit(candidateContext, jobContext, aiOptions);
 
   // Determine initial status based on score
   let finalStatus = "REVIEW";

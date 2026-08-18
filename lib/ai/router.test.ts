@@ -366,6 +366,50 @@ describe("Structured Domain Functions", () => {
     assert.strictEqual(fitScore.strengths[0], "TypeScript expertise");
   });
 
+  it("scoreJobFit applies calibrated weights and injects conversion insights into prompt", async () => {
+    let capturedSystem = "";
+    const mockModel = createMockModel({
+      generateOutput: {
+        score: 75,
+        recommendation: "REVIEW",
+        skillsFit: 100,
+        experienceFit: 80,
+        domainFit: 60,
+        trajectoryFit: 60,
+        strengths: ["Expert skills"],
+        gaps: [],
+        risks: [],
+        reasoning: "Good match",
+      },
+      onCall: (options) => {
+        const sys = options.prompt.find((p) => p.role === "system");
+        if (sys && typeof sys.content === "string") {
+          capturedSystem = sys.content;
+        }
+      },
+    });
+
+    const customWeights = {
+      skills: 0.50,
+      experience: 0.20,
+      domain: 0.15,
+      trajectory: 0.15,
+    };
+    const conversionInsights = "CALIBRATED CONVERSION INSIGHTS:\n- Candidate demonstrates strong market conversion in: TypeScript.";
+
+    const fitScore = await scoreJobFit(candidate, job, {
+      primaryModel: mockModel,
+      weights: customWeights,
+      conversionInsights,
+    });
+
+    // 100*0.50 + 80*0.20 + 60*0.15 + 60*0.15 = 50 + 16 + 9 + 9 = 84
+    assert.strictEqual(fitScore.score, 84);
+    assert.strictEqual(fitScore.recommendation, "APPLY");
+    assert.ok(capturedSystem.includes("CALIBRATED CONVERSION INSIGHTS:"));
+    assert.ok(capturedSystem.includes("Candidate demonstrates strong market conversion in: TypeScript."));
+  });
+
   it("extractJobDetails produces structured metadata from unstructured text", async () => {
     const rawText = `
       Staff Systems Engineer at Vercel

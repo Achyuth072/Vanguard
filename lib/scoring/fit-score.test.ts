@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import {
   computeCompositeFitScore,
   deriveRecommendation,
-  DEFAULT_FIT_SCORE_WEIGHTS,
   validateWeights,
   normalizeSubDimensions,
   type FitScoreWeights,

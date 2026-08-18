@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { getCandidateProfile, updateCandidateProfile } from "@/app/actions/candidate";
 import ProfileDrawer from "@/app/components/ProfileDrawer";
+import ScoringFeedbackLoopSettings from "@/app/components/ScoringFeedbackLoopSettings";
 import type { CandidateProfile } from "@/types/candidate";
 
 export default function SettingsPage() {
@@ -164,6 +165,9 @@ export default function SettingsPage() {
             </div>
           </form>
         </div>
+
+        {/* Adaptive Scoring & Outcome Feedback Loop */}
+        <ScoringFeedbackLoopSettings />
 
         {/* Data Export & Backup Utilities */}
         <div className="pt-2">

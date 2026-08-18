@@ -5,6 +5,8 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import {
   computeCompositeFitScore,
   deriveRecommendation,
+  DEFAULT_FIT_SCORE_WEIGHTS,
+  type FitScoreWeights,
 } from "../scoring/fit-score";
 
 export const FitScoreSchema = z.object({
@@ -83,6 +85,8 @@ export interface JobContext {
 export interface AIRouterOptions {
   primaryModel?: LanguageModel;
   fallbackModel?: LanguageModel;
+  weights?: FitScoreWeights;
+  conversionInsights?: string;
 }
 
 export function getOpenRouterModel(): LanguageModel {
@@ -200,7 +204,7 @@ export async function scoreJobFit(
   job: JobContext,
   options?: AIRouterOptions
 ): Promise<FitScore> {
-  const system = `You are a precise, objective career matching assistant for Pulse.
+  let system = `You are a precise, objective career matching assistant for Pulse.
 Your task is to evaluate whether a job posting is a viable match for a candidate based strictly on candidate facts.
 CRITICAL INVARIANTS:
 1. Ground your evaluation strictly in the provided candidate facts and job requirements.
@@ -216,6 +220,10 @@ CRITICAL INVARIANTS:
    - APPLY (80-100): High alignment across critical requirements, minimal gaps.
    - REVIEW (60-79): Moderate alignment, viable potential with notable gaps or uncertainties.
    - IGNORE (0-59): Major disqualifying gaps, misaligned experience level, or incompatible domain.`;
+
+  if (options?.conversionInsights) {
+    system += `\n\n${options.conversionInsights}`;
+  }
 
   const prompt = `CANDIDATE FACTS:
 ${buildCandidateFactSheet(candidate)}
@@ -239,12 +247,16 @@ Evaluate the candidate's fit across all four sub-dimensions (skillsFit, experien
     options,
   });
 
-  const computedScore = computeCompositeFitScore({
-    skillsFit: result.skillsFit,
-    experienceFit: result.experienceFit,
-    domainFit: result.domainFit,
-    trajectoryFit: result.trajectoryFit,
-  });
+  const weights = options?.weights || DEFAULT_FIT_SCORE_WEIGHTS;
+  const computedScore = computeCompositeFitScore(
+    {
+      skillsFit: result.skillsFit,
+      experienceFit: result.experienceFit,
+      domainFit: result.domainFit,
+      trajectoryFit: result.trajectoryFit,
+    },
+    weights
+  );
 
   return {
     ...result,

@@ -47,7 +47,7 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
     if (score >= 80) {
       return (
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-950/60 border border-emerald-800/80 text-emerald-400 shadow-sm">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
           <span>{score}/100</span>
           <span className="text-[10px] uppercase tracking-wider text-emerald-300 font-mono">APPLY</span>
         </span>

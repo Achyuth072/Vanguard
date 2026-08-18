@@ -322,7 +322,7 @@ export default function TailoredResumeEditor({
           {isDirty && (
             <div className="flex items-center justify-between p-3 rounded-lg bg-amber-950/30 border border-amber-900/60 text-amber-300 text-xs">
               <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                <span className="w-2 h-2 rounded-full bg-amber-400"></span>
                 You have unsaved changes to this Markdown resume.
               </span>
               <button

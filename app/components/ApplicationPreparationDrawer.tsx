@@ -504,7 +504,7 @@ export default function ApplicationPreparationDrawer({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
                 <span>Browser Assist</span>
-                {isAutomating && <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>}
+                {isAutomating && <span className="w-2 h-2 rounded-full bg-indigo-400"></span>}
                 {mappedFields.length > 0 && !isAutomating && (
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
                 )}
@@ -596,7 +596,7 @@ export default function ApplicationPreparationDrawer({
                   <div className="space-y-6">
                     {/* Bot Challenge Banner */}
                     {currentRunnerState === "BOT_CHECK_PAUSED" && (
-                      <div className="p-4 rounded-xl bg-amber-950/70 border border-amber-500/80 text-amber-200 text-xs shadow-xl animate-pulse flex items-start gap-3">
+                      <div className="p-4 rounded-xl bg-amber-950/70 border border-amber-500/80 text-amber-200 text-xs shadow-xl flex items-start gap-3">
                         <div className="p-2 rounded-lg bg-amber-900/60 text-amber-400 shrink-0 text-base">
                           🛡️
                         </div>

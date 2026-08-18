@@ -159,7 +159,7 @@ export default function ScoringFeedbackLoopSettings() {
     if (state.phase === "COLD_START") {
       return (
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-950/70 border border-blue-800 text-blue-300 text-xs font-semibold">
-          <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
+          <span className="w-2 h-2 rounded-full bg-blue-400"></span>
           <span>Phase 0: Cold Start ({state.sampleSize}/10 outcomes)</span>
         </div>
       );
@@ -200,7 +200,7 @@ export default function ScoringFeedbackLoopSettings() {
       </div>
 
       {loading ? (
-        <div className="text-xs text-neutral-500 py-6 text-center animate-pulse">
+        <div className="text-xs text-neutral-500 py-6 text-center">
           Loading scoring calibration metrics...
         </div>
       ) : (
@@ -328,7 +328,7 @@ export default function ScoringFeedbackLoopSettings() {
               </div>
 
               {statusMessage && (
-                <div className="text-xs text-purple-300 animate-pulse font-medium">
+                <div className="text-xs text-purple-300 font-medium">
                   {statusMessage}
                 </div>
               )}

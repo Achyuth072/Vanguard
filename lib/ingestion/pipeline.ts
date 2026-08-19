@@ -359,13 +359,8 @@ export async function ingestJobPipeline(
 
   const fitScore = await scoreJobFit(candidateContext, jobContext, aiOptions);
 
-  // Determine initial status based on score
-  let finalStatus = "REVIEW";
-  if (fitScore.score >= 80 || fitScore.recommendation === "APPLY") {
-    finalStatus = "SHORTLISTED";
-  } else if (fitScore.score < 60 || fitScore.recommendation === "IGNORE") {
-    finalStatus = "IGNORED";
-  }
+  // Jobs passing deterministic filters start in DISCOVERED status (unless already in a downstream status)
+  const finalStatus = existingJob?.status || "DISCOVERED";
 
   const job = await prisma.job.upsert({
     where: { dedupeKey },

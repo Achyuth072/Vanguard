@@ -88,15 +88,8 @@ export default function EditJobModal({
       const result = await updateJobDetailsAction(job.id, payload, { rescore: rerunAI });
 
       if (result.success) {
-        const extra = result.rescore?.fitScore ? ` (Score: ${result.rescore.fitScore.score}/100)` : "";
-        setSuccessMessage(`✓ Job details updated successfully${extra}`);
-        setTimeout(() => {
-          setSuccessMessage(null);
-          onClose();
-          setTimeout(() => {
-            if (onSuccess) onSuccess();
-          }, 150);
-        }, 900);
+        onClose();
+        if (onSuccess) onSuccess();
       } else {
         setError("Failed to update job details.");
       }

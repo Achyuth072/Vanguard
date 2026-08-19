@@ -154,18 +154,11 @@ export async function rescoreJob(
   const fitScore = await scoreJobFit(candidateContext, jobContext, aiOptions);
 
   let newStatus = job.status;
-  if (!IMMUTABLE_DOWNSTREAM_STATUSES.has(job.status.toUpperCase())) {
-    if (fitScore.score >= 80 || fitScore.recommendation === "APPLY") {
-      newStatus = "SHORTLISTED";
-    } else if (fitScore.score < 60 || fitScore.recommendation === "IGNORE") {
-      newStatus = "IGNORED";
-    } else {
-      newStatus = "REVIEW";
-    }
-
+  if (job.status === "FILTERED_OUT") {
+    newStatus = "DISCOVERED";
     await prisma.job.update({
       where: { id: jobId },
-      data: { status: newStatus },
+      data: { status: "DISCOVERED" },
     });
   }
 

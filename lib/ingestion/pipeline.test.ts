@@ -279,7 +279,7 @@ describe("Ingestion Pipeline", () => {
     });
 
     assert.strictEqual(result.isDuplicate, false);
-    assert.strictEqual(result.status, "SHORTLISTED");
+    assert.strictEqual(result.status, "DISCOVERED");
     assert.strictEqual(result.fitScore?.score, 90);
     assert.strictEqual(result.fitScore?.recommendation, "APPLY");
     assert.strictEqual(result.filterResult?.passed, true);
@@ -290,7 +290,7 @@ describe("Ingestion Pipeline", () => {
       include: { fitScore: true },
     });
     assert.ok(savedJob);
-    assert.strictEqual(savedJob.status, "SHORTLISTED");
+    assert.strictEqual(savedJob.status, "DISCOVERED");
     assert.ok(savedJob.fitScore);
     assert.strictEqual(savedJob.fitScore.score, 90);
 
@@ -368,7 +368,7 @@ describe("Ingestion Pipeline", () => {
 
     assert.strictEqual(result.job.title, "Staff Node Developer");
     assert.strictEqual(result.job.company, "TechNova");
-    assert.strictEqual(result.status, "REVIEW");
+    assert.strictEqual(result.status, "DISCOVERED");
     assert.strictEqual(result.fitScore?.score, 75);
     assert.strictEqual(callCount, 2, "Extraction + Scoring should both execute");
   });
@@ -549,7 +549,7 @@ describe("Ingestion Pipeline", () => {
     );
 
     assert.strictEqual(result.isDuplicate, false);
-    assert.strictEqual(result.status, "SHORTLISTED");
+    assert.strictEqual(result.status, "DISCOVERED");
     assert.strictEqual(result.job.company, "CloudScale");
     assert.ok(result.job.description.includes("Staff Infrastructure Engineer"));
     assert.ok(!result.job.description.includes("<script>"), "HTML tags and scripts should be stripped");

@@ -410,7 +410,7 @@ describe("Ingestion Pipeline — Status Guard", () => {
       prismaClient: mockDb as unknown as typeof db,
       aiOptions: { primaryModel: mockModel, fallbackModel: mockModel },
     });
-    assert.strictEqual(firstResult.status, "SHORTLISTED");
+    assert.strictEqual(firstResult.status, "DISCOVERED");
 
     // Advance to APPLIED
     const jobId = firstResult.job.id;

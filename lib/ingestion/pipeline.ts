@@ -17,6 +17,17 @@ import {
 } from "@/lib/ai/router";
 import { FeedbackLoopService } from "@/lib/scoring/feedback-loop";
 
+const IMMUTABLE_DOWNSTREAM_STATUSES = new Set([
+  "APPLIED",
+  "SCREENING",
+  "INTERVIEW",
+  "INTERVIEWING",
+  "OFFER",
+  "REJECTED",
+  "GHOSTED",
+  "WITHDRAWN",
+]);
+
 export interface IngestionInput {
   rawText?: string;
   url?: string;
@@ -179,8 +190,8 @@ export async function ingestJobPipeline(
   });
 
   if (existingJob) {
-    // If already processed (has fitScore or is filtered out / shortlisted / review)
-    if (existingJob.fitScore || existingJob.status === "FILTERED_OUT" || existingJob.status === "SHORTLISTED" || existingJob.status === "REVIEW") {
+    // If already processed (has fitScore, is filtered/shortlisted/review, or has advanced to a downstream lifecycle status)
+    if (existingJob.fitScore || existingJob.status === "FILTERED_OUT" || existingJob.status === "SHORTLISTED" || existingJob.status === "REVIEW" || IMMUTABLE_DOWNSTREAM_STATUSES.has(existingJob.status.toUpperCase())) {
       let parsedFitScore: FitScore | null = null;
       if (existingJob.fitScore) {
         let strengths: string[] = [];
@@ -282,7 +293,9 @@ export async function ingestJobPipeline(
         employmentType,
         description,
         url: input.url || "",
-        status: "FILTERED_OUT",
+        ...(!existingJob || !IMMUTABLE_DOWNSTREAM_STATUSES.has(existingJob.status.toUpperCase())
+          ? { status: "FILTERED_OUT" }
+          : {}),
       },
     });
 
@@ -380,7 +393,9 @@ export async function ingestJobPipeline(
       employmentType,
       description,
       url: input.url || "",
-      status: finalStatus,
+      ...(!existingJob || !IMMUTABLE_DOWNSTREAM_STATUSES.has(existingJob.status.toUpperCase())
+        ? { status: finalStatus }
+        : {}),
     },
   });
 

@@ -93,7 +93,9 @@ export default function EditJobModal({
         setTimeout(() => {
           setSuccessMessage(null);
           onClose();
-          if (onSuccess) onSuccess();
+          setTimeout(() => {
+            if (onSuccess) onSuccess();
+          }, 150);
         }, 900);
       } else {
         setError("Failed to update job details.");

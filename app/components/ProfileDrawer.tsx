@@ -322,7 +322,7 @@ export default function ProfileDrawer({
       >
         {/* Drawer Header */}
         <SheetHeader className="p-6 border-b border-zinc-800 bg-zinc-900 shrink-0 space-y-4 text-left">
-          <div className="flex items-start justify-between gap-4 pr-6">
+          <div>
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="violet" className="font-mono uppercase tracking-wider text-[10px]">
@@ -338,28 +338,6 @@ export default function ProfileDrawer({
               <SheetDescription className="text-xs text-zinc-400">
                 Verified facts repository for automated resume tailoring &amp; question answering.
               </SheetDescription>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <Button
-                type="button"
-                size="sm"
-                onClick={handleSave}
-                disabled={isSaving}
-                className="font-bold text-xs"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    <span>Saving...</span>
-                  </>
-                ) : (
-                  <>
-                    <Check className="h-3.5 w-3.5 text-emerald-600" />
-                    <span>Save Profile</span>
-                  </>
-                )}
-              </Button>
             </div>
           </div>
 
@@ -1383,8 +1361,19 @@ export default function ProfileDrawer({
               size="sm"
               onClick={handleSave}
               disabled={isSaving}
+              className="font-bold text-xs"
             >
-              {isSaving ? "Saving..." : "Save Changes"}
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <Check className="h-3.5 w-3.5 text-emerald-600" />
+                  <span>Save Profile</span>
+                </>
+              )}
             </Button>
           </div>
         </SheetFooter>

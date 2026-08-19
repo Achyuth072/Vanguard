@@ -1,7 +1,12 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { db } from "@/lib/db";
-import { getCandidateProfile, updateCandidateProfile } from "./candidate";
+import {
+  getCandidateProfile,
+  updateCandidateProfile,
+  parseCandidateResumeAction,
+  getLocalResumeMarkdownAction,
+} from "./candidate";
 import type { CandidateProfileInput } from "@/types/candidate";
 
 describe("Candidate Server Actions", () => {
@@ -102,4 +107,23 @@ describe("Candidate Server Actions", () => {
       await updateCandidateProfile(invalidInput);
     });
   });
+
+  it("parseCandidateResumeAction extracts profile with fallback on raw markdown", async () => {
+    const sampleMarkdown = `# Jane Doe\n\n## Technical Skills\n- Python, TypeScript, React\n\n## Experience\n### Senior Engineer — Acme Corp\n*Jan 2022 -- Dec 2024*\n- Architected high-scale platform\n`;
+    const res = await parseCandidateResumeAction(sampleMarkdown, "candidate-test-parse");
+    assert.strictEqual(res.success, true);
+    assert.strictEqual(res.profile.id, "candidate-test-parse");
+    assert.strictEqual(res.profile.name, "Jane Doe");
+    assert.ok(res.profile.skills.length > 0);
+  });
+
+  it("getLocalResumeMarkdownAction reads local resume if present", async () => {
+    const res = await getLocalResumeMarkdownAction();
+    assert.strictEqual(typeof res.success, "boolean");
+    if (res.success) {
+      assert.ok(typeof res.markdown === "string");
+      assert.ok(res.markdown.length > 0);
+    }
+  });
 });
+

@@ -1,5 +1,9 @@
+import { z } from "zod";
 import {
   CandidateProfileSchema,
+  MasterSkillSchema,
+  MasterProjectSchema,
+  MasterExperienceSchema,
   type CandidateProfile,
   type MasterExperience,
   type MasterProject,
@@ -7,6 +11,26 @@ import {
   type MasterSkillCategory,
   type RemoteStatus,
 } from "../types/candidate";
+import {
+  generateStructuredWithFallback,
+  type AIRouterOptions,
+} from "./ai/router";
+
+export const CandidateResumeExtractionSchema = z.object({
+  name: z.string().default("Default Candidate"),
+  targetRole: z.string().default("Software Engineer"),
+  minSalary: z.number().int().nonnegative().default(0),
+  currency: z.string().default("INR"),
+  yearsOfExperience: z.number().int().nonnegative().default(0),
+  remotePreference: z.enum(["ANY", "REMOTE_ONLY", "HYBRID", "ONSITE"]).default("ANY"),
+  preferredLocations: z.array(z.string()).default([]),
+  skills: z.array(MasterSkillSchema).default([]),
+  projects: z.array(MasterProjectSchema).default([]),
+  experiences: z.array(MasterExperienceSchema).default([]),
+});
+
+export type CandidateResumeExtraction = z.infer<typeof CandidateResumeExtractionSchema>;
+
 
 const MONTH_MAP: Record<string, string> = {
   jan: "01",
@@ -366,3 +390,105 @@ export function parseResumeMarkdownToProfile(
     resumeText: markdown,
   });
 }
+
+/**
+ * Parses markdown resume text into a structured CandidateProfile using AI
+ * with multi-model fallback (Google Gemini -> Groq -> OpenRouter).
+ * Falls back to deterministic regex parser if all AI models fail.
+ */
+export async function parseResumeMarkdownWithAI(
+  markdown: string,
+  candidateId: string = "candidate-default",
+  options?: AIRouterOptions
+): Promise<CandidateProfile> {
+  if (!markdown || !markdown.trim()) {
+    return parseResumeMarkdownToProfile("", candidateId);
+  }
+
+  const system = `You are an expert technical resume parser and candidate profile extractor for Pulse.
+Extract structured candidate facts from the provided markdown resume.
+CRITICAL INVARIANTS:
+1. Ground all extractions strictly in the provided resume text. Never hallucinate skills, metrics, experiences, or project scopes not present in the markdown.
+2. Extract the candidate's full name. Derive an appropriate target role from their latest title or background (e.g. "Full Stack Engineer", "Senior Frontend Engineer").
+3. For Work Experience:
+   - Identify company name, job title, location, remote status ("REMOTE", "HYBRID", "ONSITE", "UNKNOWN"), start date (YYYY-MM), end date (YYYY-MM or null), whether it is current position (isCurrent: true/false), and detailed bullet point highlights.
+   - Assign deterministic IDs e.g. "exp-company-1".
+4. For Master Projects:
+   - Identify project title, company/context (or "Personal" / "Independent"), role (e.g. "Lead Engineer"), dates (YYYY-MM), technology stack array, detailed bullet highlights, quantifiable metrics (e.g. "reduced latency by 65%", "60fps"), and a concise description.
+   - Assign deterministic IDs e.g. "proj-title".
+5. For Skills Repository:
+   - Categorize each skill into: "LANGUAGE", "FRAMEWORK", "DATABASE", "CLOUD", "TOOL", or "DOMAIN".
+   - Assign estimated years of experience based on candidate tenure and usage across roles.
+6. Calculate total professional years of experience accurately based on employment timeline.
+7. Extract preferred locations or remote preference if indicated (defaulting to ["Remote", "Bengaluru", "India"] and "ANY" if flexible).`;
+
+  const prompt = `RESUME MARKDOWN:
+${markdown}
+
+Extract all candidate profile master facts according to the schema.`;
+
+  try {
+    const extracted = await generateStructuredWithFallback({
+      schema: CandidateResumeExtractionSchema,
+      system,
+      prompt,
+      options,
+    });
+
+    const projects: MasterProject[] = (extracted.projects || []).map((p, idx) => ({
+      ...p,
+      id: p.id && p.id.trim().length > 0 ? p.id : `proj-${p.title.toLowerCase().replace(/[^a-z0-9]/g, "-") || idx + 1}`,
+      company: p.company || "",
+      role: p.role || "",
+      startDate: p.startDate || null,
+      endDate: p.endDate || null,
+      technologies: Array.isArray(p.technologies) ? p.technologies : [],
+      highlights: Array.isArray(p.highlights) ? p.highlights : [],
+      metrics: Array.isArray(p.metrics) ? p.metrics : [],
+      description: p.description || (p.highlights && p.highlights[0]) || `${p.title} project`,
+    }));
+
+    const experiences: MasterExperience[] = (extracted.experiences || []).map((e, idx) => ({
+      ...e,
+      id: e.id && e.id.trim().length > 0 ? e.id : `exp-${e.company.toLowerCase().replace(/[^a-z0-9]/g, "-") || idx + 1}-${idx + 1}`,
+      company: e.company || "Company",
+      title: e.title || "Software Engineer",
+      location: e.location || "",
+      remoteStatus: e.remoteStatus || "UNKNOWN",
+      startDate: e.startDate || null,
+      endDate: e.endDate || null,
+      isCurrent: Boolean(e.isCurrent),
+      highlights: Array.isArray(e.highlights) ? e.highlights : [],
+    }));
+
+    const skills: MasterSkill[] = (extracted.skills || []).map((s) => ({
+      name: s.name,
+      category: s.category || categorizeSkill(s.name),
+      yearsOfExperience: s.yearsOfExperience !== undefined ? s.yearsOfExperience : null,
+    }));
+
+    const preferredLocations =
+      extracted.preferredLocations && extracted.preferredLocations.length > 0
+        ? extracted.preferredLocations
+        : ["Remote", "Bengaluru", "India"];
+
+    return CandidateProfileSchema.parse({
+      id: candidateId,
+      name: extracted.name || "Default Candidate",
+      targetRole: extracted.targetRole || "Software Engineer",
+      minSalary: extracted.minSalary || 0,
+      currency: extracted.currency || "INR",
+      yearsOfExperience: extracted.yearsOfExperience || 0,
+      remotePreference: extracted.remotePreference || "ANY",
+      preferredLocations,
+      skills,
+      projects,
+      experiences,
+      resumeText: markdown,
+    });
+  } catch (err) {
+    console.warn("AI resume parsing encountered error or fallback, invoking deterministic parser:", err);
+    return parseResumeMarkdownToProfile(markdown, candidateId);
+  }
+}
+

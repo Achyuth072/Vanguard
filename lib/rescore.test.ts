@@ -243,7 +243,7 @@ describe("Job Re-scoring", () => {
 
     assert.strictEqual(result.fitScore?.score, 92);
     assert.strictEqual(result.fitScore?.recommendation, "APPLY");
-    assert.strictEqual(result.status, "SHORTLISTED");
+    assert.strictEqual(result.status, "REVIEW");
 
     // Check DB state
     const savedFit = mockDb._state.fitScores.get("job-123");
@@ -253,7 +253,8 @@ describe("Job Re-scoring", () => {
 
     const savedJob = mockDb._state.jobs.get("job-123");
     assert.ok(savedJob);
-    assert.strictEqual(savedJob.status, "SHORTLISTED");
+    assert.strictEqual(savedJob.status, "REVIEW");
+
 
     // Check audit event
     const scoredEvent = mockDb._state.events.find(

@@ -10,11 +10,16 @@ import {
   ChevronDown,
   Copy,
   X,
+  Sparkles,
+  FileText,
 } from "lucide-react";
 import {
   getCandidateProfile,
   updateCandidateProfile,
+  parseCandidateResumeAction,
+  getLocalResumeMarkdownAction,
 } from "@/app/actions/candidate";
+
 import type {
   CandidateProfile,
   MasterProject,
@@ -77,6 +82,9 @@ export default function ProfileDrawer({
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isParsingResume, setIsParsingResume] = useState(false);
+  const [isReadingLocalResume, setIsReadingLocalResume] = useState(false);
+  const [parseSummary, setParseSummary] = useState<string | null>(null);
 
   // Form State
   const [profile, setProfile] = useState<CandidateProfile>({
@@ -158,6 +166,73 @@ export default function ProfileDrawer({
       setIsSaving(false);
     }
   }
+
+  async function handleParseResume() {
+    const trimmed = profile.resumeText.trim();
+    if (!trimmed) {
+      setErrorMessage(
+        "Base resume text is empty. Please enter or load resume markdown first."
+      );
+      return;
+    }
+
+    setIsParsingResume(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    setParseSummary(null);
+
+    try {
+      const res = await parseCandidateResumeAction(trimmed, profile.id);
+      if (res.success && res.profile) {
+        setProfile(res.profile);
+        const summaryMsg = `Parsed & updated profile: ${res.profile.skills.length} skills, ${res.profile.projects.length} projects, and ${res.profile.experiences.length} experience roles.`;
+        setSuccessMessage(summaryMsg);
+        setParseSummary(summaryMsg);
+        if (res.profile.projects.length > 0) {
+          setExpandedProjectId(res.profile.projects[0].id);
+        }
+        if (res.profile.experiences.length > 0) {
+          setExpandedExpId(res.profile.experiences[0].id);
+        }
+        setTimeout(() => setSuccessMessage(null), 5000);
+      } else {
+        setErrorMessage(res.error || "Failed to parse resume markdown");
+      }
+    } catch (err: unknown) {
+      console.error("Failed to parse resume:", err);
+      setErrorMessage(
+        err instanceof Error ? err.message : "Failed to parse resume markdown"
+      );
+    } finally {
+      setIsParsingResume(false);
+    }
+  }
+
+  async function handleLoadLocalResume() {
+    setIsReadingLocalResume(true);
+    setErrorMessage(null);
+    try {
+      const res = await getLocalResumeMarkdownAction();
+      if (res.success && res.markdown) {
+        setProfile((prev) => ({
+          ...prev,
+          resumeText: res.markdown!,
+        }));
+        setSuccessMessage(
+          `Loaded local resume (${res.filename || "file"}). Click "Parse & Auto-Fill" to populate all spots.`
+        );
+        setTimeout(() => setSuccessMessage(null), 4000);
+      } else {
+        setErrorMessage("No local resume file found in .scratch/Resume/");
+      }
+    } catch (err: unknown) {
+      console.error("Failed to load local resume:", err);
+      setErrorMessage("Failed to load local resume file.");
+    } finally {
+      setIsReadingLocalResume(false);
+    }
+  }
+
 
   // --- Location Handlers ---
   function handleAddLocation() {
@@ -1294,39 +1369,103 @@ export default function ProfileDrawer({
               {/* 5. BASE RESUME TEXT TAB */}
               {activeTab === "resume" && (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
-                      <h3 className="text-sm font-semibold text-zinc-100 tracking-tight">
-                        Raw Resume / Markdown Bio
+                      <h3 className="text-sm font-semibold text-zinc-100 tracking-tight flex items-center gap-2">
+                        <span>Raw Resume / Markdown Bio</span>
+                        <Badge variant="violet" className="text-[10px] py-0 font-mono">
+                          AI Grounding Source
+                        </Badge>
                       </h3>
                       <p className="text-xs text-zinc-400">
-                        Full textual biography and resume text. Used for deep grounding and semantic matching.
+                        Source markdown used to extract candidate master facts and ground all tailored assets.
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-mono text-zinc-500">
-                        {profile.resumeText.length} chars
-                      </span>
+                    <div className="flex items-center gap-2 shrink-0">
                       <Button
                         type="button"
-                        variant="secondary"
+                        variant="outline"
                         size="sm"
-                        onClick={() => {
-                          navigator.clipboard.writeText(profile.resumeText);
-                          setSuccessMessage("Resume text copied to clipboard!");
-                          setTimeout(() => setSuccessMessage(null), 2000);
-                        }}
-                        className="gap-1.5"
+                        onClick={handleLoadLocalResume}
+                        disabled={isReadingLocalResume || isParsingResume}
+                        className="gap-1.5 text-xs bg-zinc-950 border-zinc-800 hover:bg-zinc-850"
+                        title="Load markdown from .scratch/Resume/"
                       >
-                        <Copy className="w-3.5 h-3.5" />
-                        <span>Copy</span>
+                        {isReadingLocalResume ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <FileText className="w-3.5 h-3.5 text-cyan-400" />
+                        )}
+                        <span>Load Local File</span>
+                      </Button>
+
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleParseResume}
+                        disabled={isParsingResume || !profile.resumeText.trim()}
+                        className="gap-1.5 text-xs font-semibold bg-violet-600 hover:bg-violet-500 text-white shadow-sm"
+                        title="Extract all profile fields using AI with fallback models"
+                      >
+                        {isParsingResume ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Parsing with AI...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-3.5 h-3.5 text-violet-200" />
+                            <span>Parse &amp; Auto-Fill Profile</span>
+                          </>
+                        )}
                       </Button>
                     </div>
                   </div>
 
+                  {/* Information banner about AI extraction */}
+                  <div className="p-3.5 rounded-lg bg-violet-950/30 border border-violet-800/40 text-violet-200 text-xs flex items-start gap-2.5">
+                    <Sparkles className="w-4 h-4 shrink-0 text-violet-400 mt-0.5" />
+                    <div className="space-y-1">
+                      <p className="font-medium text-zinc-200">
+                        Auto-Extraction &amp; Precision Fallback Pipeline
+                      </p>
+                      <p className="text-zinc-400 leading-relaxed">
+                        Clicking <strong className="text-violet-300">&quot;Parse &amp; Auto-Fill Profile&quot;</strong> analyzes the markdown using multi-model fallback (Google Gemini &rarr; Groq &rarr; OpenRouter &rarr; deterministic parser) to populate Name, Target Role, Experience Years, Skills, Projects, and Work History across all tabs for your review.
+                      </p>
+                    </div>
+                  </div>
+
+                  {parseSummary && (
+                    <div className="p-3 rounded-md bg-emerald-950/40 border border-emerald-800 text-emerald-300 text-xs flex items-center gap-2">
+                      <Check className="w-4 h-4 shrink-0 text-emerald-400" />
+                      <span>{parseSummary}</span>
+                    </div>
+                  )}
+
                   <div className="bg-zinc-950 p-4 rounded-lg border border-zinc-800 space-y-2">
+                    <div className="flex items-center justify-between text-xs text-zinc-500 pb-1 border-b border-zinc-900">
+                      <span className="font-mono text-[11px] text-zinc-400">
+                        {profile.resumeText.length} characters
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          if (!profile.resumeText) return;
+                          navigator.clipboard.writeText(profile.resumeText);
+                          setSuccessMessage("Resume text copied to clipboard!");
+                          setTimeout(() => setSuccessMessage(null), 2000);
+                        }}
+                        className="gap-1.5 h-7 text-xs text-zinc-400 hover:text-zinc-200"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Copy Markdown</span>
+                      </Button>
+                    </div>
+
                     <Textarea
-                      rows={18}
+                      rows={16}
                       value={profile.resumeText}
                       onChange={(e) =>
                         setProfile((prev) => ({
@@ -1340,6 +1479,7 @@ export default function ProfileDrawer({
                   </div>
                 </div>
               )}
+
             </>
           )}
         </div>

@@ -1,5 +1,7 @@
 "use server";
 
+import fs from "node:fs";
+import path from "node:path";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import {
@@ -10,6 +12,10 @@ import {
   type CandidateProfileInput,
   type RawCandidateDbRecord,
 } from "@/types/candidate";
+import {
+  parseResumeMarkdownWithAI,
+  parseResumeMarkdownToProfile,
+} from "@/lib/candidate-parser";
 
 function safeRevalidatePath(path: string) {
   try {
@@ -92,3 +98,61 @@ export async function updateCandidateProfile(
     profile: deserializeCandidateProfile(updatedRecord as RawCandidateDbRecord),
   };
 }
+
+/**
+ * Parses raw resume markdown into a fully structured CandidateProfile
+ * using AI with model fallback and deterministic regex backup.
+ */
+export async function parseCandidateResumeAction(
+  markdown: string,
+  candidateId: string = "candidate-default"
+): Promise<{ success: boolean; profile: CandidateProfile; error?: string }> {
+  try {
+    const profile = await parseResumeMarkdownWithAI(markdown, candidateId);
+    return {
+      success: true,
+      profile,
+    };
+  } catch (err) {
+    const fallback = parseResumeMarkdownToProfile(markdown, candidateId);
+    return {
+      success: true,
+      profile: fallback,
+      error: err instanceof Error ? err.message : "Fallback parser invoked",
+    };
+  }
+}
+
+/**
+ * Retrieves the local resume markdown content from .scratch/Resume/ if available.
+ */
+export async function getLocalResumeMarkdownAction(): Promise<{
+  success: boolean;
+  markdown: string | null;
+  filename?: string;
+}> {
+  try {
+    const resumeDir = path.join(process.cwd(), ".scratch", "Resume");
+    if (!fs.existsSync(resumeDir)) {
+      return { success: false, markdown: null };
+    }
+
+    const primaryPath = path.join(resumeDir, "Achyuth.md");
+    if (fs.existsSync(primaryPath)) {
+      const content = fs.readFileSync(primaryPath, "utf-8");
+      return { success: true, markdown: content, filename: "Achyuth.md" };
+    }
+
+    const files = fs.readdirSync(resumeDir).filter((f) => f.endsWith(".md"));
+    if (files.length > 0) {
+      const content = fs.readFileSync(path.join(resumeDir, files[0]), "utf-8");
+      return { success: true, markdown: content, filename: files[0] };
+    }
+
+    return { success: false, markdown: null };
+  } catch (err) {
+    console.error("Failed to read local resume markdown:", err);
+    return { success: false, markdown: null };
+  }
+}
+

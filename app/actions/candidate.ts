@@ -39,6 +39,7 @@ export async function getCandidateProfile(
       name: "Default Candidate",
       targetRole: "Software Engineer",
       minSalary: 0,
+      currency: "INR",
       yearsOfExperience: 0,
       remotePreference: "ANY",
       preferredLocations: [],

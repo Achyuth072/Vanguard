@@ -38,6 +38,7 @@ export function buildCandidateProfilePayload(
       name: "Alex Builder",
       targetRole: "Software Engineer",
       minSalary: 0,
+      currency: "INR",
       yearsOfExperience: 5,
       remotePreference: "ANY",
       preferredLocations: ["Remote", "San Francisco, CA"],

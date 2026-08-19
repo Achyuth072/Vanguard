@@ -39,6 +39,7 @@ export interface EnrichedJob {
   remoteStatus: string;
   salaryMin: number | null;
   salaryMax: number | null;
+  currency?: string;
   employmentType: string;
   description: string;
   url: string;
@@ -118,6 +119,7 @@ export async function getJobs(): Promise<EnrichedJob[]> {
       remoteStatus: job.remoteStatus,
       salaryMin: job.salaryMin,
       salaryMax: job.salaryMax,
+      currency: job.currency || "INR",
       employmentType: job.employmentType,
       description: job.description,
       url: job.url,
@@ -161,6 +163,7 @@ export interface UpdateJobInput {
   remoteStatus?: string;
   salaryMin?: number | null;
   salaryMax?: number | null;
+  currency?: string;
   employmentType?: string;
   description?: string;
   url?: string;
@@ -178,6 +181,7 @@ export async function updateJob(
   if (input.remoteStatus !== undefined) updateData.remoteStatus = input.remoteStatus;
   if (input.salaryMin !== undefined) updateData.salaryMin = input.salaryMin;
   if (input.salaryMax !== undefined) updateData.salaryMax = input.salaryMax;
+  if (input.currency !== undefined) updateData.currency = input.currency;
   if (input.employmentType !== undefined) updateData.employmentType = input.employmentType;
   if (input.description !== undefined) updateData.description = input.description;
   if (input.url !== undefined) updateData.url = input.url;

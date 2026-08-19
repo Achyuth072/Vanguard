@@ -58,25 +58,89 @@ describe("Deterministic Filter Engine", () => {
   });
 
   describe("Salary filter", () => {
-    it("rejects when job salaryMax is strictly less than candidate minSalary", () => {
+    it("rejects when job salaryMax is strictly less than candidate minSalary in same currency", () => {
+      const candidate: CandidateFilterCriteria = {
+        ...baseCandidate,
+        currency: "USD",
+        minSalary: 100000,
+      };
       const job: JobFilterInput = {
         ...baseJob,
+        currency: "USD",
         salaryMin: 70000,
         salaryMax: 90000,
       };
-      const result = evaluateDeterministicFilters(baseCandidate, job);
+      const result = evaluateDeterministicFilters(candidate, job);
       assert.strictEqual(result.passed, false);
       assert.strictEqual(result.reasons.length, 1);
       assert.match(result.reasons[0], /Salary ceiling \$90,000 is below candidate minimum \$100,000/i);
     });
 
-    it("passes when job salaryMax equals candidate minSalary", () => {
+    it("passes when job salaryMax equals candidate minSalary in same currency", () => {
+      const candidate: CandidateFilterCriteria = {
+        ...baseCandidate,
+        currency: "USD",
+        minSalary: 100000,
+      };
       const job: JobFilterInput = {
         ...baseJob,
+        currency: "USD",
         salaryMin: 80000,
         salaryMax: 100000,
       };
-      const result = evaluateDeterministicFilters(baseCandidate, job);
+      const result = evaluateDeterministicFilters(candidate, job);
+      assert.strictEqual(result.passed, true);
+    });
+
+    it("passes when USD job converted to INR exceeds candidate INR minSalary", () => {
+      // Candidate: ₹1,500,000 INR; Job: $100,000 USD (~₹8,500,000 INR)
+      const candidate: CandidateFilterCriteria = {
+        ...baseCandidate,
+        currency: "INR",
+        minSalary: 1500000,
+      };
+      const job: JobFilterInput = {
+        ...baseJob,
+        currency: "USD",
+        salaryMin: 80000,
+        salaryMax: 100000,
+      };
+      const result = evaluateDeterministicFilters(candidate, job);
+      assert.strictEqual(result.passed, true);
+    });
+
+    it("rejects when USD job converted to INR is below candidate INR minSalary", () => {
+      // Candidate: ₹1,500,000 INR; Job: $10,000 USD (~₹850,000 INR)
+      const candidate: CandidateFilterCriteria = {
+        ...baseCandidate,
+        currency: "INR",
+        minSalary: 1500000,
+      };
+      const job: JobFilterInput = {
+        ...baseJob,
+        currency: "USD",
+        salaryMin: 8000,
+        salaryMax: 10000,
+      };
+      const result = evaluateDeterministicFilters(candidate, job);
+      assert.strictEqual(result.passed, false);
+      assert.strictEqual(result.reasons.length, 1);
+      assert.match(result.reasons[0], /Salary ceiling \$10,000/i);
+      assert.match(result.reasons[0], /below candidate minimum/i);
+    });
+
+    it("bypasses filter when job currency is unsupported or unmapped", () => {
+      const candidate: CandidateFilterCriteria = {
+        ...baseCandidate,
+        currency: "INR",
+        minSalary: 1500000,
+      };
+      const job: JobFilterInput = {
+        ...baseJob,
+        currency: "XYZ",
+        salaryMax: 500,
+      };
+      const result = evaluateDeterministicFilters(candidate, job);
       assert.strictEqual(result.passed, true);
     });
   });

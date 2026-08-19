@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { SUPPORTED_CURRENCIES } from "@/lib/utils/currency";
 
 interface EditJobModalProps {
   job: EnrichedJob | null;
@@ -33,6 +34,7 @@ export default function EditJobModal({
   const [location, setLocation] = useState("");
   const [remoteStatus, setRemoteStatus] = useState("UNKNOWN");
   const [employmentType, setEmploymentType] = useState("FULL_TIME");
+  const [currency, setCurrency] = useState("INR");
   const [salaryMin, setSalaryMin] = useState<string>("");
   const [salaryMax, setSalaryMax] = useState<string>("");
   const [url, setUrl] = useState("");
@@ -49,6 +51,7 @@ export default function EditJobModal({
       setLocation(job.location || "");
       setRemoteStatus(job.remoteStatus || "UNKNOWN");
       setEmploymentType(job.employmentType || "FULL_TIME");
+      setCurrency(job.currency || "INR");
       setSalaryMin(job.salaryMin !== null && job.salaryMin !== undefined ? String(job.salaryMin) : "");
       setSalaryMax(job.salaryMax !== null && job.salaryMax !== undefined ? String(job.salaryMax) : "");
       setUrl(job.url || "");
@@ -79,6 +82,7 @@ export default function EditJobModal({
         location: location.trim(),
         remoteStatus,
         employmentType,
+        currency,
         salaryMin: isNaN(parsedMin as number) ? null : parsedMin,
         salaryMax: isNaN(parsedMax as number) ? null : parsedMax,
         url: url.trim(),
@@ -212,33 +216,47 @@ export default function EditJobModal({
             </div>
           </div>
 
-          {/* Row 3: Salary Min & Max ($) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Row 3: Currency, Salary Min & Max */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400 mb-1.5">
-                Minimum Salary ($ / yr)
+                Currency
+              </label>
+              <select
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                className="w-full h-9 rounded-md border border-zinc-800 bg-zinc-950 px-3 text-xs text-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+              >
+                {SUPPORTED_CURRENCIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.code} ({c.symbol})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400 mb-1.5">
+                Minimum Salary / yr
               </label>
               <Input
                 type="number"
                 value={salaryMin}
                 onChange={(e) => setSalaryMin(e.target.value)}
-                placeholder="e.g. 140000"
+                placeholder={currency === "INR" ? "e.g. 1200000" : "e.g. 120000"}
                 min={0}
-                step={1000}
                 className="text-xs font-mono"
               />
             </div>
             <div>
               <label className="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400 mb-1.5">
-                Maximum Salary ($ / yr)
+                Maximum Salary / yr
               </label>
               <Input
                 type="number"
                 value={salaryMax}
                 onChange={(e) => setSalaryMax(e.target.value)}
-                placeholder="e.g. 180000"
+                placeholder={currency === "INR" ? "e.g. 1800000" : "e.g. 180000"}
                 min={0}
-                step={1000}
                 className="text-xs font-mono"
               />
             </div>

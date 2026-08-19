@@ -37,6 +37,7 @@ export interface IngestionInput {
   remoteStatus?: "REMOTE" | "HYBRID" | "ONSITE" | "UNKNOWN" | string;
   salaryMin?: number | null;
   salaryMax?: number | null;
+  currency?: string;
   employmentType?: string;
   description?: string;
   requiredExperienceYears?: number | null;
@@ -60,6 +61,7 @@ export interface IngestedJobRecord {
   remoteStatus: string;
   salaryMin?: number | null;
   salaryMax?: number | null;
+  currency?: string;
   employmentType: string;
   description: string;
   url: string;
@@ -151,6 +153,7 @@ export async function ingestJobPipeline(
   let remoteStatus = input.remoteStatus || "UNKNOWN";
   let salaryMin = input.salaryMin ?? null;
   let salaryMax = input.salaryMax ?? null;
+  let currency = input.currency || "INR";
   let employmentType = input.employmentType || "FULL_TIME";
   let description = input.description || rawContent;
   let requiredExperienceYears = input.requiredExperienceYears ?? null;
@@ -164,6 +167,7 @@ export async function ingestJobPipeline(
     remoteStatus = remoteStatus === "UNKNOWN" ? extracted.remoteStatus : remoteStatus;
     salaryMin = salaryMin ?? extracted.salaryMin ?? null;
     salaryMax = salaryMax ?? extracted.salaryMax ?? null;
+    currency = input.currency || extracted.currency || "INR";
     employmentType = employmentType === "FULL_TIME" ? extracted.employmentType : employmentType;
     description = description || extracted.description;
     requiredExperienceYears = requiredExperienceYears ?? extracted.requiredExperienceYears ?? null;
@@ -241,6 +245,7 @@ export async function ingestJobPipeline(
 
   const candidateCriteria: CandidateFilterCriteria = {
     minSalary: candidateRecord?.minSalary ?? 0,
+    currency: candidateRecord?.currency ?? "INR",
     yearsOfExperience: candidateRecord?.yearsOfExperience ?? 0,
     remotePreference: candidateRecord?.remotePreference ?? "ANY",
     preferredLocations: candidateRecord?.preferredLocations,
@@ -253,6 +258,7 @@ export async function ingestJobPipeline(
     remoteStatus,
     salaryMin,
     salaryMax,
+    currency,
     employmentType,
     description,
     requiredExperienceYears,
@@ -277,6 +283,7 @@ export async function ingestJobPipeline(
         remoteStatus,
         salaryMin,
         salaryMax,
+        currency,
         employmentType,
         description,
         url: input.url || "",
@@ -290,6 +297,7 @@ export async function ingestJobPipeline(
         remoteStatus,
         salaryMin,
         salaryMax,
+        currency,
         employmentType,
         description,
         url: input.url || "",
@@ -324,6 +332,7 @@ export async function ingestJobPipeline(
   const candidateContext: CandidateContext = {
     targetRole: candidateRecord?.targetRole,
     minSalary: candidateRecord?.minSalary,
+    currency: candidateRecord?.currency ?? "INR",
     yearsOfExperience: candidateRecord?.yearsOfExperience,
     remotePreference: candidateRecord?.remotePreference,
     preferredLocations: candidateRecord?.preferredLocations,
@@ -340,6 +349,7 @@ export async function ingestJobPipeline(
     remoteStatus,
     salaryMin,
     salaryMax,
+    currency,
     employmentType,
     description,
     requiredExperienceYears,
@@ -372,6 +382,7 @@ export async function ingestJobPipeline(
       remoteStatus,
       salaryMin,
       salaryMax,
+      currency,
       employmentType,
       description,
       url: input.url || "",
@@ -385,6 +396,7 @@ export async function ingestJobPipeline(
       remoteStatus,
       salaryMin,
       salaryMax,
+      currency,
       employmentType,
       description,
       url: input.url || "",

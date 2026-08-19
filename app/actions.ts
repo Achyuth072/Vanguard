@@ -186,6 +186,7 @@ export async function updateJobDetailsAction(
     remoteStatus?: string;
     salaryMin?: number | null;
     salaryMax?: number | null;
+    currency?: string;
     employmentType?: string;
     description?: string;
     url?: string;

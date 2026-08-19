@@ -4,8 +4,8 @@
 
 ### Core Entities
 
-- **Candidate**: The single-user profile representing the job seeker. Holds scalar filter preferences (minimum salary, years of experience, remote requirement, preferred locations) and rich structured JSON history (projects, employment records, skills, master resume sections).
-- **Job**: A single job opportunity discovered or imported into the system. Identified uniquely across aggregators via a computed `dedupeKey`. Contains raw and normalized metadata (role title, company name, location, remote classification, salary range, job description text, status).
+- **Candidate**: The single-user profile representing the job seeker. Holds scalar filter preferences (minimum salary, currency preference, years of experience, remote requirement, preferred locations) and rich structured JSON history (projects, employment records, skills, master resume sections).
+- **Job**: A single job opportunity discovered or imported into the system. Identified uniquely across aggregators via a computed `dedupeKey`. Contains raw and normalized metadata (role title, company name, location, remote classification, salary range and currency, job description text, status).
 - **JobSource**: The origin mechanism and metadata of a job listing (such as manual paste, direct URL import, or future feed/API integrations).
 - **FitScore**: The evaluation record of a job against the candidate profile. Consists of a normalized score (0–100), explicit categorization (`APPLY`, `REVIEW`, `IGNORE`), identified strengths, critical gaps, risk flags, and concise structured reasoning.
 - **Application**: The record of engagement for a shortlisted job. Tracks application lifecycle states, attached tailored resume version, generated question answers, notes, and submission timestamps.
@@ -15,9 +15,9 @@
 
 ### Pipeline Stages
 
-1. **Ingestion**: Adding raw job descriptions into the staging layer via manual paste or URL scraping.
+1. **Ingestion**: Adding raw job descriptions into the staging layer via manual paste or URL scraping, with AI extraction of compensation and currency (normalizing LPA and symbols).
 2. **Deduplication**: Computing a deterministic `dedupeKey` from normalized company, title, and URL tokens to eliminate duplicate listings before expensive processing.
-3. **Deterministic Filtering**: Fast, zero-AI evaluation of hard constraints (minimum salary, remote eligibility, minimum experience) rejecting non-viable jobs instantly.
+3. **Deterministic Filtering**: Fast, zero-AI evaluation of hard constraints (minimum salary with cross-currency conversion normalization, remote eligibility, minimum experience) rejecting non-viable jobs instantly.
 4. **AI Fit Scoring**: Provider-agnostic semantic evaluation generating structured scores and gap analysis.
 5. **Priority Inbox**: The primary decision interface presenting high-value jobs requiring human attention.
 6. **Application Preparation**: Generating role-specific tailored resumes, project recommendations, and grounded question answers from verified candidate facts.

@@ -9,6 +9,7 @@ import EditJobModal from "./EditJobModal";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { formatSalaryCompact } from "@/lib/utils/currency";
 
 interface JobCardProps {
   job: EnrichedJob;
@@ -147,8 +148,8 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
               <>
                 <span className="text-zinc-700">•</span>
                 <span className="text-emerald-400 font-mono tabular-nums">
-                  ${job.salaryMin ? `${(job.salaryMin / 1000).toFixed(0)}k` : "0"}
-                  {job.salaryMax ? ` – $${(job.salaryMax / 1000).toFixed(0)}k` : "+"}
+                  {job.salaryMin ? formatSalaryCompact(job.salaryMin, job.currency) : "0"}
+                  {job.salaryMax ? ` – ${formatSalaryCompact(job.salaryMax, job.currency)}` : "+"}
                 </span>
               </>
             )}

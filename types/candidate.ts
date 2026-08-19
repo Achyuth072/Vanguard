@@ -56,6 +56,7 @@ export const CandidateProfileSchema = z.object({
   name: z.string().default("Default Candidate"),
   targetRole: z.string().default("Software Engineer"),
   minSalary: z.number().int().nonnegative().default(0),
+  currency: z.string().default("INR"),
   yearsOfExperience: z.number().int().nonnegative().default(0),
   remotePreference: z.string().default("ANY"),
   preferredLocations: z.array(z.string()).default([]),
@@ -75,6 +76,7 @@ export interface RawCandidateDbRecord {
   name: string;
   targetRole: string;
   minSalary: number;
+  currency?: string;
   yearsOfExperience: number;
   remotePreference: string;
   preferredLocations: string;
@@ -157,6 +159,7 @@ export function serializeCandidateProfile(
     name: validated.name,
     targetRole: validated.targetRole,
     minSalary: validated.minSalary,
+    currency: validated.currency,
     yearsOfExperience: validated.yearsOfExperience,
     remotePreference: validated.remotePreference,
     preferredLocations: JSON.stringify(validated.preferredLocations),
@@ -175,6 +178,7 @@ export function deserializeCandidateProfile(
     name: record.name,
     targetRole: record.targetRole,
     minSalary: record.minSalary,
+    currency: record.currency || "INR",
     yearsOfExperience: record.yearsOfExperience,
     remotePreference: record.remotePreference,
     preferredLocations: parsePreferredLocations(record.preferredLocations),

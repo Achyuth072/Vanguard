@@ -66,6 +66,7 @@ describe("Assisted Application UX, SSE Progress Stream & Hybrid Submission Detec
         name: "Alex Builder",
         targetRole: "Staff Engineer",
         minSalary: 190000,
+        currency: "USD",
         yearsOfExperience: 7,
         remotePreference: "REMOTE_ONLY",
         preferredLocations: ["Remote", "New York, NY"],

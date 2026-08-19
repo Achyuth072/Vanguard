@@ -78,6 +78,7 @@ describe("Candidate Master Types and Serializers", () => {
       assert.strictEqual(parsed.id, "candidate-default");
       assert.strictEqual(parsed.name, "Default Candidate");
       assert.strictEqual(parsed.targetRole, "Software Engineer");
+      assert.strictEqual(parsed.currency, "INR");
       assert.deepStrictEqual(parsed.skills, []);
       assert.deepStrictEqual(parsed.projects, []);
       assert.deepStrictEqual(parsed.experiences, []);
@@ -90,6 +91,7 @@ describe("Candidate Master Types and Serializers", () => {
       name: "Jane Doe",
       targetRole: "Senior Software Engineer",
       minSalary: 120000,
+      currency: "USD",
       yearsOfExperience: 5,
       remotePreference: "REMOTE_ONLY",
       preferredLocations: ["Remote", "Bengaluru", "San Francisco"],
@@ -132,6 +134,7 @@ describe("Candidate Master Types and Serializers", () => {
       const serialized = serializeCandidateProfile(sampleProfile);
       assert.strictEqual(serialized.id, "candidate-123");
       assert.strictEqual(serialized.name, "Jane Doe");
+      assert.strictEqual(serialized.currency, "USD");
       assert.strictEqual(typeof serialized.skills, "string");
       assert.strictEqual(typeof serialized.projects, "string");
       assert.strictEqual(typeof serialized.experiences, "string");
@@ -153,6 +156,7 @@ describe("Candidate Master Types and Serializers", () => {
       const deserialized = deserializeCandidateProfile(dbRecord);
       assert.strictEqual(deserialized.id, sampleProfile.id);
       assert.strictEqual(deserialized.name, sampleProfile.name);
+      assert.strictEqual(deserialized.currency, "USD");
       assert.strictEqual(deserialized.skills.length, 3);
       assert.strictEqual(deserialized.skills[0].name, "TypeScript");
       assert.strictEqual(deserialized.skills[0].category, "LANGUAGE");

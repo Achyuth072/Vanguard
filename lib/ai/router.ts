@@ -39,6 +39,7 @@ export const JobDetailsSchema = z.object({
   remoteStatus: z.enum(["REMOTE", "HYBRID", "ONSITE", "UNKNOWN"]).default("UNKNOWN"),
   salaryMin: z.number().int().nullable().optional(),
   salaryMax: z.number().int().nullable().optional(),
+  currency: z.string().default("INR"),
   employmentType: z
     .enum(["FULL_TIME", "PART_TIME", "CONTRACT", "INTERNSHIP", "OTHER"])
     .default("FULL_TIME"),
@@ -61,6 +62,7 @@ export interface CandidateContext {
   name?: string;
   targetRole?: string;
   minSalary?: number;
+  currency?: string;
   yearsOfExperience?: number;
   remotePreference?: string;
   preferredLocations?: string[] | string;
@@ -77,6 +79,7 @@ export interface JobContext {
   remoteStatus?: string;
   salaryMin?: number | null;
   salaryMax?: number | null;
+  currency?: string;
   employmentType?: string;
   description: string;
   requiredExperienceYears?: number | null;
@@ -410,7 +413,7 @@ export async function extractJobDetails(
 ): Promise<JobDetails> {
   const system = `You are an expert job posting analyzer.
 Extract structured metadata from the provided raw job description text.
-Accurately identify role title, company name, location, remote work status (REMOTE, HYBRID, ONSITE, or UNKNOWN), salary ranges (if present), employment type (FULL_TIME, PART_TIME, CONTRACT, INTERNSHIP, OTHER), estimated minimum required years of experience (if mentioned), and key required technical/domain skills.
+Accurately identify role title, company name, location, remote work status (REMOTE, HYBRID, ONSITE, or UNKNOWN), salary ranges and currency (ISO-4217 code such as INR, USD, EUR, GBP, CAD, AUD; detect ₹/Rs/LPA as INR, $/USD as USD, € as EUR, £ as GBP; convert LPA to full integer e.g. 15 LPA -> 1500000; default to INR if unstated), employment type (FULL_TIME, PART_TIME, CONTRACT, INTERNSHIP, OTHER), estimated minimum required years of experience (if mentioned), and key required technical/domain skills.
 Never hallucinate salary numbers or requirements not present in the text.`;
 
   const prompt = `RAW JOB TEXT:

@@ -36,6 +36,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { SUPPORTED_CURRENCIES } from "@/lib/utils/currency";
 
 interface ProfileDrawerProps {
   isOpen: boolean;
@@ -83,6 +84,7 @@ export default function ProfileDrawer({
     name: "Default Candidate",
     targetRole: "Software Engineer",
     minSalary: 0,
+    currency: "INR",
     yearsOfExperience: 0,
     remotePreference: "ANY",
     preferredLocations: [],
@@ -510,20 +512,38 @@ export default function ProfileDrawer({
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-1.5">
                         <label className="block text-xs font-medium text-zinc-400">
-                          Min. Expected Salary ($ / yr)
+                          Min. Expected Salary / yr
                         </label>
-                        <Input
-                          type="number"
-                          value={profile.minSalary || ""}
-                          onChange={(e) =>
-                            setProfile((prev) => ({
-                              ...prev,
-                              minSalary: Math.max(0, parseInt(e.target.value, 10) || 0),
-                            }))
-                          }
-                          placeholder="e.g. 120000"
-                          className="font-mono"
-                        />
+                        <div className="flex gap-2">
+                          <select
+                            value={profile.currency || "INR"}
+                            onChange={(e) =>
+                              setProfile((prev) => ({
+                                ...prev,
+                                currency: e.target.value,
+                              }))
+                            }
+                            className="flex h-9 w-28 shrink-0 rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs font-medium text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+                          >
+                            {SUPPORTED_CURRENCIES.map((c) => (
+                              <option key={c.code} value={c.code}>
+                                {c.code} ({c.symbol})
+                              </option>
+                            ))}
+                          </select>
+                          <Input
+                            type="number"
+                            value={profile.minSalary || ""}
+                            onChange={(e) =>
+                              setProfile((prev) => ({
+                                ...prev,
+                                minSalary: Math.max(0, parseInt(e.target.value, 10) || 0),
+                              }))
+                            }
+                            placeholder={profile.currency === "INR" ? "e.g. 1500000" : "e.g. 120000"}
+                            className="font-mono flex-1 min-w-0"
+                          />
+                        </div>
                       </div>
 
                       <div className="space-y-1.5">

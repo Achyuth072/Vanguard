@@ -1,5 +1,8 @@
+import { convertCurrency, formatSalary } from "../utils/currency";
+
 export interface CandidateFilterCriteria {
   minSalary?: number;
+  currency?: string;
   yearsOfExperience?: number;
   remotePreference?: "REMOTE_ONLY" | "HYBRID" | "ONSITE" | "ANY" | string;
   preferredLocations?: string[] | string;
@@ -14,6 +17,7 @@ export interface JobFilterInput {
   remoteStatus?: "REMOTE" | "HYBRID" | "ONSITE" | "UNKNOWN" | string;
   salaryMin?: number | null;
   salaryMax?: number | null;
+  currency?: string;
   employmentType?: string;
   description?: string;
   requiredExperienceYears?: number | null;
@@ -98,12 +102,28 @@ export function evaluateDeterministicFilters(
     typeof candidate.minSalary === "number" &&
     candidate.minSalary > 0 &&
     typeof job.salaryMax === "number" &&
-    job.salaryMax > 0 &&
-    job.salaryMax < candidate.minSalary
+    job.salaryMax > 0
   ) {
-    const formattedMax = job.salaryMax.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
-    const formattedMin = candidate.minSalary.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
-    reasons.push(`Salary ceiling ${formattedMax} is below candidate minimum ${formattedMin}`);
+    const candidateCurrency = (candidate.currency || "INR").toUpperCase();
+    const jobCurrency = (job.currency || "INR").toUpperCase();
+
+    if (candidateCurrency === jobCurrency) {
+      if (job.salaryMax < candidate.minSalary) {
+        const formattedMax = formatSalary(job.salaryMax, jobCurrency);
+        const formattedMin = formatSalary(candidate.minSalary, candidateCurrency);
+        reasons.push(`Salary ceiling ${formattedMax} is below candidate minimum ${formattedMin}`);
+      }
+    } else {
+      const convertedJobMax = convertCurrency(job.salaryMax, jobCurrency, candidateCurrency);
+      if (convertedJobMax !== null && convertedJobMax < candidate.minSalary) {
+        const formattedJobMax = formatSalary(job.salaryMax, jobCurrency);
+        const formattedConverted = formatSalary(convertedJobMax, candidateCurrency);
+        const formattedCandidateMin = formatSalary(candidate.minSalary, candidateCurrency);
+        reasons.push(
+          `Salary ceiling ${formattedJobMax} (~${formattedConverted}) is below candidate minimum ${formattedCandidateMin}`
+        );
+      }
+    }
   }
 
   // 2. Remote / Work Model Filter

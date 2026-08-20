@@ -65,22 +65,12 @@ export default function GlobalCommandPalette() {
             <CommandItem
               onSelect={() =>
                 runCommand(() => {
-                  const ingestBtn = document.querySelector<HTMLButtonElement>(
-                    '[data-testid="quick-ingest-button"]'
-                  );
-                  if (ingestBtn) {
-                    ingestBtn.click();
-                  } else {
-                    const fallbackBtn = Array.from(document.querySelectorAll("button")).find(
-                      (b) => b.textContent?.includes("Quick Ingest") || b.textContent?.includes("Ingest")
-                    );
-                    fallbackBtn?.click();
-                  }
+                  window.dispatchEvent(new CustomEvent("open-ingest-modal", { detail: { mode: "manual" } }));
                 })
               }
             >
               <PlusCircle className="mr-2 h-4 w-4 text-zinc-400" />
-              <span>Ingest Job / Manual Entry</span>
+              <span>Manual Job Entry</span>
               <CommandShortcut>G N</CommandShortcut>
             </CommandItem>
 
@@ -125,17 +115,7 @@ export default function GlobalCommandPalette() {
             <CommandItem
               onSelect={() =>
                 runCommand(() => {
-                  const ingestBtn = document.querySelector<HTMLButtonElement>(
-                    '[data-testid="quick-ingest-button"]'
-                  );
-                  if (ingestBtn) {
-                    ingestBtn.click();
-                  } else {
-                    const fallbackBtn = Array.from(document.querySelectorAll("button")).find(
-                      (b) => b.textContent?.includes("Quick Ingest") || b.textContent?.includes("Ingest")
-                    );
-                    fallbackBtn?.click();
-                  }
+                  window.dispatchEvent(new CustomEvent("open-ingest-modal", { detail: { mode: "paste" } }));
                 })
               }
             >

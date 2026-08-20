@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { EnrichedJob } from "@/lib/data";
 import JobCard from "./JobCard";
@@ -23,8 +23,24 @@ export default function PriorityInbox({ initialJobs }: PriorityInboxProps) {
   const [activeTab, setActiveTab] = useState<TabType>("inbox");
   const [searchQuery, setSearchQuery] = useState("");
   const [isIngestOpen, setIsIngestOpen] = useState(false);
+  const [ingestMode, setIngestMode] = useState<"paste" | "url" | "manual">("paste");
   const [selectedPrepJob, setSelectedPrepJob] = useState<EnrichedJob | null>(null);
   const [isPrepDrawerOpen, setIsPrepDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpenIngest = (e: Event) => {
+      const customEvent = e as CustomEvent<{ mode?: "paste" | "url" | "manual" }>;
+      if (customEvent.detail?.mode) {
+        setIngestMode(customEvent.detail.mode);
+      } else {
+        setIngestMode("paste");
+      }
+      setIsIngestOpen(true);
+    };
+
+    window.addEventListener("open-ingest-modal", handleOpenIngest);
+    return () => window.removeEventListener("open-ingest-modal", handleOpenIngest);
+  }, []);
 
   const [allJobsStatusFilter, setAllJobsStatusFilter] = useState<string>("ALL");
 
@@ -288,7 +304,9 @@ export default function PriorityInbox({ initialJobs }: PriorityInboxProps) {
 
       {/* Ingestion Modal Dialog */}
       <IngestModal
+        key={isIngestOpen ? `open-${ingestMode}` : "closed"}
         isOpen={isIngestOpen}
+        initialMode={ingestMode}
         onClose={() => setIsIngestOpen(false)}
         onSuccess={handleDataRefreshed}
       />

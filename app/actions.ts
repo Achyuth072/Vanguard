@@ -129,6 +129,7 @@ export async function updateJobDetailsAction(
     employmentType?: string;
     description?: string;
     url?: string;
+    source?: string;
   },
   options?: { rescore?: boolean }
 ) {

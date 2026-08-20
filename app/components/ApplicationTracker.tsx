@@ -7,6 +7,7 @@ import DraftButton from "./DraftButton";
 import EditJobModal from "./EditJobModal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { getSourceBadgeStyle } from "@/lib/utils/source";
 
 interface ApplicationTrackerProps {
   jobs: EnrichedJob[];
@@ -220,8 +221,19 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
                           )}
                         </div>
 
-                        <div className="text-zinc-400 font-medium text-xs truncate">
-                          {job.company}
+                        <div className="flex items-center justify-between gap-1 text-zinc-400 font-medium text-xs">
+                          <span className="truncate">{job.company}</span>
+                          {job.source && (
+                            (() => {
+                              const sourceInfo = getSourceBadgeStyle(job.source);
+                              return (
+                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-semibold border shrink-0 ${sourceInfo.colorClass}`}>
+                                  <span className={`w-1 h-1 rounded-full ${sourceInfo.dotColorClass}`} />
+                                  <span>{sourceInfo.label}</span>
+                                </span>
+                              );
+                            })()
+                          )}
                         </div>
 
                         {job.location && (

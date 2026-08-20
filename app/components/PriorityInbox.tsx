@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatSalaryCompact } from "@/lib/utils/currency";
+import { SUPPORTED_SOURCES, getSourceBadgeStyle, normalizeSource } from "@/lib/utils/source";
 import {
   Sparkles,
   MapPin,
@@ -43,6 +44,7 @@ export default function PriorityInbox({ initialJobs }: PriorityInboxProps) {
   const [activeTab, setActiveTab] = useState<TabType>("inbox");
   const [searchQuery, setSearchQuery] = useState("");
   const [allJobsStatusFilter, setAllJobsStatusFilter] = useState<string>("ALL");
+  const [sourceFilter, setSourceFilter] = useState<string>("ALL");
   const [selectedJobId, setSelectedJobId] = useState<string | null>(initialJobs[0]?.id || null);
 
   // Modals & drawers
@@ -152,6 +154,10 @@ export default function PriorityInbox({ initialJobs }: PriorityInboxProps) {
       }
     }
 
+    if (sourceFilter !== "ALL") {
+      list = list.filter((job) => normalizeSource(job.source, job.url) === sourceFilter);
+    }
+
     if (!searchQuery.trim()) return list;
 
     const query = searchQuery.toLowerCase();
@@ -159,10 +165,11 @@ export default function PriorityInbox({ initialJobs }: PriorityInboxProps) {
       const titleMatch = job.title.toLowerCase().includes(query);
       const companyMatch = job.company.toLowerCase().includes(query);
       const locationMatch = job.location.toLowerCase().includes(query);
+      const sourceMatch = job.source?.toLowerCase().includes(query);
       const reasoningMatch = job.fitScore?.reasoning?.toLowerCase().includes(query);
-      return titleMatch || companyMatch || locationMatch || reasoningMatch;
+      return titleMatch || companyMatch || locationMatch || sourceMatch || reasoningMatch;
     });
-  }, [activeTab, allJobsStatusFilter, searchQuery, inboxJobs, reviewJobs, applicationJobs, initialJobs]);
+  }, [activeTab, allJobsStatusFilter, sourceFilter, searchQuery, inboxJobs, reviewJobs, applicationJobs, initialJobs]);
 
   // Active selected job in detail view
   const selectedJob = useMemo(() => {
@@ -394,19 +401,35 @@ export default function PriorityInbox({ initialJobs }: PriorityInboxProps) {
           </button>
         </div>
 
-        {/* Search & Ingest Action Button */}
-        <div className="flex items-center gap-2.5">
+        {/* Search, Source Filter & Ingest Action Button */}
+        <div className="flex flex-wrap items-center gap-2.5">
           {activeTab !== "applications" && (
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-              <Input
-                type="text"
-                placeholder="Filter company, title, skills..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 text-xs bg-zinc-950 border-zinc-800 w-48 sm:w-64 h-8"
-              />
-            </div>
+            <>
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                <Input
+                  type="text"
+                  placeholder="Filter company, title, skills..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8 text-xs bg-zinc-950 border-zinc-800 w-44 sm:w-56 h-8"
+                />
+              </div>
+
+              <select
+                value={sourceFilter}
+                onChange={(e) => setSourceFilter(e.target.value)}
+                aria-label="Filter by Source Platform"
+                className="h-8 bg-zinc-950 border border-zinc-800 text-zinc-300 text-xs rounded-md px-2.5 outline-none cursor-pointer hover:border-zinc-700 focus-visible:ring-1 focus-visible:ring-violet-400"
+              >
+                <option value="ALL">All Sources</option>
+                {SUPPORTED_SOURCES.map((s) => (
+                  <option key={s.key} value={s.key}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </>
           )}
 
           <Button
@@ -482,6 +505,20 @@ export default function PriorityInbox({ initialJobs }: PriorityInboxProps) {
                           </h4>
                           <div className="flex items-center gap-2 text-[11px] text-zinc-400 font-medium truncate">
                             <span className="text-zinc-200 font-semibold">{job.company}</span>
+                            {job.source && (
+                              <>
+                                <span>•</span>
+                                {(() => {
+                                  const sourceInfo = getSourceBadgeStyle(job.source);
+                                  return (
+                                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold border ${sourceInfo.colorClass}`}>
+                                      <span className={`w-1 h-1 rounded-full ${sourceInfo.dotColorClass}`} />
+                                      <span>{sourceInfo.label}</span>
+                                    </span>
+                                  );
+                                })()}
+                              </>
+                            )}
                             {job.location && (
                               <>
                                 <span>•</span>
@@ -540,6 +577,20 @@ export default function PriorityInbox({ initialJobs }: PriorityInboxProps) {
                           <Building2 className="w-3.5 h-3.5 text-zinc-500" />
                           {selectedJob.company}
                         </span>
+                        {selectedJob.source && (
+                          <>
+                            <span className="text-zinc-700">•</span>
+                            {(() => {
+                              const sourceInfo = getSourceBadgeStyle(selectedJob.source);
+                              return (
+                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ${sourceInfo.colorClass}`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${sourceInfo.dotColorClass}`} />
+                                  <span>{sourceInfo.label}</span>
+                                </span>
+                              );
+                            })()}
+                          </>
+                        )}
                         {selectedJob.location && (
                           <>
                             <span className="text-zinc-700">•</span>

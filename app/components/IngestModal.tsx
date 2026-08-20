@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { SUPPORTED_CURRENCIES } from "@/lib/utils/currency";
+import { SUPPORTED_SOURCES, normalizeSource, detectSourceFromUrl } from "@/lib/utils/source";
 
 interface IngestModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export default function IngestModal({ isOpen, onClose, onSuccess, initialMode = 
   const [mode, setMode] = useState<"paste" | "url" | "manual">(initialMode);
   const [rawText, setRawText] = useState("");
   const [url, setUrl] = useState("");
+  const [source, setSource] = useState("MANUAL");
   const [company, setCompany] = useState("");
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState("");
@@ -68,8 +70,16 @@ export default function IngestModal({ isOpen, onClose, onSuccess, initialMode = 
         }
       }
 
+      const effectiveSource = source && source !== "MANUAL"
+        ? source
+        : mode === "url"
+        ? (detectSourceFromUrl(url) || "URL")
+        : mode === "manual"
+        ? "MANUAL"
+        : "PASTE";
+
       const payload = {
-        source: mode === "url" ? "URL" : mode === "manual" ? "MANUAL" : "PASTE",
+        source: effectiveSource,
         ...(mode === "url" ? { url: url.trim() } : {}),
         ...(mode === "paste" ? { rawText: rawText.trim() } : {}),
         ...(mode === "manual" && rawText.trim() ? { description: rawText.trim(), rawText: rawText.trim() } : {}),
@@ -89,6 +99,7 @@ export default function IngestModal({ isOpen, onClose, onSuccess, initialMode = 
         setTimeout(() => {
           setRawText("");
           setUrl("");
+          setSource("MANUAL");
           setCompany("");
           setTitle("");
           setLocation("");
@@ -198,23 +209,48 @@ export default function IngestModal({ isOpen, onClose, onSuccess, initialMode = 
           )}
 
           {mode === "url" && (
-            <div>
-              <label className="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400 mb-1.5">
-                Job Posting URL *
-              </label>
-              <Input
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://jobs.example.com/roles/ai-engineer"
-                required
-                className="font-mono text-xs"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="sm:col-span-2">
+                <label className="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400 mb-1.5">
+                  Job Posting URL *
+                </label>
+                <Input
+                  type="url"
+                  value={url}
+                  onChange={(e) => {
+                    const newUrl = e.target.value;
+                    setUrl(newUrl);
+                    const detected = detectSourceFromUrl(newUrl);
+                    if (detected) {
+                      setSource(detected);
+                    }
+                  }}
+                  placeholder="https://jobs.example.com/roles/ai-engineer"
+                  required
+                  className="font-mono text-xs"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400 mb-1.5">
+                  Source Platform
+                </label>
+                <select
+                  value={source}
+                  onChange={(e) => setSource(e.target.value)}
+                  className="w-full h-8 rounded-md bg-zinc-950 border border-zinc-800 text-zinc-100 text-xs px-2.5 outline-none focus:border-zinc-700 cursor-pointer"
+                >
+                  {SUPPORTED_SOURCES.map((s) => (
+                    <option key={s.key} value={s.key}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           )}
 
           {/* Primary Fields: Company & Title */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-[10px] uppercase tracking-wider font-semibold text-zinc-500 mb-1">
                 Company {mode === "manual" ? "*" : "(Optional override)"}
@@ -241,6 +277,24 @@ export default function IngestModal({ isOpen, onClose, onSuccess, initialMode = 
                 className="text-xs"
               />
             </div>
+            {mode !== "url" && (
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider font-semibold text-zinc-500 mb-1">
+                  Source
+                </label>
+                <select
+                  value={source}
+                  onChange={(e) => setSource(e.target.value)}
+                  className="w-full h-8 rounded-md bg-zinc-950 border border-zinc-800 text-zinc-100 text-xs px-2.5 outline-none focus:border-zinc-700 cursor-pointer"
+                >
+                  {SUPPORTED_SOURCES.map((s) => (
+                    <option key={s.key} value={s.key}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Details / Overrides Section: Always expanded for Manual mode, Collapsible for Paste/URL */}

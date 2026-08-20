@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "db:seed": "prisma db seed",
-    "test": "NODE_ENV=test tsx --test --test-concurrency=1 $(find app lib types -name '*.test.ts')"
+    "db:import-legacy": "tsx scripts/import-legacy-csv.ts",
+    "test": "NODE_ENV=test tsx --test --test-concurrency=1 $(find app lib types scripts -name '*.test.ts')"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

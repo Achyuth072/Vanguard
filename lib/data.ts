@@ -167,6 +167,7 @@ export interface UpdateJobInput {
   employmentType?: string;
   description?: string;
   url?: string;
+  source?: string;
 }
 
 export async function updateJob(
@@ -185,6 +186,7 @@ export async function updateJob(
   if (input.employmentType !== undefined) updateData.employmentType = input.employmentType;
   if (input.description !== undefined) updateData.description = input.description;
   if (input.url !== undefined) updateData.url = input.url;
+  if (input.source !== undefined) updateData.source = input.source;
 
   const updated = await prisma.job.update({
     where: { id: jobId },

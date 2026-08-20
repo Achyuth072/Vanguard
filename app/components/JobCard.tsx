@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatSalaryCompact } from "@/lib/utils/currency";
+import { getSourceBadgeStyle } from "@/lib/utils/source";
 
 interface JobCardProps {
   job: EnrichedJob;
@@ -129,6 +130,20 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400 font-medium">
             <span className="text-zinc-200 font-semibold">{job.company}</span>
+            {job.source && (
+              <>
+                <span className="text-zinc-700">•</span>
+                {(() => {
+                  const sourceInfo = getSourceBadgeStyle(job.source);
+                  return (
+                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ${sourceInfo.colorClass}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${sourceInfo.dotColorClass}`} />
+                      <span>{sourceInfo.label}</span>
+                    </span>
+                  );
+                })()}
+              </>
+            )}
             {job.location && (
               <>
                 <span className="text-zinc-700">•</span>

@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { SUPPORTED_CURRENCIES } from "@/lib/utils/currency";
+import { SUPPORTED_SOURCES, normalizeSource, detectSourceFromUrl } from "@/lib/utils/source";
 
 interface EditJobModalProps {
   job: EnrichedJob | null;
@@ -38,6 +39,7 @@ export default function EditJobModal({
   const [salaryMin, setSalaryMin] = useState<string>("");
   const [salaryMax, setSalaryMax] = useState<string>("");
   const [url, setUrl] = useState("");
+  const [source, setSource] = useState("MANUAL");
   const [description, setDescription] = useState("");
   const [rerunAI, setRerunAI] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -55,6 +57,7 @@ export default function EditJobModal({
       setSalaryMin(job.salaryMin !== null && job.salaryMin !== undefined ? String(job.salaryMin) : "");
       setSalaryMax(job.salaryMax !== null && job.salaryMax !== undefined ? String(job.salaryMax) : "");
       setUrl(job.url || "");
+      setSource(job.source ? normalizeSource(job.source, job.url) : "MANUAL");
       setDescription(job.description || "");
       setRerunAI(true);
       setError(null);
@@ -86,6 +89,7 @@ export default function EditJobModal({
         salaryMin: isNaN(parsedMin as number) ? null : parsedMin,
         salaryMax: isNaN(parsedMax as number) ? null : parsedMax,
         url: url.trim(),
+        source: source.trim(),
         description: description.trim(),
       };
 
@@ -262,18 +266,43 @@ export default function EditJobModal({
             </div>
           </div>
 
-          {/* Row 4: URL */}
-          <div>
-            <label className="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400 mb-1.5">
-              Job URL
-            </label>
-            <Input
-              type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://company.com/careers/job-id"
-              className="text-xs font-mono"
-            />
+          {/* Row 4: URL & Source */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="sm:col-span-2">
+              <label className="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400 mb-1.5">
+                Job URL
+              </label>
+              <Input
+                type="url"
+                value={url}
+                onChange={(e) => {
+                  const newUrl = e.target.value;
+                  setUrl(newUrl);
+                  const detected = detectSourceFromUrl(newUrl);
+                  if (detected && (source === "MANUAL" || source === "OTHER" || source === "URL")) {
+                    setSource(detected);
+                  }
+                }}
+                placeholder="https://company.com/careers/job-id"
+                className="text-xs font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400 mb-1.5">
+                Source Platform
+              </label>
+              <select
+                value={source}
+                onChange={(e) => setSource(e.target.value)}
+                className="w-full h-8 rounded-md bg-zinc-950 border border-zinc-800 text-zinc-100 text-xs px-2.5 outline-none focus:border-zinc-700 cursor-pointer"
+              >
+                {SUPPORTED_SOURCES.map((s) => (
+                  <option key={s.key} value={s.key}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Row 5: Description */}

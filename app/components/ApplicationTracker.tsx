@@ -116,8 +116,8 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="space-y-3 flex flex-col h-full min-h-0">
+      <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold tracking-tight text-zinc-100">Application Pipeline</h2>
           <p className="text-xs text-zinc-400 mt-0.5">
@@ -147,7 +147,7 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
       </div>
 
       {/* Horizontally Scrollable Kanban Rail */}
-      <div className="flex gap-4 overflow-x-auto pb-4 pt-1 snap-x select-none">
+      <div className="flex gap-4 overflow-x-auto pb-2 pt-1 snap-x select-none flex-1 min-h-0">
         {displayedStages.map((stage) => {
           const stageJobs = pipelineJobs.filter((j) => normalizeStatus(j.status) === stage.id);
           const isTargeted = dragOverStageId === stage.id;
@@ -158,14 +158,14 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
               onDragOver={(e) => handleDragOver(e, stage.id)}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, stage.id)}
-              className={`w-72 min-w-[288px] max-w-[288px] shrink-0 snap-start bg-zinc-900 border rounded-lg p-3 flex flex-col min-h-[460px] transition-colors ${
+              className={`w-72 min-w-[288px] max-w-[288px] shrink-0 snap-start bg-zinc-900 border rounded-lg p-3 flex flex-col h-full min-h-0 transition-colors ${
                 isTargeted
                   ? "border-violet-500 bg-zinc-800/90 ring-1 ring-violet-400/50"
                   : "border-zinc-800"
               }`}
             >
               {/* Column Header */}
-              <div className="flex items-center justify-between mb-3 pb-2 border-b border-zinc-800">
+              <div className="flex items-center justify-between mb-3 pb-2 border-b border-zinc-800 shrink-0">
                 <Badge variant={stage.variant} className="text-[10px] uppercase tracking-wider font-semibold">
                   {stage.label}
                 </Badge>
@@ -175,7 +175,7 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
               </div>
 
               {/* Cards Container */}
-              <div className="space-y-3 flex-1 overflow-y-auto pr-0.5">
+              <div className="space-y-3 flex-1 min-h-0 overflow-y-auto pr-0.5">
                 {stageJobs.length === 0 ? (
                   <div
                     className={`h-32 flex flex-col items-center justify-center text-xs italic border border-dashed rounded-md transition-colors ${

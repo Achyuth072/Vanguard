@@ -30,9 +30,6 @@ import {
   Search,
   PlusCircle,
   TrendingUp,
-  FileText,
-  Layers,
-  ArrowUpDown,
 } from "lucide-react";
 
 interface PriorityInboxProps {
@@ -271,66 +268,66 @@ export default function PriorityInbox({ initialJobs }: PriorityInboxProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col flex-1 min-h-0 space-y-3 sm:space-y-3.5">
       {/* Top KPI Metrics Banner */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-        <Card className="p-3.5 bg-zinc-900/60 border-zinc-800/80 hover:border-zinc-700 transition-colors">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0">
+        <Card className="p-3 bg-zinc-900/60 border-zinc-800/80 hover:border-zinc-700 transition-colors">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Priority (≥80)</span>
             <span className="p-1 rounded-md bg-emerald-950/60 border border-emerald-800/50 text-emerald-400">
               <CheckCircle2 className="w-3.5 h-3.5" />
             </span>
           </div>
-          <div className="mt-1.5 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-emerald-400 font-mono">{inboxJobs.length}</span>
+          <div className="mt-1 flex items-baseline gap-2">
+            <span className="text-xl sm:text-2xl font-bold text-emerald-400 font-mono">{inboxJobs.length}</span>
             <span className="text-[11px] text-zinc-500 font-mono">
               {initialJobs.length > 0 ? Math.round((inboxJobs.length / initialJobs.length) * 100) : 0}% of total
             </span>
           </div>
         </Card>
 
-        <Card className="p-3.5 bg-zinc-900/60 border-zinc-800/80 hover:border-zinc-700 transition-colors">
+        <Card className="p-3 bg-zinc-900/60 border-zinc-800/80 hover:border-zinc-700 transition-colors">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Review (60-79)</span>
             <span className="p-1 rounded-md bg-amber-950/60 border border-amber-800/50 text-amber-400">
               <Clock className="w-3.5 h-3.5" />
             </span>
           </div>
-          <div className="mt-1.5 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-amber-400 font-mono">{reviewJobs.length}</span>
+          <div className="mt-1 flex items-baseline gap-2">
+            <span className="text-xl sm:text-2xl font-bold text-amber-400 font-mono">{reviewJobs.length}</span>
             <span className="text-[11px] text-zinc-500 font-mono">Needs triage</span>
           </div>
         </Card>
 
-        <Card className="p-3.5 bg-zinc-900/60 border-zinc-800/80 hover:border-zinc-700 transition-colors">
+        <Card className="p-3 bg-zinc-900/60 border-zinc-800/80 hover:border-zinc-700 transition-colors">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">In Pipeline</span>
             <span className="p-1 rounded-md bg-violet-950/60 border border-violet-800/50 text-violet-400">
               <Briefcase className="w-3.5 h-3.5" />
             </span>
           </div>
-          <div className="mt-1.5 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-violet-400 font-mono">{applicationJobs.length}</span>
+          <div className="mt-1 flex items-baseline gap-2">
+            <span className="text-xl sm:text-2xl font-bold text-violet-400 font-mono">{applicationJobs.length}</span>
             <span className="text-[11px] text-zinc-500 font-mono">In-flight</span>
           </div>
         </Card>
 
-        <Card className="p-3.5 bg-zinc-900/60 border-zinc-800/80 hover:border-zinc-700 transition-colors">
+        <Card className="p-3 bg-zinc-900/60 border-zinc-800/80 hover:border-zinc-700 transition-colors">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Avg Fit Score</span>
             <span className="p-1 rounded-md bg-zinc-800 border border-zinc-700 text-zinc-300">
               <TrendingUp className="w-3.5 h-3.5" />
             </span>
           </div>
-          <div className="mt-1.5 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-zinc-100 font-mono">{avgScore}/100</span>
+          <div className="mt-1 flex items-baseline gap-2">
+            <span className="text-xl sm:text-2xl font-bold text-zinc-100 font-mono">{avgScore}/100</span>
             <span className="text-[11px] text-zinc-500 font-mono">{initialJobs.length} jobs</span>
           </div>
         </Card>
       </div>
 
       {/* Action Header / Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-zinc-900/90 border border-zinc-800 rounded-xl p-3.5">
+      <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-zinc-900/90 border border-zinc-800 rounded-xl p-2.5 sm:p-3">
         {/* Navigation Tabs */}
         <div className="flex flex-wrap items-center gap-1.5">
           <button
@@ -429,15 +426,17 @@ export default function PriorityInbox({ initialJobs }: PriorityInboxProps) {
 
       {/* Main Surface: Kanban View vs 2-Column Split Cockpit */}
       {activeTab === "applications" ? (
-        <ApplicationTracker
-          jobs={initialJobs}
-          onStatusUpdated={handleDataRefreshed}
-          onOpenPreparation={handleOpenPreparation}
-        />
+        <div className="flex-1 min-h-0">
+          <ApplicationTracker
+            jobs={initialJobs}
+            onStatusUpdated={handleDataRefreshed}
+            onOpenPreparation={handleOpenPreparation}
+          />
+        </div>
       ) : (
-        <div className="space-y-4">
+        <div className="flex flex-col flex-1 min-h-0 space-y-3">
           {activeTab === "all" && (
-            <div className="flex items-center gap-2 bg-zinc-900/60 p-2.5 rounded-lg border border-zinc-800/60 text-xs">
+            <div className="shrink-0 flex items-center gap-2 bg-zinc-900/60 p-2 rounded-lg border border-zinc-800/60 text-xs">
               <span className="text-zinc-400 font-medium ml-2">Status filter:</span>
               <select
                 value={allJobsStatusFilter}
@@ -454,9 +453,9 @@ export default function PriorityInbox({ initialJobs }: PriorityInboxProps) {
           )}
 
           {/* Master-Detail 2-Column Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 min-h-0 h-full items-stretch">
             {/* LEFT COLUMN: Master Job List (35-40% / 4-5 cols) */}
-            <div className="lg:col-span-5 xl:col-span-4 space-y-2 max-h-[calc(100vh-250px)] overflow-y-auto pr-1">
+            <div className="lg:col-span-5 xl:col-span-4 space-y-2 h-full overflow-y-auto pr-1">
               {displayedJobs.length === 0 ? (
                 <div className="p-8 text-center bg-zinc-900/40 border border-zinc-800 rounded-xl text-zinc-500 text-xs">
                   No jobs found matching your criteria.
@@ -523,11 +522,11 @@ export default function PriorityInbox({ initialJobs }: PriorityInboxProps) {
             </div>
 
             {/* RIGHT COLUMN: Active Job Evaluation & Action Cockpit (60-65% / 7-8 cols) */}
-            <div className="lg:col-span-7 xl:col-span-8">
+            <div className="lg:col-span-7 xl:col-span-8 h-full min-h-0">
               {selectedJob ? (
-                <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-5 sm:p-6 space-y-5 sticky top-5 max-h-[calc(100vh-140px)] overflow-y-auto shadow-xl">
+                <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-4 sm:p-5 space-y-4 h-full overflow-y-auto shadow-xl">
                   {/* Selected Job Header */}
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-zinc-800">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pb-3 border-b border-zinc-800">
                     <div className="space-y-1.5">
                       <div className="flex flex-wrap items-center gap-2.5">
                         <h2 className="text-lg sm:text-xl font-bold text-zinc-100 tracking-tight">

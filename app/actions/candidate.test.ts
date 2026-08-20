@@ -1,4 +1,4 @@
-import { describe, it, beforeEach } from "node:test";
+import { describe, it, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 import { db } from "@/lib/db";
 import {
@@ -124,6 +124,20 @@ describe("Candidate Server Actions", () => {
       assert.ok(typeof res.markdown === "string");
       assert.ok(res.markdown.length > 0);
     }
+  });
+
+  after(async () => {
+    await db.event.deleteMany({
+      where: {
+        entityType: "Candidate",
+        entityId: { in: ["test-candidate-1", "candidate-test-parse"] },
+      },
+    });
+    await db.candidate.deleteMany({
+      where: {
+        id: { in: ["test-candidate-1", "candidate-test-parse"] },
+      },
+    });
   });
 });
 

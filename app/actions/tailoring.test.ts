@@ -46,7 +46,11 @@ function createMockModel(outputMap: Record<string, unknown>): LanguageModel {
 }
 
 test("Tailoring Server Actions Suite", async (t) => {
-  // Ensure default candidate exists
+  const originalCandidate = await db.candidate.findUnique({
+    where: { id: "candidate-default" },
+  });
+
+  // Ensure default candidate exists for test
   await db.candidate.upsert({
     where: { id: "candidate-default" },
     create: {
@@ -81,6 +85,32 @@ test("Tailoring Server Actions Suite", async (t) => {
     },
     update: {
       name: "Jordan Lee",
+      targetRole: "Senior Systems Engineer",
+      yearsOfExperience: 5,
+      skills: JSON.stringify([
+        { name: "TypeScript", category: "LANGUAGE", yearsOfExperience: 5 },
+        { name: "React", category: "FRAMEWORK", yearsOfExperience: 4 },
+        { name: "Next.js", category: "FRAMEWORK", yearsOfExperience: 3 },
+      ]),
+      projects: JSON.stringify([
+        {
+          id: "pulse-engine",
+          title: "Pulse Engine",
+          technologies: ["TypeScript", "Next.js"],
+          highlights: ["Engineered zero-cost AI router"],
+          metrics: ["100% test coverage"],
+          description: "Career workflow automation tool.",
+        },
+      ]),
+      experiences: JSON.stringify([
+        {
+          id: "exp-1",
+          company: "Tech Corp",
+          title: "Staff Engineer",
+          highlights: ["Led frontend platform migration"],
+        },
+      ]),
+      resumeText: "Jordan Lee - Staff Engineer with deep TypeScript and Next.js expertise.",
     },
   });
 
@@ -105,6 +135,13 @@ test("Tailoring Server Actions Suite", async (t) => {
       await db.application.delete({ where: { id: app.id } });
     }
     await db.job.deleteMany({ where: { id: testJob.id } });
+    if (originalCandidate) {
+      const { id, createdAt, updatedAt, ...rest } = originalCandidate;
+      await db.candidate.update({
+        where: { id: "candidate-default" },
+        data: rest,
+      });
+    }
   });
 
   const mockResumeOutput = {

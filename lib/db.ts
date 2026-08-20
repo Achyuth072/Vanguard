@@ -1,8 +1,13 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 
+const defaultDatabaseUrl =
+  process.env.NODE_ENV === "test"
+    ? "file:./pulse-test.db"
+    : "file:./pulse.db";
+
 const adapter = new PrismaLibSql({
-  url: process.env.DATABASE_URL || "file:./pulse.db",
+  url: process.env.DATABASE_URL || defaultDatabaseUrl,
 });
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient };

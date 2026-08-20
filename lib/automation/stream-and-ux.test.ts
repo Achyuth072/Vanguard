@@ -1,4 +1,4 @@
-import { describe, it, beforeEach } from "node:test";
+import { describe, it, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 import { chromium, type BrowserContext, type Page } from "playwright";
 import { db } from "@/lib/db";
@@ -293,6 +293,24 @@ describe("Assisted Application UX, SSE Progress Stream & Hybrid Submission Detec
     assert.strictEqual(draftResult.job.status, "PREPARED");
 
     // Clean up
-    await db.job.delete({ where: { id: "test-job-stream-2" } });
+    await db.job.deleteMany({ where: { id: "test-job-stream-2" } });
+  });
+
+  after(async () => {
+    await db.event.deleteMany({
+      where: {
+        entityId: { in: ["test-job-stream-1", "test-job-stream-2", "test-app-stream-1"] },
+      },
+    });
+    await db.application.deleteMany({
+      where: {
+        jobId: { in: ["test-job-stream-1", "test-job-stream-2"] },
+      },
+    });
+    await db.job.deleteMany({
+      where: {
+        id: { in: ["test-job-stream-1", "test-job-stream-2"] },
+      },
+    });
   });
 });

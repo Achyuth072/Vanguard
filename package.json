@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "test": "NODE_ENV=test tsx --test --test-concurrency=1 $(find app lib types -name '*.test.ts')"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

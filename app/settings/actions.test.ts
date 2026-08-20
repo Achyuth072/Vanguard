@@ -1,5 +1,6 @@
-import { describe, it } from "node:test";
+import { describe, it, after } from "node:test";
 import assert from "node:assert/strict";
+import { db } from "@/lib/db";
 import {
   getScoringFeedbackLoopState,
   getScoringWeightHistory,
@@ -10,6 +11,15 @@ import {
 import { DEFAULT_FIT_SCORE_WEIGHTS, validateWeights } from "@/lib/scoring/fit-score";
 
 describe("Scoring Feedback Loop Server Actions", () => {
+  after(async () => {
+    await resetScoringWeights();
+    await db.event.deleteMany({
+      where: {
+        entityType: "System",
+        entityId: "ScoringWeights",
+      },
+    });
+  });
   it("retrieves feedback loop state without throwing", async () => {
     const state = await getScoringFeedbackLoopState();
     assert.ok(state);

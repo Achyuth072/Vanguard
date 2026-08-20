@@ -6,6 +6,15 @@ export const SUPPORTED_CURRENCIES = [
   { code: "CAD", symbol: "CA$", label: "CAD ($) - Canadian Dollar" },
   { code: "AUD", symbol: "A$", label: "AUD ($) - Australian Dollar" },
   { code: "SGD", symbol: "S$", label: "SGD ($) - Singapore Dollar" },
+  { code: "AED", symbol: "AED", label: "AED (AED) - UAE Dirham" },
+  { code: "CHF", symbol: "CHF", label: "CHF (CHF) - Swiss Franc" },
+  { code: "JPY", symbol: "¥", label: "JPY (¥) - Japanese Yen" },
+  { code: "SEK", symbol: "kr", label: "SEK (kr) - Swedish Krona" },
+  { code: "NZD", symbol: "NZ$", label: "NZD ($) - New Zealand Dollar" },
+  { code: "HKD", symbol: "HK$", label: "HKD ($) - Hong Kong Dollar" },
+  { code: "BRL", symbol: "R$", label: "BRL (R$) - Brazilian Real" },
+  { code: "PLN", symbol: "zł", label: "PLN (zł) - Polish Zloty" },
+  { code: "ZAR", symbol: "R", label: "ZAR (R) - South African Rand" },
 ] as const;
 
 export type SupportedCurrencyCode = (typeof SUPPORTED_CURRENCIES)[number]["code"];
@@ -21,6 +30,15 @@ export const STATIC_EXCHANGE_RATES_TO_INR: Record<string, number> = {
   CAD: 62,
   AUD: 55,
   SGD: 63,
+  AED: 23.1,
+  CHF: 95.5,
+  JPY: 0.57,
+  SEK: 8.0,
+  NZD: 50.5,
+  HKD: 10.9,
+  BRL: 15.0,
+  PLN: 21.5,
+  ZAR: 4.6,
 };
 
 export function getCurrencySymbol(currency: string = "INR"): string {
@@ -58,8 +76,32 @@ export function normalizeCurrencyCode(input?: string | null): string {
   if (["SGD", "S$", "SINGAPORE DOLLAR", "SINGAPORE DOLLARS"].includes(upper)) {
     return "SGD";
   }
-  if (["JPY", "¥", "YEN"].includes(upper)) {
+  if (["AED", "DIRHAM", "DIRHAMS", "DH", "DHS"].includes(upper)) {
+    return "AED";
+  }
+  if (["CHF", "SWISS FRANC", "SWISS FRANCS", "FRANC", "FRANCS"].includes(upper)) {
+    return "CHF";
+  }
+  if (["JPY", "¥", "YEN", "JAPANESE YEN"].includes(upper)) {
     return "JPY";
+  }
+  if (["SEK", "KR", "KRONA", "KRONOR", "SWEDISH KRONA"].includes(upper)) {
+    return "SEK";
+  }
+  if (["NZD", "NZ$", "NEW ZEALAND DOLLAR", "KIWI DOLLAR"].includes(upper)) {
+    return "NZD";
+  }
+  if (["HKD", "HK$", "HONG KONG DOLLAR"].includes(upper)) {
+    return "HKD";
+  }
+  if (["BRL", "R$", "REAL", "REAIS", "BRAZILIAN REAL"].includes(upper)) {
+    return "BRL";
+  }
+  if (["PLN", "ZŁ", "ZL", "ZLOTY", "POLISH ZLOTY"].includes(upper)) {
+    return "PLN";
+  }
+  if (["ZAR", "RAND", "SOUTH AFRICAN RAND"].includes(upper)) {
+    return "ZAR";
   }
 
   return upper.length === 3 ? upper : "INR";
@@ -98,7 +140,25 @@ export function convertCurrency(
  */
 export function formatSalary(amount: number, currency: string = "INR"): string {
   const curr = (currency || "INR").toUpperCase();
-  const locale = curr === "INR" ? "en-IN" : "en-US";
+  const localeMap: Record<string, string> = {
+    INR: "en-IN",
+    USD: "en-US",
+    EUR: "de-DE",
+    GBP: "en-GB",
+    CAD: "en-CA",
+    AUD: "en-AU",
+    SGD: "en-SG",
+    AED: "en-AE",
+    CHF: "de-CH",
+    JPY: "ja-JP",
+    SEK: "sv-SE",
+    NZD: "en-NZ",
+    HKD: "zh-HK",
+    BRL: "pt-BR",
+    PLN: "pl-PL",
+    ZAR: "en-ZA",
+  };
+  const locale = localeMap[curr] || "en-US";
 
   try {
     return amount.toLocaleString(locale, {
@@ -130,9 +190,21 @@ export function formatSalaryCompact(amount: number, currency: string = "INR"): s
     return `${symbol}${(amount / 1000).toFixed(0)}k`;
   }
 
+  if (curr === "JPY") {
+    if (amount >= 10000) {
+      const man = amount / 10000;
+      return `${symbol}${man % 1 === 0 ? man.toFixed(0) : man.toFixed(1)}万`;
+    }
+    return `${symbol}${amount.toLocaleString()}`;
+  }
+
   if (amount >= 1000000) {
     const m = amount / 1000000;
     return `${symbol}${m % 1 === 0 ? m.toFixed(0) : m.toFixed(1)}M`;
   }
-  return `${symbol}${(amount / 1000).toFixed(0)}k`;
+  if (amount >= 1000) {
+    const k = amount / 1000;
+    return `${symbol}${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}k`;
+  }
+  return `${symbol}${amount}`;
 }

@@ -436,6 +436,15 @@ EXTRACTION GUIDELINES:
      * "CAD": CA$, CAD, "Canadian Dollar".
      * "AUD": A$, AUD, "Australian Dollar".
      * "SGD": S$, SGD, "Singapore Dollar".
+     * "AED": AED, "Dirham", "Dirhams", "DH", "Dhs".
+     * "CHF": CHF, "Swiss Franc", "Franc", "Francs".
+     * "JPY": ¥, JPY, "Yen", "Japanese Yen".
+     * "SEK": kr, SEK, "Krona", "Kronor", "Swedish Krona".
+     * "NZD": NZ$, NZD, "New Zealand Dollar".
+     * "HKD": HK$, HKD, "Hong Kong Dollar".
+     * "BRL": R$, BRL, "Real", "Reais", "Brazilian Real".
+     * "PLN": zł, PLN, "Złoty", "Zloty", "Polish Zloty".
+     * "ZAR": R, ZAR, "Rand", "South African Rand".
    - CRITICAL CURRENCY INVARIANT: Never convert ₹, Rs, L, Lakhs, or LPA to USD! "₹12L – ₹35L" is strictly INR (salaryMin: 1200000, salaryMax: 3500000, currency: "INR").
    - Indian Number Suffixes:
      * "L", "Lac", "Lakh", "Lakhs", "LPA" = multiply by 100,000 (e.g. ₹12L -> 1,200,000, ₹35L -> 3,500,000, 15 LPA -> 1,500,000).

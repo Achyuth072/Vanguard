@@ -98,5 +98,24 @@ describe("Currency Utilities", () => {
       assert.strictEqual(normalizeCurrencyCode("£"), "GBP");
       assert.strictEqual(normalizeCurrencyCode("Pounds"), "GBP");
     });
+
+    it("normalizes global job board currencies (AED, CHF, JPY, SEK, CAD, AUD, SGD, NZD, HKD, BRL, PLN, ZAR)", () => {
+      assert.strictEqual(normalizeCurrencyCode("AED"), "AED");
+      assert.strictEqual(normalizeCurrencyCode("Dirhams"), "AED");
+      assert.strictEqual(normalizeCurrencyCode("CHF"), "CHF");
+      assert.strictEqual(normalizeCurrencyCode("Swiss Franc"), "CHF");
+      assert.strictEqual(normalizeCurrencyCode("¥"), "JPY");
+      assert.strictEqual(normalizeCurrencyCode("Yen"), "JPY");
+      assert.strictEqual(normalizeCurrencyCode("kr"), "SEK");
+      assert.strictEqual(normalizeCurrencyCode("Swedish Krona"), "SEK");
+      assert.strictEqual(normalizeCurrencyCode("CA$"), "CAD");
+      assert.strictEqual(normalizeCurrencyCode("A$"), "AUD");
+      assert.strictEqual(normalizeCurrencyCode("S$"), "SGD");
+      assert.strictEqual(normalizeCurrencyCode("NZ$"), "NZD");
+      assert.strictEqual(normalizeCurrencyCode("HK$"), "HKD");
+      assert.strictEqual(normalizeCurrencyCode("R$"), "BRL");
+      assert.strictEqual(normalizeCurrencyCode("zł"), "PLN");
+      assert.strictEqual(normalizeCurrencyCode("Rand"), "ZAR");
+    });
   });
 });

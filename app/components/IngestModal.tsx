@@ -18,10 +18,11 @@ interface IngestModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  initialMode?: "paste" | "url" | "manual";
 }
 
-export default function IngestModal({ isOpen, onClose, onSuccess }: IngestModalProps) {
-  const [mode, setMode] = useState<"paste" | "url">("paste");
+export default function IngestModal({ isOpen, onClose, onSuccess, initialMode = "paste" }: IngestModalProps) {
+  const [mode, setMode] = useState<"paste" | "url" | "manual">(initialMode);
   const [rawText, setRawText] = useState("");
   const [url, setUrl] = useState("");
   const [company, setCompany] = useState("");
@@ -46,9 +47,31 @@ export default function IngestModal({ isOpen, onClose, onSuccess }: IngestModalP
       const parsedSalaryMin = salaryMin.trim() ? Number(salaryMin.trim()) : null;
       const parsedSalaryMax = salaryMax.trim() ? Number(salaryMax.trim()) : null;
 
+      if (mode === "manual") {
+        if (!company.trim() || !title.trim()) {
+          setError("Company and Role Title are required for manual entry.");
+          setIsLoading(false);
+          return;
+        }
+      } else if (mode === "paste") {
+        if (!rawText.trim()) {
+          setError("Please paste the job description text.");
+          setIsLoading(false);
+          return;
+        }
+      } else if (mode === "url") {
+        if (!url.trim()) {
+          setError("Please enter a valid job URL.");
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const payload = {
-        source: mode === "url" ? "URL" : "PASTE",
-        ...(mode === "url" ? { url: url.trim() } : { rawText: rawText.trim() }),
+        source: mode === "url" ? "URL" : mode === "manual" ? "MANUAL" : "PASTE",
+        ...(mode === "url" ? { url: url.trim() } : {}),
+        ...(mode === "paste" ? { rawText: rawText.trim() } : {}),
+        ...(mode === "manual" && rawText.trim() ? { description: rawText.trim(), rawText: rawText.trim() } : {}),
         ...(company.trim() ? { company: company.trim() } : {}),
         ...(title.trim() ? { title: title.trim() } : {}),
         ...(location.trim() ? { location: location.trim() } : {}),
@@ -97,7 +120,7 @@ export default function IngestModal({ isOpen, onClose, onSuccess }: IngestModalP
             Ingest Target Job
           </DialogTitle>
           <DialogDescription className="text-xs text-zinc-400">
-            Paste JD text or enter a URL. AI extracts details & scores candidate fit automatically, with optional manual overrides.
+            Paste JD text, provide a URL, or enter details manually. AI extracts details & scores candidate fit automatically.
           </DialogDescription>
         </DialogHeader>
 
@@ -112,7 +135,7 @@ export default function IngestModal({ isOpen, onClose, onSuccess }: IngestModalP
                 : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
-            Paste Job Description
+            Paste JD
           </button>
           <button
             type="button"
@@ -123,7 +146,18 @@ export default function IngestModal({ isOpen, onClose, onSuccess }: IngestModalP
                 : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
-            Job Listing URL
+            Job URL
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("manual")}
+            className={`flex-1 py-1.5 rounded-md transition-all ${
+              mode === "manual"
+                ? "bg-zinc-800 text-zinc-100 shadow-sm"
+                : "text-zinc-400 hover:text-zinc-200"
+            }`}
+          >
+            Manual Entry
           </button>
         </div>
 
@@ -146,7 +180,7 @@ export default function IngestModal({ isOpen, onClose, onSuccess }: IngestModalP
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {mode === "paste" ? (
+          {mode === "paste" && (
             <div>
               <label className="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400 mb-1.5">
                 Job Description Text *
@@ -160,7 +194,9 @@ export default function IngestModal({ isOpen, onClose, onSuccess }: IngestModalP
                 className="font-mono text-xs resize-none"
               />
             </div>
-          ) : (
+          )}
+
+          {mode === "url" && (
             <div>
               <label className="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400 mb-1.5">
                 Job Posting URL *
@@ -176,129 +212,223 @@ export default function IngestModal({ isOpen, onClose, onSuccess }: IngestModalP
             </div>
           )}
 
-          {/* Primary Overrides: Company & Title */}
+          {/* Primary Fields: Company & Title */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-[10px] uppercase tracking-wider font-semibold text-zinc-500 mb-1">
-                Company (Optional override)
+                Company {mode === "manual" ? "*" : "(Optional override)"}
               </label>
               <Input
                 type="text"
                 value={company}
                 onChange={(e) => setCompany(e.target.value)}
                 placeholder="e.g. Anthropic"
+                required={mode === "manual"}
                 className="text-xs"
               />
             </div>
             <div>
               <label className="block text-[10px] uppercase tracking-wider font-semibold text-zinc-500 mb-1">
-                Role Title (Optional override)
+                Role Title {mode === "manual" ? "*" : "(Optional override)"}
               </label>
               <Input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. AI Systems Engineer"
+                required={mode === "manual"}
                 className="text-xs"
               />
             </div>
           </div>
 
-          {/* Collapsible Section for Location, Workplace Type, and Salary */}
-          <div className="border border-zinc-800 rounded-lg p-3 bg-zinc-950/40">
-            <button
-              type="button"
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className="flex items-center justify-between w-full text-xs font-semibold text-zinc-400 hover:text-zinc-200 transition-colors"
-            >
-              <span className="flex items-center gap-1.5">
-                <span className="text-violet-400">⚡</span>
-                Additional Manual Overrides (Location, Work Mode, Salary)
-              </span>
-              <span className="text-[11px] text-zinc-500 font-mono">
-                {showAdvanced ? "Hide ▲" : "Show ▼"}
-              </span>
-            </button>
-
-            {showAdvanced && (
-              <div className="mt-3 space-y-3 pt-2 border-t border-zinc-800/60">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[10px] uppercase tracking-wider font-semibold text-zinc-500 mb-1">
-                      Location
-                    </label>
-                    <Input
-                      type="text"
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      placeholder="e.g. San Francisco, CA"
-                      className="text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] uppercase tracking-wider font-semibold text-zinc-500 mb-1">
-                      Work Mode
-                    </label>
-                    <select
-                      value={remoteStatus}
-                      onChange={(e) => setRemoteStatus(e.target.value as "AUTO" | "REMOTE" | "HYBRID" | "ONSITE")}
-                      className="flex h-8 w-full rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-zinc-100 shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-400"
-                    >
-                      <option value="AUTO">Auto-detect from JD</option>
-                      <option value="REMOTE">Remote</option>
-                      <option value="HYBRID">Hybrid</option>
-                      <option value="ONSITE">Onsite</option>
-                    </select>
-                  </div>
+          {/* Details / Overrides Section: Always expanded for Manual mode, Collapsible for Paste/URL */}
+          {mode === "manual" ? (
+            <div className="border border-zinc-800 rounded-lg p-3 bg-zinc-950/40 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] uppercase tracking-wider font-semibold text-zinc-500 mb-1">
+                    Location (Optional)
+                  </label>
+                  <Input
+                    type="text"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="e.g. San Francisco, CA"
+                    className="text-xs"
+                  />
                 </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label className="block text-[10px] uppercase tracking-wider font-semibold text-zinc-500 mb-1">
-                      Min Salary
-                    </label>
-                    <Input
-                      type="number"
-                      value={salaryMin}
-                      onChange={(e) => setSalaryMin(e.target.value)}
-                      placeholder="e.g. 120000"
-                      className="text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] uppercase tracking-wider font-semibold text-zinc-500 mb-1">
-                      Max Salary
-                    </label>
-                    <Input
-                      type="number"
-                      value={salaryMax}
-                      onChange={(e) => setSalaryMax(e.target.value)}
-                      placeholder="e.g. 160000"
-                      className="text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] uppercase tracking-wider font-semibold text-zinc-500 mb-1">
-                      Currency
-                    </label>
-                    <select
-                      value={currency}
-                      onChange={(e) => setCurrency(e.target.value)}
-                      className="flex h-8 w-full rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-zinc-100 shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-400"
-                    >
-                      <option value="USD">USD ($)</option>
-                      <option value="INR">INR (₹)</option>
-                      <option value="EUR">EUR (€)</option>
-                      <option value="GBP">GBP (£)</option>
-                      <option value="CAD">CAD ($)</option>
-                      <option value="AUD">AUD ($)</option>
-                      <option value="SGD">SGD ($)</option>
-                    </select>
-                  </div>
+                <div>
+                  <label className="block text-[10px] uppercase tracking-wider font-semibold text-zinc-500 mb-1">
+                    Work Mode
+                  </label>
+                  <select
+                    value={remoteStatus}
+                    onChange={(e) => setRemoteStatus(e.target.value as "AUTO" | "REMOTE" | "HYBRID" | "ONSITE")}
+                    className="flex h-8 w-full rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-zinc-100 shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-400"
+                  >
+                    <option value="AUTO">Auto / Unspecified</option>
+                    <option value="REMOTE">Remote</option>
+                    <option value="HYBRID">Hybrid</option>
+                    <option value="ONSITE">Onsite</option>
+                  </select>
                 </div>
               </div>
-            )}
-          </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-[10px] uppercase tracking-wider font-semibold text-zinc-500 mb-1">
+                    Min Salary
+                  </label>
+                  <Input
+                    type="number"
+                    value={salaryMin}
+                    onChange={(e) => setSalaryMin(e.target.value)}
+                    placeholder="e.g. 120000"
+                    className="text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase tracking-wider font-semibold text-zinc-500 mb-1">
+                    Max Salary
+                  </label>
+                  <Input
+                    type="number"
+                    value={salaryMax}
+                    onChange={(e) => setSalaryMax(e.target.value)}
+                    placeholder="e.g. 160000"
+                    className="text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase tracking-wider font-semibold text-zinc-500 mb-1">
+                    Currency
+                  </label>
+                  <select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}
+                    className="flex h-8 w-full rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-zinc-100 shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-400"
+                  >
+                    <option value="USD">USD ($)</option>
+                    <option value="INR">INR (₹)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="GBP">GBP (£)</option>
+                    <option value="CAD">CAD ($)</option>
+                    <option value="AUD">AUD ($)</option>
+                    <option value="SGD">SGD ($)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider font-semibold text-zinc-500 mb-1">
+                  Description / Notes (Optional)
+                </label>
+                <Textarea
+                  value={rawText}
+                  onChange={(e) => setRawText(e.target.value)}
+                  placeholder="Key responsibilities, team details, or notes about this opportunity..."
+                  rows={3}
+                  className="font-mono text-xs resize-none"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="border border-zinc-800 rounded-lg p-3 bg-zinc-950/40">
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="flex items-center justify-between w-full text-xs font-semibold text-zinc-400 hover:text-zinc-200 transition-colors"
+              >
+                <span className="flex items-center gap-1.5">
+                  <span className="text-violet-400">⚡</span>
+                  Additional Manual Overrides (Location, Work Mode, Salary)
+                </span>
+                <span className="text-[11px] text-zinc-500 font-mono">
+                  {showAdvanced ? "Hide ▲" : "Show ▼"}
+                </span>
+              </button>
+
+              {showAdvanced && (
+                <div className="mt-3 space-y-3 pt-2 border-t border-zinc-800/60">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-wider font-semibold text-zinc-500 mb-1">
+                        Location
+                      </label>
+                      <Input
+                        type="text"
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                        placeholder="e.g. San Francisco, CA"
+                        className="text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-wider font-semibold text-zinc-500 mb-1">
+                        Work Mode
+                      </label>
+                      <select
+                        value={remoteStatus}
+                        onChange={(e) => setRemoteStatus(e.target.value as "AUTO" | "REMOTE" | "HYBRID" | "ONSITE")}
+                        className="flex h-8 w-full rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-zinc-100 shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-400"
+                      >
+                        <option value="AUTO">Auto-detect from JD</option>
+                        <option value="REMOTE">Remote</option>
+                        <option value="HYBRID">Hybrid</option>
+                        <option value="ONSITE">Onsite</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-wider font-semibold text-zinc-500 mb-1">
+                        Min Salary
+                      </label>
+                      <Input
+                        type="number"
+                        value={salaryMin}
+                        onChange={(e) => setSalaryMin(e.target.value)}
+                        placeholder="e.g. 120000"
+                        className="text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-wider font-semibold text-zinc-500 mb-1">
+                        Max Salary
+                      </label>
+                      <Input
+                        type="number"
+                        value={salaryMax}
+                        onChange={(e) => setSalaryMax(e.target.value)}
+                        placeholder="e.g. 160000"
+                        className="text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-wider font-semibold text-zinc-500 mb-1">
+                        Currency
+                      </label>
+                      <select
+                        value={currency}
+                        onChange={(e) => setCurrency(e.target.value)}
+                        className="flex h-8 w-full rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-zinc-100 shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-400"
+                      >
+                        <option value="USD">USD ($)</option>
+                        <option value="INR">INR (₹)</option>
+                        <option value="EUR">EUR (€)</option>
+                        <option value="GBP">GBP (£)</option>
+                        <option value="CAD">CAD ($)</option>
+                        <option value="AUD">AUD ($)</option>
+                        <option value="SGD">SGD ($)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <DialogFooter className="pt-2">
             <Button

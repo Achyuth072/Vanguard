@@ -709,4 +709,73 @@ describe("Ingestion Pipeline", () => {
     assert.strictEqual(result.job.salaryMax, 220000);
     assert.strictEqual(result.job.currency, "USD");
   });
+
+  it("handles direct manual entry ingestion without rawText or URL", async () => {
+    const mockDb = createMockDb();
+
+    const scoringResponse = {
+      score: 88,
+      recommendation: "APPLY",
+      skillsFit: 90,
+      experienceFit: 85,
+      domainFit: 88,
+      trajectoryFit: 89,
+      strengths: ["Strong systems engineering background"],
+      gaps: [],
+      risks: [],
+      reasoning: "Great alignment with target profile.",
+    };
+
+    let scoringCallCount = 0;
+    const mockModel: LanguageModel = {
+      specificationVersion: "v2",
+      provider: "test-mock-provider",
+      modelId: "test-mock-model",
+      supportedUrls: {},
+      async doGenerate() {
+        scoringCallCount++;
+        return {
+          content: [{ type: "text", text: JSON.stringify(scoringResponse) }],
+          finishReason: "stop",
+          usage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 },
+          rawCall: { rawPrompt: null, rawSettings: {} },
+          warnings: [],
+        };
+      },
+      async doStream() {
+        throw new Error("Stream not supported");
+      },
+    } as unknown as LanguageModel;
+
+    const result = await ingestJobPipeline(
+      {
+        source: "MANUAL",
+        title: "Staff Infrastructure Engineer",
+        company: "Vercel",
+        location: "Remote",
+        remoteStatus: "REMOTE",
+        salaryMin: 200000,
+        salaryMax: 240000,
+        currency: "USD",
+        description: "Leading next-gen edge infrastructure initiatives.",
+      },
+      {
+        prismaClient: mockDb as unknown as typeof db,
+        aiOptions: { primaryModel: mockModel },
+      }
+    );
+
+    assert.strictEqual(result.job.title, "Staff Infrastructure Engineer");
+    assert.strictEqual(result.job.company, "Vercel");
+    assert.strictEqual(result.job.location, "Remote");
+    assert.strictEqual(result.job.remoteStatus, "REMOTE");
+    assert.strictEqual(result.job.salaryMin, 200000);
+    assert.strictEqual(result.job.salaryMax, 240000);
+    assert.strictEqual(result.job.currency, "USD");
+    assert.strictEqual(result.job.source, "MANUAL");
+    assert.strictEqual(result.job.description, "Leading next-gen edge infrastructure initiatives.");
+    assert.strictEqual(result.isDuplicate, false);
+    assert.strictEqual(result.fitScore?.score, 88);
+    assert.strictEqual(scoringCallCount, 1, "Only AI scoring should be called (no extraction needed for pure manual entry)");
+  });
 });

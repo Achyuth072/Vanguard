@@ -196,6 +196,7 @@ export default function PriorityInbox({ initialJobs }: PriorityInboxProps) {
           </div>
 
           <Button
+            data-testid="quick-ingest-button"
             onClick={() => setIsIngestOpen(true)}
             size="sm"
             className="h-8 gap-1.5 font-semibold shrink-0"

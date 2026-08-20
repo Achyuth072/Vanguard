@@ -65,12 +65,22 @@ export default function GlobalCommandPalette() {
             <CommandItem
               onSelect={() =>
                 runCommand(() => {
-                  router.push("/create-job");
+                  const ingestBtn = document.querySelector<HTMLButtonElement>(
+                    '[data-testid="quick-ingest-button"]'
+                  );
+                  if (ingestBtn) {
+                    ingestBtn.click();
+                  } else {
+                    const fallbackBtn = Array.from(document.querySelectorAll("button")).find(
+                      (b) => b.textContent?.includes("Quick Ingest") || b.textContent?.includes("Ingest")
+                    );
+                    fallbackBtn?.click();
+                  }
                 })
               }
             >
               <PlusCircle className="mr-2 h-4 w-4 text-zinc-400" />
-              <span>Manual Job Entry</span>
+              <span>Ingest Job / Manual Entry</span>
               <CommandShortcut>G N</CommandShortcut>
             </CommandItem>
 

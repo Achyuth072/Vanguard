@@ -1,5 +1,4 @@
 import { getJobs } from "@/lib/data";
-import Link from "next/link";
 import PriorityInbox from "./components/PriorityInbox";
 import ExportMenu from "./components/ExportMenu";
 import CandidateProfileButton from "./components/CandidateProfileButton";
@@ -29,13 +28,6 @@ export default async function Home() {
           <div className="flex items-center gap-3">
             <ExportMenu />
             <CandidateProfileButton />
-
-            <Link 
-              href="/create-job"
-              className="group flex items-center gap-2 px-3.5 py-2 rounded-md border border-zinc-800 bg-zinc-900 text-zinc-300 hover:text-zinc-100 hover:border-zinc-700 hover:bg-zinc-800 transition-all text-xs font-semibold"
-            >
-              <span>Manual Entry</span>
-            </Link>
 
             <button
               type="button"

@@ -58,7 +58,7 @@ export default function GlobalCommandPalette() {
               }
             >
               <Layers className="mr-2 h-4 w-4 text-zinc-400" />
-              <span>Career Operations Dashboard</span>
+              <span>Vanguard Dashboard</span>
               <CommandShortcut>G D</CommandShortcut>
             </CommandItem>
 

@@ -1,4 +1,4 @@
-# Pulse Domain Context
+# Vanguard Domain Context
 
 ## Ubiquitous Language & Glossary
 
@@ -38,4 +38,4 @@
 - Use **Job**, never *Posting Lead* or *CRM Opportunity*.
 - Use **Fit Score**, never *Match Percentage* or *AI Rating*.
 - Use **Priority Inbox**, never *Job Feed* or *Search Results*.
-- Avoid **Auto-apply** or **Mass Submission**: Pulse is a personal filtering and preparation assistant, not an automated submission bot.
+- Avoid **Auto-apply** or **Mass Submission**: Vanguard is a personal filtering and preparation assistant, not an automated submission bot.

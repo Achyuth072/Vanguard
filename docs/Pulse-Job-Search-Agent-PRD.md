@@ -1,4 +1,4 @@
-# Pulse — Personal Job Search Agent
+# Vanguard — Personal Job Search Agent
 ## Product Requirements Document
 
 **Status:** Proposed  
@@ -21,7 +21,7 @@ The current job-search workflow is too manual:
 
 The administrative work around the application is becoming almost as expensive as the application itself.
 
-The current `pulse-career-module` already provides a foundation for career/job tracking, but it behaves primarily as a **career CRM** rather than an **active job-search system**.
+The previous foundation provided career/job tracking, but behaved primarily as a **career CRM** rather than an **active job-search system**.
 
 ### Core insight
 
@@ -39,9 +39,9 @@ The system should optimize **quality × relevant volume × time saved**.
 
 ## 2. Product Vision
 
-Turn Pulse into a **local-first personal job-search agent**.
+Turn Vanguard into a **local-first personal job-search agent**.
 
-Pulse should continuously move jobs through this pipeline:
+Vanguard should continuously move jobs through this pipeline:
 
 ```text
 Job Sources
@@ -981,7 +981,7 @@ Automatic event tracking
 
 # 30. Final Product Definition
 
-**Pulse is a local-first personal job-search agent that discovers, filters, ranks, prepares, and tracks job applications while keeping the final decision in the user's hands.**
+**Vanguard is a local-first personal job-search agent that discovers, filters, ranks, prepares, and tracks job applications while keeping the final decision in the user's hands.**
 
 The system's north-star outcome is:
 

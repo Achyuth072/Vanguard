@@ -1,8 +1,8 @@
-# Pulse Career Operations Module
+# Vanguard
 
-**A local-first, human-in-the-loop Career Operations engine for managing high-stakes job pipelines.**
+**A local-first, human-in-the-loop Career Scouting & Application Cockpit for managing high-stakes job pipelines.**
 
-Pulse is a personal filtering, scoring, and application preparation assistant designed to eliminate the friction of job hunting without relinquishing human agency or generating hallucinated credentials.
+Vanguard is a personal filtering, scoring, and application preparation assistant designed to eliminate the friction of job hunting without relinquishing human agency or generating hallucinated credentials.
 
 ---
 
@@ -92,7 +92,7 @@ npm run db:seed
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to access the Pulse Career Ops dashboard.
+Open [http://localhost:3000](http://localhost:3000) to access the Vanguard dashboard.
 
 ---
 

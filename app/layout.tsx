@@ -9,8 +9,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Pulse Career Ops",
-  description: "AI-Powered Career Operations Module",
+  title: "Vanguard",
+  description: "Personal Career Scouting & Application Cockpit",
 };
 
 export default function RootLayout({

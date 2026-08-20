@@ -14,15 +14,15 @@ export default async function Home() {
           <div>
             <div className="flex items-center gap-3 mb-1">
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-100">
-                Career Operations
+                Vanguard
               </h1>
               <span className="px-2 py-0.5 rounded-md text-[10px] uppercase font-mono tracking-widest bg-purple-950/60 border border-purple-800/80 text-purple-400">
-                Pulse v1.0
+                v1.0
               </span>
             </div>
             <p className="text-zinc-400 text-xs flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Autonomous Job Evaluation & Application Tracking
+              Personal Career Scouting & Application Cockpit
             </p>
           </div>
 

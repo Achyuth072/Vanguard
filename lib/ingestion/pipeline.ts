@@ -158,8 +158,79 @@ export async function ingestJobPipeline(
   let description = input.description || rawContent;
   let requiredExperienceYears = input.requiredExperienceYears ?? null;
 
-  // Step 2: If title or company is missing, extract structured metadata using AI
-  if ((!title || !company) && rawContent) {
+  // Step 2a: Early Dedupe Check if title & company are provided upfront
+  if (title && company) {
+    const earlyDedupeKey = generateDedupeKey({
+      company,
+      title,
+      url: input.url,
+    });
+
+    const existingJob = await prisma.job.findUnique({
+      where: { dedupeKey: earlyDedupeKey },
+      include: {
+        fitScore: true,
+        application: true,
+      },
+    });
+
+    if (existingJob) {
+      if (
+        existingJob.fitScore ||
+        existingJob.status === "FILTERED_OUT" ||
+        existingJob.status === "SHORTLISTED" ||
+        existingJob.status === "REVIEW" ||
+        IMMUTABLE_DOWNSTREAM_STATUSES.has(existingJob.status.toUpperCase())
+      ) {
+        let parsedFitScore: FitScore | null = null;
+        if (existingJob.fitScore) {
+          let strengths: string[] = [];
+          let gaps: string[] = [];
+          let risks: string[] = [];
+          try {
+            strengths = JSON.parse(existingJob.fitScore.strengths || "[]");
+            gaps = JSON.parse(existingJob.fitScore.gaps || "[]");
+            risks = JSON.parse(existingJob.fitScore.risks || "[]");
+          } catch {}
+
+          parsedFitScore = {
+            score: existingJob.fitScore.score,
+            recommendation: existingJob.fitScore.recommendation as "APPLY" | "REVIEW" | "IGNORE",
+            skillsFit: existingJob.fitScore.skillsFit ?? existingJob.fitScore.score,
+            experienceFit: existingJob.fitScore.experienceFit ?? existingJob.fitScore.score,
+            domainFit: existingJob.fitScore.domainFit ?? existingJob.fitScore.score,
+            trajectoryFit: existingJob.fitScore.trajectoryFit ?? existingJob.fitScore.score,
+            strengths,
+            gaps,
+            risks,
+            reasoning: existingJob.fitScore.reasoning || "",
+          };
+        }
+
+        return {
+          job: existingJob,
+          isDuplicate: true,
+          status: existingJob.status,
+          fitScore: parsedFitScore,
+          filterResult: null,
+        };
+      }
+    }
+  }
+
+  // Step 2b: If unstructured rawText is provided or title/company is missing, extract structured metadata using AI
+  const needsExtraction =
+    rawContent &&
+    (!title ||
+      !company ||
+      (Boolean(input.rawText) &&
+        (!location ||
+          remoteStatus === "UNKNOWN" ||
+          salaryMin === null ||
+          salaryMax === null ||
+          requiredExperienceYears === null)));
+
+  if (needsExtraction) {
     const extracted = await extractJobDetails(rawContent, options?.aiOptions);
     title = title || extracted.title;
     company = company || extracted.company;
@@ -168,7 +239,10 @@ export async function ingestJobPipeline(
     salaryMin = salaryMin ?? extracted.salaryMin ?? null;
     salaryMax = salaryMax ?? extracted.salaryMax ?? null;
     currency = input.currency || extracted.currency || "INR";
-    employmentType = employmentType === "FULL_TIME" ? extracted.employmentType : employmentType;
+    employmentType =
+      !input.employmentType || input.employmentType === "FULL_TIME"
+        ? extracted.employmentType || employmentType
+        : input.employmentType;
     description = description || extracted.description;
     requiredExperienceYears = requiredExperienceYears ?? extracted.requiredExperienceYears ?? null;
   }

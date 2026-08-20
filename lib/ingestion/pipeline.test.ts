@@ -554,4 +554,159 @@ describe("Ingestion Pipeline", () => {
     assert.ok(result.job.description.includes("Staff Infrastructure Engineer"));
     assert.ok(!result.job.description.includes("<script>"), "HTML tags and scripts should be stripped");
   });
+
+  it("extracts missing location, remoteStatus, and salary even when manual title and company are provided", async () => {
+    const mockDb = createMockDb();
+
+    const extractionResponse = {
+      title: "Extracted Title",
+      company: "Extracted Company",
+      location: "San Francisco, CA",
+      remoteStatus: "REMOTE",
+      salaryMin: 140000,
+      salaryMax: 180000,
+      currency: "USD",
+      employmentType: "FULL_TIME",
+      description: "Hiring engineer in San Francisco or Remote.",
+      requiredExperienceYears: 4,
+      skills: ["React", "Next.js"],
+    };
+
+    const scoringResponse = {
+      score: 85,
+      recommendation: "APPLY",
+      skillsFit: 85,
+      experienceFit: 85,
+      domainFit: 85,
+      trajectoryFit: 85,
+      strengths: ["Strong experience"],
+      gaps: [],
+      risks: [],
+      reasoning: "Great candidate match.",
+    };
+
+    let callCount = 0;
+    const mockModel: LanguageModel = {
+      specificationVersion: "v2",
+      provider: "test-mock-provider",
+      modelId: "test-mock-model",
+      supportedUrls: {},
+      async doGenerate() {
+        callCount++;
+        const output = callCount === 1 ? extractionResponse : scoringResponse;
+        return {
+          content: [{ type: "text", text: JSON.stringify(output) }],
+          finishReason: "stop",
+          usage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 },
+          rawCall: { rawPrompt: null, rawSettings: {} },
+          warnings: [],
+        };
+      },
+      async doStream() {
+        throw new Error("Stream not supported");
+      },
+    } as unknown as LanguageModel;
+
+    const result = await ingestJobPipeline(
+      {
+        rawText: "We are hiring in SF / Remote, paying $140k-$180k.",
+        title: "Staff Frontend Architect", // User manual override
+        company: "Acme Corp",              // User manual override
+      },
+      {
+        prismaClient: mockDb as unknown as typeof db,
+        aiOptions: { primaryModel: mockModel },
+      }
+    );
+
+    // Title & company should be from user manual override
+    assert.strictEqual(result.job.title, "Staff Frontend Architect");
+    assert.strictEqual(result.job.company, "Acme Corp");
+    // Location, remoteStatus, and salary should be extracted by AI
+    assert.strictEqual(result.job.location, "San Francisco, CA");
+    assert.strictEqual(result.job.remoteStatus, "REMOTE");
+    assert.strictEqual(result.job.salaryMin, 140000);
+    assert.strictEqual(result.job.salaryMax, 180000);
+    assert.strictEqual(result.job.currency, "USD");
+    assert.strictEqual(callCount, 2, "Both extraction and scoring should be called");
+  });
+
+  it("respects manual overrides for location, remoteStatus, and salary over AI extracted values", async () => {
+    const mockDb = createMockDb();
+
+    const extractionResponse = {
+      title: "Extracted Title",
+      company: "Extracted Company",
+      location: "San Francisco, CA",
+      remoteStatus: "ONSITE",
+      salaryMin: 100000,
+      salaryMax: 120000,
+      currency: "USD",
+      employmentType: "FULL_TIME",
+      description: "Job posting description.",
+      requiredExperienceYears: 3,
+      skills: ["Go"],
+    };
+
+    const scoringResponse = {
+      score: 90,
+      recommendation: "APPLY",
+      skillsFit: 90,
+      experienceFit: 90,
+      domainFit: 90,
+      trajectoryFit: 90,
+      strengths: ["Senior Go skills"],
+      gaps: [],
+      risks: [],
+      reasoning: "Exceptional match.",
+    };
+
+    let callCount = 0;
+    const mockModel: LanguageModel = {
+      specificationVersion: "v2",
+      provider: "test-mock-provider",
+      modelId: "test-mock-model",
+      supportedUrls: {},
+      async doGenerate() {
+        callCount++;
+        const output = callCount === 1 ? extractionResponse : scoringResponse;
+        return {
+          content: [{ type: "text", text: JSON.stringify(output) }],
+          finishReason: "stop",
+          usage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 },
+          rawCall: { rawPrompt: null, rawSettings: {} },
+          warnings: [],
+        };
+      },
+      async doStream() {
+        throw new Error("Stream not supported");
+      },
+    } as unknown as LanguageModel;
+
+    const result = await ingestJobPipeline(
+      {
+        rawText: "Job description text here...",
+        title: "Senior Backend Lead",
+        company: "Stripe",
+        location: "Remote - US",
+        remoteStatus: "REMOTE",
+        salaryMin: 180000,
+        salaryMax: 220000,
+        currency: "USD",
+      },
+      {
+        prismaClient: mockDb as unknown as typeof db,
+        aiOptions: { primaryModel: mockModel },
+      }
+    );
+
+    // All user-provided fields should override AI extraction
+    assert.strictEqual(result.job.title, "Senior Backend Lead");
+    assert.strictEqual(result.job.company, "Stripe");
+    assert.strictEqual(result.job.location, "Remote - US");
+    assert.strictEqual(result.job.remoteStatus, "REMOTE");
+    assert.strictEqual(result.job.salaryMin, 180000);
+    assert.strictEqual(result.job.salaryMax, 220000);
+    assert.strictEqual(result.job.currency, "USD");
+  });
 });

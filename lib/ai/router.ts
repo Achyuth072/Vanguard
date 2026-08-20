@@ -412,9 +412,32 @@ export async function extractJobDetails(
   options?: AIRouterOptions
 ): Promise<JobDetails> {
   const system = `You are an expert job posting analyzer.
-Extract structured metadata from the provided raw job description text.
-Accurately identify role title, company name, location, remote work status (REMOTE, HYBRID, ONSITE, or UNKNOWN), salary ranges and currency (ISO-4217 code such as INR, USD, EUR, GBP, CAD, AUD; detect ₹/Rs/LPA as INR, $/USD as USD, € as EUR, £ as GBP; convert LPA to full integer e.g. 15 LPA -> 1500000; default to INR if unstated), employment type (FULL_TIME, PART_TIME, CONTRACT, INTERNSHIP, OTHER), estimated minimum required years of experience (if mentioned), and key required technical/domain skills.
-Never hallucinate salary numbers or requirements not present in the text.`;
+Extract structured metadata from the provided raw job description text with high precision.
+
+EXTRACTION GUIDELINES:
+1. ROLE TITLE & COMPANY:
+   - Identify the exact job title and the actual hiring company or organization.
+   - Do NOT use applicant tracking system or board provider names (e.g., Greenhouse, Lever, Ashby, Workday, BambooHR, LinkedIn, Indeed) as the company name unless the posting is explicitly by and for that company.
+2. LOCATION:
+   - Extract city, state/province, and country if present (e.g. "San Francisco, CA", "Bengaluru, India", "London, UK", "Austin, TX").
+   - If only a broad region or country is stated (e.g. "United States", "EMEA", "India"), extract that.
+   - If no location is mentioned, return an empty string "".
+3. REMOTE WORK STATUS:
+   - "REMOTE": Fully remote, 100% remote, work from home, distributed team, remote-first.
+   - "HYBRID": Explicit mention of hybrid, partial in-office days (e.g., "2-3 days in office", "hybrid policy", "flexible office model").
+   - "ONSITE": Explicit mention of in-person, on-site, in-office daily, or required relocation to physical office.
+   - "UNKNOWN": If neither remote, hybrid, nor onsite status is discernible.
+4. SALARY RANGE & CURRENCY:
+   - Currency: ISO-4217 code (INR, USD, EUR, GBP, CAD, AUD, SGD, etc.).
+   - INR: Detect ₹, Rs, INR, and LPA (Lakhs Per Annum). Convert LPA to annualized full integer (e.g. "15 - 25 LPA" -> salaryMin: 1500000, salaryMax: 2500000, currency: "INR").
+   - USD / Global: Detect $, £, € and notations like "$120k - $160k", "$120,000 - $160,000/yr". Convert "k" to thousands (e.g. 120k -> 120000).
+   - Hourly / Monthly: If only hourly rate is given (e.g. "$50 - $70/hr"), annualize assuming 2000 hours/yr (e.g. 100000 - 140000).
+   - If no salary is stated or implied in the text, set salaryMin and salaryMax to null. Never hallucinate numbers.
+5. EMPLOYMENT TYPE:
+   - FULL_TIME, PART_TIME, CONTRACT, INTERNSHIP, or OTHER.
+6. REQUIRED EXPERIENCE & SKILLS:
+   - requiredExperienceYears: Minimum integer years of experience required (e.g. 5 for "5+ years"). Null if unspecified.
+   - skills: Array of key technical and domain skills listed in the posting.`;
 
   const prompt = `RAW JOB TEXT:
 ${rawText}

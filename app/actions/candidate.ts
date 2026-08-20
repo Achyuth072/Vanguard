@@ -100,24 +100,42 @@ export async function updateCandidateProfile(
 }
 
 /**
- * Parses raw resume markdown into a fully structured CandidateProfile
- * using AI with model fallback and deterministic regex backup.
+ * Parses raw resume markdown into a fully structured CandidateProfile.
+ * By default, uses fast deterministic regex parsing (0 API calls).
+ * Supports optional AI parsing with model fallback when explicitly requested.
  */
 export async function parseCandidateResumeAction(
   markdown: string,
-  candidateId: string = "candidate-default"
-): Promise<{ success: boolean; profile: CandidateProfile; error?: string }> {
+  candidateId: string = "candidate-default",
+  mode: "deterministic" | "ai" = "deterministic"
+): Promise<{
+  success: boolean;
+  profile: CandidateProfile;
+  method: "deterministic" | "ai";
+  error?: string;
+}> {
+  if (mode === "deterministic") {
+    const profile = parseResumeMarkdownToProfile(markdown, candidateId);
+    return {
+      success: true,
+      profile,
+      method: "deterministic",
+    };
+  }
+
   try {
     const profile = await parseResumeMarkdownWithAI(markdown, candidateId);
     return {
       success: true,
       profile,
+      method: "ai",
     };
   } catch (err) {
     const fallback = parseResumeMarkdownToProfile(markdown, candidateId);
     return {
       success: true,
       profile: fallback,
+      method: "deterministic",
       error: err instanceof Error ? err.message : "Fallback parser invoked",
     };
   }

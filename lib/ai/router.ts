@@ -277,7 +277,7 @@ export async function generateStructuredWithFallback<T>({
         schema,
         system,
         prompt,
-        temperature: options?.temperature ?? 0,
+        ...(options?.temperature !== undefined ? { temperature: options.temperature } : {}),
       });
       return result.object;
     } catch (err) {

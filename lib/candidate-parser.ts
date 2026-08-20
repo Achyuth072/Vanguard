@@ -98,6 +98,8 @@ function categorizeSkill(skillName: string): MasterSkillCategory {
       "fastapi",
       "framer motion",
       "zustand",
+      "tanstack",
+      "remix",
     ].some((k) => lower.includes(k))
   ) {
     return "FRAMEWORK";
@@ -117,6 +119,7 @@ function categorizeSkill(skillName: string): MasterSkillCategory {
       "mssql",
       "cassandra",
       "dynamodb",
+      "sql server",
     ].some((k) => lower.includes(k))
   ) {
     return "DATABASE";
@@ -153,7 +156,7 @@ function categorizeSkill(skillName: string): MasterSkillCategory {
   }
 
   if (
-    ["git", "github", "linux", "webpack", "vite", "figma", "jest", "playwright"].some(
+    ["git", "github", "linux", "webpack", "vite", "figma", "jest", "playwright", "gemini", "openai", "dnd-kit"].some(
       (k) => lower.includes(k)
     )
   ) {
@@ -226,10 +229,22 @@ export function parseResumeMarkdownToProfile(
         const cleaned = content.replace(/\*\*/g, "");
         const items = cleaned.split(/[,|•]/).map((s) => s.trim()).filter(Boolean);
         for (const item of items) {
-          // clean (ES6+) or (App Router) or (PostgreSQL)
+          // Check for parenthesized tech like (PostgreSQL)
+          const parenMatch = item.match(/\(([^)]+)\)/);
           const baseName = item.replace(/\s*\([^)]*\)/g, "").trim();
-          if (baseName && !rawSkills.includes(baseName)) {
+          if (baseName && !rawSkills.some((s) => s.toLowerCase() === baseName.toLowerCase())) {
             rawSkills.push(baseName);
+          }
+          if (parenMatch && parenMatch[1]) {
+            const parenTech = parenMatch[1].trim();
+            // If the paren content is a recognized tech or not just versioning/options
+            if (
+              !parenTech.toLowerCase().startsWith("es") &&
+              !parenTech.toLowerCase().includes("router") &&
+              !rawSkills.some((s) => s.toLowerCase() === parenTech.toLowerCase())
+            ) {
+              rawSkills.push(parenTech);
+            }
           }
         }
       }
@@ -318,7 +333,7 @@ export function parseResumeMarkdownToProfile(
             const bullet = line.replace(/^[-*]\s+/, "").trim();
             if (bullet) {
               highlights.push(bullet);
-              if (bullet.includes("fps") || bullet.includes("%") || bullet.includes("reduced") || bullet.includes("optimized")) {
+              if (bullet.includes("fps") || bullet.includes("%") || bullet.includes("reduced") || bullet.includes("optimized") || bullet.includes("O(N")) {
                 metrics.push(bullet);
               }
             }
@@ -369,17 +384,14 @@ export function parseResumeMarkdownToProfile(
     };
   });
 
-  if (!skills.some((s) => s.name.toLowerCase().includes("full-stack"))) {
-    skills.push({ name: "Full-Stack Web Development", category: "DOMAIN", yearsOfExperience: calculatedYoE });
-  }
-  if (!skills.some((s) => s.name.toLowerCase().includes("ai"))) {
-    skills.push({ name: "AI Agents / LLMs", category: "DOMAIN", yearsOfExperience: 1 });
-  }
+  const targetRole = experiences.length > 0 && experiences[0].title
+    ? experiences[0].title
+    : "Software Engineer";
 
   return CandidateProfileSchema.parse({
     id: candidateId,
     name,
-    targetRole: "Full Stack Engineer",
+    targetRole,
     minSalary: 0,
     yearsOfExperience: calculatedYoE,
     remotePreference: "ANY",

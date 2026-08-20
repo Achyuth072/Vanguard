@@ -110,10 +110,11 @@ describe("Candidate Server Actions", () => {
 
   it("parseCandidateResumeAction extracts profile with fallback on raw markdown", async () => {
     const sampleMarkdown = `# Jane Doe\n\n## Technical Skills\n- Python, TypeScript, React\n\n## Experience\n### Senior Engineer — Acme Corp\n*Jan 2022 -- Dec 2024*\n- Architected high-scale platform\n`;
-    const res = await parseCandidateResumeAction(sampleMarkdown, "candidate-test-parse");
+    const res = await parseCandidateResumeAction(sampleMarkdown, "candidate-test-parse", "deterministic");
     assert.strictEqual(res.success, true);
     assert.strictEqual(res.profile.id, "candidate-test-parse");
     assert.strictEqual(res.profile.name, "Jane Doe");
+    assert.strictEqual(res.method, "deterministic");
     assert.ok(res.profile.skills.length > 0);
   });
 

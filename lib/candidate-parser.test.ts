@@ -53,6 +53,7 @@ describe("Candidate Resume Markdown Parser", () => {
 
     assert.strictEqual(profile.id, "candidate-default");
     assert.strictEqual(profile.name, "Achyuth S");
+    assert.strictEqual(profile.targetRole, "Core Developer");
     assert.strictEqual(profile.yearsOfExperience, 2);
     assert.strictEqual(profile.experiences.length, 3);
     assert.strictEqual(profile.experiences[0].company, "She Drives");
@@ -75,6 +76,13 @@ describe("Candidate Resume Markdown Parser", () => {
     const reactSkill = profile.skills.find((s) => s.name === "React.js");
     assert.ok(reactSkill);
     assert.strictEqual(reactSkill.category, "FRAMEWORK");
+
+    const postgresSkill = profile.skills.find((s) => s.name === "PostgreSQL");
+    assert.ok(postgresSkill, "Extracts parenthesized database tech like PostgreSQL");
+    assert.strictEqual(postgresSkill?.category, "DATABASE");
+
+    // Must not inject synthetic skills
+    assert.ok(!profile.skills.some((s) => s.name === "AI Agents / LLMs"));
   });
 
   it("handles empty or blank markdown gracefully", () => {

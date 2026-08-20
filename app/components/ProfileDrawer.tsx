@@ -12,6 +12,7 @@ import {
   X,
   Sparkles,
   FileText,
+  Zap,
 } from "lucide-react";
 import {
   getCandidateProfile,
@@ -167,7 +168,7 @@ export default function ProfileDrawer({
     }
   }
 
-  async function handleParseResume() {
+  async function handleParseResume(mode: "deterministic" | "ai" = "deterministic") {
     const trimmed = profile.resumeText.trim();
     if (!trimmed) {
       setErrorMessage(
@@ -182,10 +183,11 @@ export default function ProfileDrawer({
     setParseSummary(null);
 
     try {
-      const res = await parseCandidateResumeAction(trimmed, profile.id);
+      const res = await parseCandidateResumeAction(trimmed, profile.id, mode);
       if (res.success && res.profile) {
         setProfile(res.profile);
-        const summaryMsg = `Parsed & updated profile: ${res.profile.skills.length} skills, ${res.profile.projects.length} projects, and ${res.profile.experiences.length} experience roles.`;
+        const methodLabel = res.method === "deterministic" ? "Instant (No AI)" : "AI Parser";
+        const summaryMsg = `[${methodLabel}] Parsed & updated profile: ${res.profile.skills.length} skills, ${res.profile.projects.length} projects, and ${res.profile.experiences.length} experience roles.`;
         setSuccessMessage(summaryMsg);
         setParseSummary(summaryMsg);
         if (res.profile.projects.length > 0) {
@@ -1381,7 +1383,7 @@ export default function ProfileDrawer({
                         Source markdown used to extract candidate master facts and ground all tailored assets.
                       </p>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
                       <Button
                         type="button"
                         variant="outline"
@@ -1402,35 +1404,48 @@ export default function ProfileDrawer({
                       <Button
                         type="button"
                         size="sm"
-                        onClick={handleParseResume}
+                        onClick={() => handleParseResume("deterministic")}
                         disabled={isParsingResume || !profile.resumeText.trim()}
-                        className="gap-1.5 text-xs font-semibold bg-violet-600 hover:bg-violet-500 text-white shadow-sm"
-                        title="Extract all profile fields using AI with fallback models"
+                        className="gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm"
+                        title="Extract all profile fields deterministically without AI (0ms, 0 API calls)"
+                      >
+                        <Zap className="w-3.5 h-3.5 text-emerald-100" />
+                        <span>Parse Instantly (No AI)</span>
+                      </Button>
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleParseResume("ai")}
+                        disabled={isParsingResume || !profile.resumeText.trim()}
+                        className="gap-1.5 text-xs font-medium text-zinc-300 border-zinc-700 bg-zinc-900 hover:bg-zinc-800 hover:text-white"
+                        title="Extract profile fields using AI models (Gemini / Groq)"
                       >
                         {isParsingResume ? (
                           <>
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            <span>Parsing with AI...</span>
+                            <span>Parsing...</span>
                           </>
                         ) : (
                           <>
-                            <Sparkles className="w-3.5 h-3.5 text-violet-200" />
-                            <span>Parse &amp; Auto-Fill Profile</span>
+                            <Sparkles className="w-3.5 h-3.5 text-violet-400" />
+                            <span>Parse with AI</span>
                           </>
                         )}
                       </Button>
                     </div>
                   </div>
 
-                  {/* Information banner about AI extraction */}
-                  <div className="p-3.5 rounded-lg bg-violet-950/30 border border-violet-800/40 text-violet-200 text-xs flex items-start gap-2.5">
-                    <Sparkles className="w-4 h-4 shrink-0 text-violet-400 mt-0.5" />
+                  {/* Information banner about extraction */}
+                  <div className="p-3.5 rounded-lg bg-zinc-950/70 border border-zinc-800 text-zinc-300 text-xs flex items-start gap-2.5">
+                    <Zap className="w-4 h-4 shrink-0 text-emerald-400 mt-0.5" />
                     <div className="space-y-1">
                       <p className="font-medium text-zinc-200">
-                        Auto-Extraction &amp; Precision Fallback Pipeline
+                        Deterministic Local Parsing (Recommended)
                       </p>
                       <p className="text-zinc-400 leading-relaxed">
-                        Clicking <strong className="text-violet-300">&quot;Parse &amp; Auto-Fill Profile&quot;</strong> analyzes the markdown using multi-model fallback (Google Gemini &rarr; Groq &rarr; OpenRouter &rarr; deterministic parser) to populate Name, Target Role, Experience Years, Skills, Projects, and Work History across all tabs for your review.
+                        <strong className="text-emerald-300">&quot;Parse Instantly (No AI)&quot;</strong> extracts your name, target role, technical skills, projects, and work history directly from Markdown in &lt;1ms without using AI API quotas or risking hallucinations. Use <strong className="text-violet-300">&quot;Parse with AI&quot;</strong> only if your resume is unformatted free-form text.
                       </p>
                     </div>
                   </div>

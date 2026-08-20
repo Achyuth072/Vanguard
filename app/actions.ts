@@ -116,6 +116,15 @@ export async function ghostJobAction(jobId: string) {
   return await updateJobStatusAction(jobId, "GHOSTED");
 }
 
+export async function autoGhostStaleApplicationsAction(thresholdDays?: number) {
+  const { autoGhostStaleApplications } = await import("@/lib/lifecycle/auto-ghost");
+  const result = await autoGhostStaleApplications({ thresholdDays });
+  try {
+    revalidatePath("/");
+  } catch {}
+  return { success: true, ...result };
+}
+
 export async function updateJobDetailsAction(
   jobId: string,
   input: {

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { EnrichedJob } from "@/lib/data";
-import { updateJobStatusAction } from "../actions";
+import { updateJobStatusAction, autoGhostStaleApplicationsAction } from "../actions";
+import { calculateDaysSinceApplied, identifyGhostableJobs } from "@/lib/lifecycle/auto-ghost";
 import DraftButton from "./DraftButton";
 import EditJobModal from "./EditJobModal";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +47,7 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
   const [selectedEditJob, setSelectedEditJob] = useState<EnrichedJob | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(true);
+  const [isAutoGhosting, setIsAutoGhosting] = useState(false);
 
   // Normalize status for grouping (handles INTERVIEW / INTERVIEWING, ASSESSMENT / TAKE_HOME)
   const normalizeStatus = (status: string) => {
@@ -64,6 +66,21 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
     if (s === "ARCHIVED") return showArchived;
     return PIPELINE_STAGES.some((stage) => stage.id === s) || job.application !== null;
   });
+
+  const ghostableList = useMemo(() => identifyGhostableJobs(pipelineJobs, 21), [pipelineJobs]);
+
+  async function handleAutoGhostAll() {
+    if (ghostableList.length === 0 || isAutoGhosting) return;
+    setIsAutoGhosting(true);
+    try {
+      await autoGhostStaleApplicationsAction(21);
+      if (onStatusUpdated) onStatusUpdated();
+    } catch (err) {
+      console.error("Auto-ghost error:", err);
+    } finally {
+      setIsAutoGhosting(false);
+    }
+  }
 
   async function handleMoveStage(jobId: string, newStage: string) {
     setUpdatingId(jobId);
@@ -131,20 +148,36 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setShowArchived((prev) => !prev)}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 ${
-            showArchived
-              ? "bg-zinc-800 border-zinc-600 text-zinc-200"
-              : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700"
-          }`}
-        >
-          <svg className="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-          </svg>
-          <span>{showArchived ? "Hide Archived Column" : `Show Archived (${archivedCount})`}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {ghostableList.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleAutoGhostAll}
+              disabled={isAutoGhosting}
+              className="h-8 text-xs font-semibold text-amber-300 border-amber-800/80 bg-amber-950/40 hover:bg-amber-900/60 hover:text-amber-200 cursor-pointer flex items-center gap-1.5"
+            >
+              <span>👻</span>
+              <span>{isAutoGhosting ? "Ghosting..." : `Auto-Ghost Stale (${ghostableList.length})`}</span>
+            </Button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setShowArchived((prev) => !prev)}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 ${
+              showArchived
+                ? "bg-zinc-800 border-zinc-600 text-zinc-200"
+                : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700"
+            }`}
+          >
+            <svg className="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+            </svg>
+            <span>{showArchived ? "Hide Archived Column" : `Show Archived (${archivedCount})`}</span>
+          </button>
+        </div>
       </div>
 
       {/* Horizontally Scrollable Kanban Rail */}
@@ -246,11 +279,33 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
                           </div>
                         )}
 
-                        {job.application?.appliedAt && (
-                          <div className="text-zinc-500 text-[10px] font-mono">
-                            Applied: <span className="tabular-nums">{new Date(job.application.appliedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                          </div>
-                        )}
+                        {job.application?.appliedAt && (() => {
+                          const days = calculateDaysSinceApplied(job.application.appliedAt);
+                          const isAppliedStatus = normalizeStatus(job.status) === "APPLIED";
+                          const isGhostable = isAppliedStatus && days !== null && days >= 21;
+                          const isStale = isAppliedStatus && days !== null && days >= 14 && days < 21;
+
+                          return (
+                            <div className="flex items-center justify-between gap-1 text-[10px] font-mono">
+                              <span className="text-zinc-500">
+                                Applied: <span className="tabular-nums">{new Date(job.application.appliedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                              </span>
+                              {days !== null && (
+                                <span
+                                  className={`px-1.5 py-0.5 rounded text-[9px] font-medium border tabular-nums ${
+                                    isGhostable
+                                      ? "bg-rose-950/60 text-rose-300 border-rose-800/80"
+                                      : isStale
+                                      ? "bg-amber-950/60 text-amber-300 border-amber-800/80"
+                                      : "bg-zinc-900 text-zinc-400 border-zinc-800"
+                                  }`}
+                                >
+                                  {isGhostable ? `👻 ${days}d (Ghosted?)` : isStale ? `⏳ ${days}d pending` : `${days}d ago`}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
 
                         <div className="flex flex-wrap gap-1.5">
                           {job.application?.responseTimeDays !== null && job.application?.responseTimeDays !== undefined && (
@@ -283,6 +338,26 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
                               <span>Restore to Inbox</span>
                             </Button>
                           )}
+
+                          {normalizeStatus(job.status) === "APPLIED" && (() => {
+                            const days = calculateDaysSinceApplied(job.application?.appliedAt);
+                            if (days !== null && days >= 21) {
+                              return (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleMoveStage(job.id, "GHOSTED")}
+                                  disabled={isUpdating}
+                                  className="w-full h-6 text-[10px] font-semibold text-rose-300 border-rose-800/80 bg-rose-950/40 hover:bg-rose-900/60 hover:text-rose-200 cursor-pointer flex items-center justify-center gap-1"
+                                >
+                                  <span>👻</span>
+                                  <span>Mark Ghosted (&gt; 3 wks)</span>
+                                </Button>
+                              );
+                            }
+                            return null;
+                          })()}
 
                           <div className="flex items-center gap-1.5">
                             <select

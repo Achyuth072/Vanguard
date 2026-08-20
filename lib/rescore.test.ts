@@ -10,6 +10,7 @@ interface MockCandidate {
   name: string;
   targetRole: string;
   minSalary: number;
+  currency?: string;
   yearsOfExperience: number;
   remotePreference: string;
   preferredLocations: string;
@@ -28,6 +29,7 @@ interface MockJob {
   remoteStatus: string;
   salaryMin: number | null;
   salaryMax: number | null;
+  currency?: string;
   employmentType: string;
   description: string;
   url: string;
@@ -74,6 +76,10 @@ function createMockModel(output: Record<string, unknown>): LanguageModel {
         experienceFit: typeof output.score === "number" ? output.score : 85,
         domainFit: typeof output.score === "number" ? output.score : 85,
         trajectoryFit: typeof output.score === "number" ? output.score : 85,
+        strengths: [],
+        gaps: [],
+        risks: [],
+        reasoning: "Mock model reasoning",
         ...output,
       };
       return {
@@ -297,5 +303,32 @@ describe("Job Re-scoring", () => {
 
     const savedJob = mockDb._state.jobs.get("job-123");
     assert.strictEqual(savedJob?.status, "FILTERED_OUT");
+  });
+
+  it("correctly converts currency when job currency differs from candidate currency (e.g. USD job with INR candidate)", async () => {
+    const mockDb = createMockDb();
+    const candidate = (await mockDb.candidate.findFirst())!;
+    candidate.minSalary = 1200000; // 12 Lakhs INR
+    candidate.currency = "INR";
+
+    const job = mockDb._state.jobs.get("job-123")!;
+    job.salaryMin = 140000; // $140k USD
+    job.salaryMax = 180000; // $180k USD
+    job.currency = "USD";
+    job.status = "FILTERED_OUT"; // was previously filtered out
+
+    const mockModel = createMockModel({
+      score: 88,
+      recommendation: "APPLY",
+    });
+
+    const result = await rescoreJob("job-123", {
+      prismaClient: mockDb as unknown as typeof db,
+      aiOptions: { primaryModel: mockModel },
+    });
+
+    assert.strictEqual(result.filterResult?.passed, true, "USD $180k should exceed INR ₹12L requirement");
+    assert.strictEqual(result.status, "DISCOVERED", "Should reset status from FILTERED_OUT to DISCOVERED");
+    assert.strictEqual(result.fitScore?.score, 88);
   });
 });

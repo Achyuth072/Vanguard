@@ -70,6 +70,9 @@ test("Application Lifecycle Service & State Machine", async (t) => {
     assert.equal(isValidTransition("APPLIED", "INTERVIEW"), true);
     assert.equal(isValidTransition("APPLIED", "PREPARED"), true);
     assert.equal(isValidTransition("APPLIED", "REJECTED"), true);
+    assert.equal(isValidTransition("APPLIED", "DISCOVERED"), true);
+    assert.equal(isValidTransition("SHORTLISTED", "DISCOVERED"), true);
+    assert.equal(isValidTransition("PREPARED", "DISCOVERED"), true);
     assert.equal(isValidTransition("SCREENING", "PREPARED"), true);
     assert.equal(isValidTransition("SCREENING", "ASSESSMENT"), true);
     assert.equal(isValidTransition("SCREENING", "TAKE_HOME_OA"), true);
@@ -215,5 +218,17 @@ test("Application Lifecycle Service & State Machine", async (t) => {
     assert.equal(found.application.responseTimeDays, 3.25);
     assert.ok(found.application.firstResponseAt);
     assert.ok(found.application.appliedAt);
+  });
+
+  await t.test("allows resetting APPLIED back to DISCOVERED", async () => {
+    // Reset testJob to APPLIED
+    await db.job.update({ where: { id: testJob.id }, data: { status: "APPLIED" } });
+
+    const res = await transitionApplicationStatus(testJob.id, "DISCOVERED");
+    assert.equal(res.newStatus, "DISCOVERED");
+    assert.equal(res.previousStatus, "APPLIED");
+
+    const updatedJob = await db.job.findUnique({ where: { id: testJob.id } });
+    assert.equal(updatedJob?.status, "DISCOVERED");
   });
 });

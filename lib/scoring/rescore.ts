@@ -66,6 +66,7 @@ export async function rescoreJob(
 
   const candidateCriteria: CandidateFilterCriteria = {
     minSalary: candidateRecord?.minSalary ?? 0,
+    currency: candidateRecord?.currency ?? "INR",
     yearsOfExperience: candidateRecord?.yearsOfExperience ?? 0,
     remotePreference: candidateRecord?.remotePreference ?? "ANY",
     preferredLocations: candidateRecord?.preferredLocations,
@@ -78,6 +79,7 @@ export async function rescoreJob(
     remoteStatus: job.remoteStatus,
     salaryMin: job.salaryMin,
     salaryMax: job.salaryMax,
+    currency: job.currency ?? "INR",
     employmentType: job.employmentType,
     description: job.description,
   };

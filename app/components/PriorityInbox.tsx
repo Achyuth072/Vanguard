@@ -26,6 +26,8 @@ export default function PriorityInbox({ initialJobs }: PriorityInboxProps) {
   const [selectedPrepJob, setSelectedPrepJob] = useState<EnrichedJob | null>(null);
   const [isPrepDrawerOpen, setIsPrepDrawerOpen] = useState(false);
 
+  const [allJobsStatusFilter, setAllJobsStatusFilter] = useState<string>("ALL");
+
   // Categorize jobs for tabs
   const inboxJobs = initialJobs.filter((job) => {
     const s = job.status.toUpperCase();
@@ -57,14 +59,33 @@ export default function PriorityInbox({ initialJobs }: PriorityInboxProps) {
   });
 
   const allJobs = initialJobs;
+  const archivedCount = initialJobs.filter((j) => j.status.toUpperCase() === "ARCHIVED").length;
+  const activeCount = initialJobs.filter((j) => {
+    const s = j.status.toUpperCase();
+    return s !== "ARCHIVED" && s !== "IGNORED" && s !== "FILTERED_OUT";
+  }).length;
 
   // Filter jobs based on active tab and search query
   const getTabJobs = () => {
     let list: EnrichedJob[] = [];
     if (activeTab === "inbox") list = inboxJobs;
     else if (activeTab === "review") list = reviewJobs;
-    else if (activeTab === "all") list = allJobs;
-    else if (activeTab === "applications") list = applicationJobs;
+    else if (activeTab === "all") {
+      if (allJobsStatusFilter === "ARCHIVED") {
+        list = allJobs.filter((j) => j.status.toUpperCase() === "ARCHIVED");
+      } else if (allJobsStatusFilter === "ACTIVE") {
+        list = allJobs.filter((j) => {
+          const s = j.status.toUpperCase();
+          return s !== "ARCHIVED" && s !== "IGNORED" && s !== "FILTERED_OUT";
+        });
+      } else if (allJobsStatusFilter === "SHORTLISTED") {
+        list = allJobs.filter((j) => j.status.toUpperCase() === "SHORTLISTED");
+      } else if (allJobsStatusFilter === "APPLIED") {
+        list = allJobs.filter((j) => j.status.toUpperCase() === "APPLIED");
+      } else {
+        list = allJobs;
+      }
+    } else if (activeTab === "applications") list = applicationJobs;
 
     if (!searchQuery.trim()) return list;
 
@@ -196,6 +217,33 @@ export default function PriorityInbox({ initialJobs }: PriorityInboxProps) {
         />
       ) : (
         <div className="space-y-4">
+          {activeTab === "all" && (
+            <div className="flex flex-wrap items-center gap-1.5 pb-1">
+              <span className="text-xs text-zinc-400 font-medium mr-1">Filter Status:</span>
+              {[
+                { id: "ALL", label: "All", count: allJobs.length },
+                { id: "ACTIVE", label: "Active", count: activeCount },
+                { id: "ARCHIVED", label: "Archived", count: archivedCount },
+                { id: "SHORTLISTED", label: "Shortlisted", count: initialJobs.filter(j => j.status.toUpperCase() === "SHORTLISTED").length },
+                { id: "APPLIED", label: "Applied", count: initialJobs.filter(j => j.status.toUpperCase() === "APPLIED").length },
+              ].map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setAllJobsStatusFilter(f.id)}
+                  className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors cursor-pointer flex items-center gap-1.5 ${
+                    allJobsStatusFilter === f.id
+                      ? "bg-zinc-800 border-zinc-600 text-zinc-100 ring-1 ring-zinc-500"
+                      : "bg-zinc-950/60 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700"
+                  }`}
+                >
+                  <span>{f.label}</span>
+                  <span className="text-[10px] font-mono opacity-80 tabular-nums">({f.count})</span>
+                </button>
+              ))}
+            </div>
+          )}
+
           {displayedJobs.length === 0 ? (
             <Card className="p-12 text-center space-y-3 bg-zinc-900/50 border-zinc-800">
               <div className="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center mx-auto text-zinc-400">

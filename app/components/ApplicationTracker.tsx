@@ -31,13 +31,19 @@ const PIPELINE_STAGES: PipelineStage[] = [
   { id: "GHOSTED", label: "Ghosted", variant: "secondary" },
 ];
 
+const ARCHIVED_STAGE: PipelineStage = {
+  id: "ARCHIVED",
+  label: "Archived",
+  variant: "outline",
+};
+
 export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPreparation }: ApplicationTrackerProps) {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [draggedJobId, setDraggedJobId] = useState<string | null>(null);
   const [dragOverStageId, setDragOverStageId] = useState<string | null>(null);
   const [selectedEditJob, setSelectedEditJob] = useState<EnrichedJob | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-
+  const [showArchived, setShowArchived] = useState(true);
 
   // Normalize status for grouping (handles INTERVIEW / INTERVIEWING)
   const normalizeStatus = (status: string) => {
@@ -46,9 +52,13 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
     return s;
   };
 
+  const archivedCount = jobs.filter((j) => normalizeStatus(j.status) === "ARCHIVED").length;
+  const displayedStages = showArchived ? [...PIPELINE_STAGES, ARCHIVED_STAGE] : PIPELINE_STAGES;
+
   const pipelineJobs = jobs.filter((job) => {
     const s = normalizeStatus(job.status);
-    if (s === "ARCHIVED" || s === "IGNORED" || s === "FILTERED_OUT") return false;
+    if (s === "IGNORED" || s === "FILTERED_OUT") return false;
+    if (s === "ARCHIVED") return showArchived;
     return PIPELINE_STAGES.some((stage) => stage.id === s) || job.application !== null;
   });
 
@@ -105,18 +115,38 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold tracking-tight text-zinc-100">Application Pipeline</h2>
           <p className="text-xs text-zinc-400 mt-0.5">
-            Active tracking stages with automatic audit event logging. Drag cards between columns to change status. Total active: <span className="tabular-nums font-mono font-medium text-zinc-300">{pipelineJobs.length}</span>
+            Active tracking stages with automatic audit event logging. Drag cards between columns to change status. Total active: <span className="tabular-nums font-mono font-medium text-zinc-300">{pipelineJobs.filter(j => normalizeStatus(j.status) !== "ARCHIVED").length}</span>
+            {archivedCount > 0 && (
+              <span className="ml-2 text-zinc-500">
+                • Archived: <span className="tabular-nums font-mono text-zinc-400">{archivedCount}</span>
+              </span>
+            )}
           </p>
         </div>
+
+        <button
+          type="button"
+          onClick={() => setShowArchived((prev) => !prev)}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 ${
+            showArchived
+              ? "bg-zinc-800 border-zinc-600 text-zinc-200"
+              : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700"
+          }`}
+        >
+          <svg className="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+          </svg>
+          <span>{showArchived ? "Hide Archived Column" : `Show Archived (${archivedCount})`}</span>
+        </button>
       </div>
 
       {/* Horizontally Scrollable Kanban Rail */}
       <div className="flex gap-4 overflow-x-auto pb-4 pt-1 snap-x select-none">
-        {PIPELINE_STAGES.map((stage) => {
+        {displayedStages.map((stage) => {
           const stageJobs = pipelineJobs.filter((j) => normalizeStatus(j.status) === stage.id);
           const isTargeted = dragOverStageId === stage.id;
 
@@ -224,6 +254,22 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
 
                         {/* Stage Selector, Prep Trigger & Draft Button */}
                         <div className="pt-2.5 border-t border-zinc-800/80 space-y-2">
+                          {normalizeStatus(job.status) === "ARCHIVED" && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleMoveStage(job.id, "DISCOVERED")}
+                              disabled={isUpdating}
+                              className="w-full h-6 text-[10px] font-semibold text-emerald-400 border-emerald-800/80 bg-emerald-950/30 hover:bg-emerald-900/50 hover:text-emerald-300 cursor-pointer flex items-center justify-center gap-1"
+                            >
+                              <svg className="w-3 h-3 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                              </svg>
+                              <span>Restore to Inbox</span>
+                            </Button>
+                          )}
+
                           <div className="flex items-center gap-1.5">
                             <select
                               value={normalizeStatus(job.status)}
@@ -231,11 +277,13 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
                               aria-label={`Move stage for ${job.title}`}
                               className="flex-1 bg-zinc-900 border border-zinc-700 text-zinc-300 text-[10px] rounded px-2 py-1 outline-none cursor-pointer hover:border-zinc-600 focus-visible:border-violet-400 focus-visible:ring-1 focus-visible:ring-violet-400 transition-colors"
                             >
+                              <option value="DISCOVERED">Stage: Inbox (Discovered)</option>
                               {PIPELINE_STAGES.map((s) => (
                                 <option key={s.id} value={s.id}>
                                   Stage: {s.label}
                                 </option>
                               ))}
+                              <option value="ARCHIVED">Stage: Archived</option>
                             </select>
 
                             {onOpenPreparation && (

@@ -327,7 +327,45 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {job.status !== "SHORTLISTED" && job.status !== "APPLIED" && job.status !== "INTERVIEW" && job.status !== "OFFER" && (
+          {/* Direct Stage Selector Dropdown */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-zinc-500 font-mono hidden sm:inline">Move:</span>
+            <select
+              value={job.status.toUpperCase()}
+              onChange={(e) => handleStatusChange(e.target.value)}
+              disabled={isUpdating}
+              aria-label={`Move stage for ${job.title}`}
+              className="h-7 bg-zinc-900 border border-zinc-700 text-zinc-300 text-xs rounded px-2 outline-none cursor-pointer hover:border-zinc-500 focus-visible:border-violet-400 focus-visible:ring-1 focus-visible:ring-violet-400 transition-colors"
+            >
+              <option value="DISCOVERED">Inbox (Discovered)</option>
+              <option value="SHORTLISTED">Shortlisted</option>
+              <option value="PREPARED">Prepared</option>
+              <option value="APPLIED">Applied</option>
+              <option value="SCREENING">Screening</option>
+              <option value="INTERVIEW">Interview</option>
+              <option value="OFFER">Offer</option>
+              <option value="REJECTED">Rejected</option>
+              <option value="GHOSTED">Ghosted</option>
+              <option value="ARCHIVED">Archived</option>
+            </select>
+          </div>
+
+          {job.status === "ARCHIVED" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleStatusChange("DISCOVERED")}
+              disabled={isUpdating}
+              className="h-7 px-2.5 text-xs font-semibold text-emerald-400 border-emerald-800/80 bg-emerald-950/30 hover:bg-emerald-900/50 hover:text-emerald-300 cursor-pointer flex items-center gap-1.5"
+            >
+              <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>Restore to Inbox</span>
+            </Button>
+          )}
+
+          {job.status !== "SHORTLISTED" && job.status !== "APPLIED" && job.status !== "INTERVIEW" && job.status !== "OFFER" && job.status !== "ARCHIVED" && (
             <Button
               variant="outline"
               size="sm"
@@ -339,7 +377,7 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
             </Button>
           )}
 
-          {job.status !== "PREPARED" && job.status !== "APPLIED" && job.status !== "INTERVIEW" && job.status !== "OFFER" ? (
+          {job.status !== "PREPARED" && job.status !== "APPLIED" && job.status !== "INTERVIEW" && job.status !== "OFFER" && job.status !== "ARCHIVED" ? (
             <Button
               variant="outline"
               size="sm"
@@ -359,7 +397,7 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
               <span>Prepare Application</span>
             </Button>
           ) : (
-            onOpenPreparation && (
+            onOpenPreparation && job.status !== "ARCHIVED" && (
               <Button
                 variant="outline"
                 size="sm"
@@ -374,7 +412,7 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
             )
           )}
 
-          {job.status !== "APPLIED" && job.status !== "INTERVIEW" && job.status !== "OFFER" && (
+          {job.status !== "APPLIED" && job.status !== "INTERVIEW" && job.status !== "OFFER" && job.status !== "ARCHIVED" && (
             <Button
               variant="default"
               size="sm"

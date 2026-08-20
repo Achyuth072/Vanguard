@@ -71,9 +71,15 @@ test("Application Lifecycle Service & State Machine", async (t) => {
     assert.equal(isValidTransition("SCREENING", "PREPARED"), true);
     assert.equal(isValidTransition("SCREENING", "SHORTLISTED"), true);
     assert.equal(isValidTransition("SCREENING", "OFFER"), true);
-    assert.equal(isValidTransition("INTERVIEW", "PREPARED"), true);
     assert.equal(isValidTransition("OFFER", "PREPARED"), true);
     assert.equal(isValidTransition("DISCOVERED", "OFFER"), false);
+    assert.equal(isValidTransition("ARCHIVED", "DISCOVERED"), true);
+    assert.equal(isValidTransition("ARCHIVED", "SHORTLISTED"), true);
+    assert.equal(isValidTransition("ARCHIVED", "PREPARED"), true);
+    assert.equal(isValidTransition("ARCHIVED", "APPLIED"), true);
+    assert.equal(isValidTransition("ARCHIVED", "INTERVIEW"), true);
+    assert.equal(isValidTransition("ARCHIVED", "OFFER"), true);
+    assert.equal(isValidTransition("IGNORED", "DISCOVERED"), true);
   });
 
 

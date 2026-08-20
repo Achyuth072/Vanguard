@@ -428,9 +428,10 @@ EXTRACTION GUIDELINES:
    - "ONSITE": Explicit mention of in-person, on-site, in-office daily, or required relocation to physical office.
    - "UNKNOWN": If neither remote, hybrid, nor onsite status is discernible.
 4. SALARY RANGE & CURRENCY:
-   - Currency: ISO-4217 code (INR, USD, EUR, GBP, CAD, AUD, SGD, etc.).
-   - INR: Detect ₹, Rs, INR, and LPA (Lakhs Per Annum). Convert LPA to annualized full integer (e.g. "15 - 25 LPA" -> salaryMin: 1500000, salaryMax: 2500000, currency: "INR").
-   - USD / Global: Detect $, £, € and notations like "$120k - $160k", "$120,000 - $160,000/yr". Convert "k" to thousands (e.g. 120k -> 120000).
+   - Currency: ISO-4217 code (INR, USD, EUR, GBP, CAD, AUD, SGD, etc.). Default to INR if currency symbol is ambiguous or unstated in Indian postings, USD for $, EUR for €, GBP for £.
+   - Base Cash Salary Isolation: Extract the base cash salary and ignore ancillary equity/benefits clauses (e.g. "$20k – $30k • No equity" -> salaryMin: 20000, salaryMax: 30000, currency: "USD").
+   - Handle Dash Variants & Shorthands: Parse hyphens, en-dashes (–), em-dashes (—), and "to" (e.g. "$20k – $30k", "$80k to $100k", "$120,000 - $150,000/yr"). Convert "k" / "K" suffix to thousands (e.g. 20k -> 20000).
+   - INR / LPA: Detect ₹, Rs, INR, and LPA (Lakhs Per Annum). Convert LPA to annualized full integer (e.g. "15 - 25 LPA" -> salaryMin: 1500000, salaryMax: 2500000, currency: "INR").
    - Hourly / Monthly: If only hourly rate is given (e.g. "$50 - $70/hr"), annualize assuming 2000 hours/yr (e.g. 100000 - 140000).
    - If no salary is stated or implied in the text, set salaryMin and salaryMax to null. Never hallucinate numbers.
 5. EMPLOYMENT TYPE:

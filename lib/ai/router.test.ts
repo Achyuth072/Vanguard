@@ -511,6 +511,38 @@ describe("Structured Domain Functions", () => {
     assert.strictEqual(details.requiredExperienceYears, 7);
   });
 
+  it("extractJobDetails isolates base cash salary from ranges with en-dashes and equity clauses", async () => {
+    const rawText = `
+      Frontend Engineer at StartUpX
+      Location: Remote
+      Compensation: $20k – $30k • No equity
+      We are hiring a Frontend Engineer with React and TypeScript skills.
+    `;
+
+    const mockModel = createMockModel({
+      generateOutput: {
+        title: "Frontend Engineer",
+        company: "StartUpX",
+        location: "Remote",
+        remoteStatus: "REMOTE",
+        salaryMin: 20000,
+        salaryMax: 30000,
+        currency: "USD",
+        employmentType: "FULL_TIME",
+        description: rawText.trim(),
+        requiredExperienceYears: 2,
+        skills: ["React", "TypeScript"],
+      },
+    });
+
+    const details = await extractJobDetails(rawText, { primaryModel: mockModel });
+    assert.strictEqual(details.title, "Frontend Engineer");
+    assert.strictEqual(details.company, "StartUpX");
+    assert.strictEqual(details.salaryMin, 20000);
+    assert.strictEqual(details.salaryMax, 30000);
+    assert.strictEqual(details.currency, "USD");
+  });
+
   it("tailorApplicationSummary generates factual summary and match points", async () => {
     const mockModel = createMockModel({
       generateOutput: {

@@ -65,18 +65,25 @@ test("Application Lifecycle Service & State Machine", async (t) => {
     assert.equal(isValidTransition("PREPARED", "INTERVIEW"), true);
     assert.equal(isValidTransition("PREPARED", "OFFER"), true);
     assert.equal(isValidTransition("APPLIED", "SCREENING"), true);
+    assert.equal(isValidTransition("APPLIED", "ASSESSMENT"), true);
+    assert.equal(isValidTransition("APPLIED", "TAKE_HOME"), true);
     assert.equal(isValidTransition("APPLIED", "INTERVIEW"), true);
     assert.equal(isValidTransition("APPLIED", "PREPARED"), true);
     assert.equal(isValidTransition("APPLIED", "REJECTED"), true);
     assert.equal(isValidTransition("SCREENING", "PREPARED"), true);
+    assert.equal(isValidTransition("SCREENING", "ASSESSMENT"), true);
+    assert.equal(isValidTransition("SCREENING", "TAKE_HOME_OA"), true);
     assert.equal(isValidTransition("SCREENING", "SHORTLISTED"), true);
     assert.equal(isValidTransition("SCREENING", "OFFER"), true);
+    assert.equal(isValidTransition("ASSESSMENT", "INTERVIEW"), true);
+    assert.equal(isValidTransition("ASSESSMENT", "REJECTED"), true);
     assert.equal(isValidTransition("OFFER", "PREPARED"), true);
     assert.equal(isValidTransition("DISCOVERED", "OFFER"), false);
     assert.equal(isValidTransition("ARCHIVED", "DISCOVERED"), true);
     assert.equal(isValidTransition("ARCHIVED", "SHORTLISTED"), true);
     assert.equal(isValidTransition("ARCHIVED", "PREPARED"), true);
     assert.equal(isValidTransition("ARCHIVED", "APPLIED"), true);
+    assert.equal(isValidTransition("ARCHIVED", "ASSESSMENT"), true);
     assert.equal(isValidTransition("ARCHIVED", "INTERVIEW"), true);
     assert.equal(isValidTransition("ARCHIVED", "OFFER"), true);
     assert.equal(isValidTransition("IGNORED", "DISCOVERED"), true);
@@ -132,13 +139,22 @@ test("Application Lifecycle Service & State Machine", async (t) => {
     assert.equal(app.responseTimeDays, 3.25);
     assert.equal(app.firstResponseAt?.toISOString(), screeningTimestamp.toISOString());
 
-    // 5. INTERVIEW
-    const res5 = await transitionApplicationStatus(testJob.id, "INTERVIEW");
-    assert.equal(res5.newStatus, "INTERVIEW");
+    // 5. ASSESSMENT (Take-home / Online Assessment via TAKE_HOME alias)
+    const res5 = await transitionApplicationStatus(testJob.id, "TAKE_HOME");
+    assert.equal(res5.newStatus, "ASSESSMENT");
+    assert.equal(res5.previousStatus, "SCREENING");
 
-    // 6. OFFER
-    const res6 = await transitionApplicationStatus(testJob.id, "OFFER");
-    assert.equal(res6.newStatus, "OFFER");
+    app = await db.application.findUnique({ where: { jobId: testJob.id } });
+    assert.ok(app);
+    assert.equal(app.status, "ASSESSMENT");
+
+    // 6. INTERVIEW
+    const res6 = await transitionApplicationStatus(testJob.id, "INTERVIEW");
+    assert.equal(res6.newStatus, "INTERVIEW");
+
+    // 7. OFFER
+    const res7 = await transitionApplicationStatus(testJob.id, "OFFER");
+    assert.equal(res7.newStatus, "OFFER");
   });
 
   await t.test("handles rejection with structured stage and reason", async () => {

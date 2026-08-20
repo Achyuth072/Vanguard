@@ -74,8 +74,20 @@ export function determineCalibrationPhase(sampleSize: number): CalibrationPhase 
   return "AUTOMATED";
 }
 
-export const POSITIVE_STATUSES = new Set(["INTERVIEW", "INTERVIEWING", "OFFER"]);
+export const POSITIVE_STATUSES = new Set([
+  "ASSESSMENT",
+  "TAKE_HOME",
+  "TAKE_HOME_OA",
+  "OA",
+  "INTERVIEW",
+  "INTERVIEWING",
+  "OFFER",
+]);
 export const TERMINAL_STATUSES = new Set([
+  "ASSESSMENT",
+  "TAKE_HOME",
+  "TAKE_HOME_OA",
+  "OA",
   "INTERVIEW",
   "INTERVIEWING",
   "OFFER",

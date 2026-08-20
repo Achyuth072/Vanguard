@@ -100,13 +100,18 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
     if (s === "SHORTLISTED" || s === "DRAFT") variant = "violet";
     else if (s === "PREPARED") variant = "blue";
     else if (s === "APPLIED" || s === "SCREENING") variant = "blue";
+    else if (s === "ASSESSMENT" || s === "TAKE_HOME" || s === "TAKE_HOME_OA" || s === "OA") variant = "amber";
     else if (s === "INTERVIEW" || s === "INTERVIEWING") variant = "violet";
     else if (s === "OFFER") variant = "emerald";
     else if (s === "REJECTED" || s === "FILTERED_OUT") variant = "destructive";
 
+    const displayLabel = s === "ASSESSMENT" || s === "TAKE_HOME" || s === "TAKE_HOME_OA" || s === "OA"
+      ? "Take-home / OA"
+      : job.status;
+
     return (
       <Badge variant={variant} className="text-[10px] uppercase tracking-wider font-semibold">
-        {job.status}
+        {displayLabel}
       </Badge>
     );
   };
@@ -342,6 +347,7 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
               <option value="PREPARED">Prepared</option>
               <option value="APPLIED">Applied</option>
               <option value="SCREENING">Screening</option>
+              <option value="ASSESSMENT">Take-home / OA</option>
               <option value="INTERVIEW">Interview</option>
               <option value="OFFER">Offer</option>
               <option value="REJECTED">Rejected</option>
@@ -365,7 +371,7 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
             </Button>
           )}
 
-          {job.status !== "SHORTLISTED" && job.status !== "APPLIED" && job.status !== "INTERVIEW" && job.status !== "OFFER" && job.status !== "ARCHIVED" && (
+          {job.status !== "SHORTLISTED" && job.status !== "APPLIED" && job.status !== "ASSESSMENT" && job.status !== "INTERVIEW" && job.status !== "OFFER" && job.status !== "ARCHIVED" && (
             <Button
               variant="outline"
               size="sm"
@@ -377,7 +383,7 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
             </Button>
           )}
 
-          {job.status !== "PREPARED" && job.status !== "APPLIED" && job.status !== "INTERVIEW" && job.status !== "OFFER" && job.status !== "ARCHIVED" ? (
+          {job.status !== "PREPARED" && job.status !== "APPLIED" && job.status !== "ASSESSMENT" && job.status !== "INTERVIEW" && job.status !== "OFFER" && job.status !== "ARCHIVED" ? (
             <Button
               variant="outline"
               size="sm"
@@ -412,7 +418,7 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
             )
           )}
 
-          {job.status !== "APPLIED" && job.status !== "INTERVIEW" && job.status !== "OFFER" && job.status !== "ARCHIVED" && (
+          {job.status !== "APPLIED" && job.status !== "ASSESSMENT" && job.status !== "INTERVIEW" && job.status !== "OFFER" && job.status !== "ARCHIVED" && (
             <Button
               variant="default"
               size="sm"

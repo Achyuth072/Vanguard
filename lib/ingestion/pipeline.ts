@@ -20,6 +20,10 @@ import { FeedbackLoopService } from "@/lib/scoring/feedback-loop";
 const IMMUTABLE_DOWNSTREAM_STATUSES = new Set([
   "APPLIED",
   "SCREENING",
+  "ASSESSMENT",
+  "TAKE_HOME",
+  "TAKE_HOME_OA",
+  "OA",
   "INTERVIEW",
   "INTERVIEWING",
   "OFFER",

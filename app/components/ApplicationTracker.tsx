@@ -25,6 +25,7 @@ const PIPELINE_STAGES: PipelineStage[] = [
   { id: "PREPARED", label: "Prepared", variant: "blue" },
   { id: "APPLIED", label: "Applied", variant: "blue" },
   { id: "SCREENING", label: "Screening", variant: "blue" },
+  { id: "ASSESSMENT", label: "Take-home / OA", variant: "amber" },
   { id: "INTERVIEW", label: "Interview", variant: "violet" },
   { id: "OFFER", label: "Offer", variant: "emerald" },
   { id: "REJECTED", label: "Rejected", variant: "destructive" },
@@ -45,10 +46,11 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(true);
 
-  // Normalize status for grouping (handles INTERVIEW / INTERVIEWING)
+  // Normalize status for grouping (handles INTERVIEW / INTERVIEWING, ASSESSMENT / TAKE_HOME)
   const normalizeStatus = (status: string) => {
     const s = status.toUpperCase();
     if (s === "INTERVIEWING") return "INTERVIEW";
+    if (s === "TAKE_HOME" || s === "TAKE_HOME_OA" || s === "OA") return "ASSESSMENT";
     return s;
   };
 

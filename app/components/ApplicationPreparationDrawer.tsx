@@ -983,6 +983,7 @@ export default function ApplicationPreparationDrawer({
                         { id: "PREPARED", label: "Prepared" },
                         { id: "APPLIED", label: "Mark Applied" },
                         { id: "SCREENING", label: "Screening" },
+                        { id: "ASSESSMENT", label: "Take-home / OA" },
                         { id: "INTERVIEW", label: "Interviewing" },
                         { id: "OFFER", label: "Offer Received" },
                         { id: "REJECTED", label: "Rejected" },

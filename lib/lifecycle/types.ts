@@ -4,6 +4,7 @@ export const APPLICATION_STATUSES = [
   "PREPARED",
   "APPLIED",
   "SCREENING",
+  "ASSESSMENT",
   "INTERVIEW",
   "OFFER",
   "REJECTED",

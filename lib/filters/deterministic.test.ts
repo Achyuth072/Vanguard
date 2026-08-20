@@ -274,7 +274,8 @@ describe("Deterministic Filter Engine", () => {
   describe("extractRequiredExperience helper", () => {
     it("extracts years from various JD formats", () => {
       assert.strictEqual(extractRequiredExperience("5+ years of experience in React"), 5);
-      assert.strictEqual(extractRequiredExperience("Requires 3-5 years of industry experience"), 5);
+      assert.strictEqual(extractRequiredExperience("Requires 3-5 years of industry experience"), 3);
+      assert.strictEqual(extractRequiredExperience("1-7 years shipping production software applications"), 1);
       assert.strictEqual(extractRequiredExperience("At least 7 years software engineering"), 7);
       assert.strictEqual(extractRequiredExperience("Minimum of 4 years experience"), 4);
       assert.strictEqual(extractRequiredExperience("10+ yrs experience"), 10);

@@ -46,10 +46,10 @@ export interface DeterministicFilterResult {
 export function extractRequiredExperience(text?: string | null): number | null {
   if (!text) return null;
 
-  // Pattern 1: Range like "3-5 years" or "3 - 5 yrs" -> pick max
+  // Pattern 1: Range like "3-5 years" or "1-7 yrs" -> pick min (lower bound requirement)
   const rangeMatch = text.match(/(?:^|\b)(\d+)\s*(?:-|to)\s*(\d+)\+?\s*(?:years?|yrs?)/i);
-  if (rangeMatch && rangeMatch[2]) {
-    return parseInt(rangeMatch[2], 10);
+  if (rangeMatch && rangeMatch[1]) {
+    return parseInt(rangeMatch[1], 10);
   }
 
   // Pattern 2: "Minimum of 4 years", "At least 5 years"

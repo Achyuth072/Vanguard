@@ -157,8 +157,6 @@ export async function rescoreJob(
     }
   }
 
-  const fitScore = await scoreJobFit(candidateContext, jobContext, aiOptions);
-
   let newStatus = job.status;
   if (job.status === "FILTERED_OUT") {
     newStatus = "DISCOVERED";
@@ -168,47 +166,54 @@ export async function rescoreJob(
     });
   }
 
-  await prisma.fitScore.upsert({
-    where: { jobId },
-    create: {
-      jobId,
-      score: fitScore.score,
-      recommendation: fitScore.recommendation,
-      skillsFit: fitScore.skillsFit,
-      experienceFit: fitScore.experienceFit,
-      domainFit: fitScore.domainFit,
-      trajectoryFit: fitScore.trajectoryFit,
-      strengths: JSON.stringify(fitScore.strengths),
-      gaps: JSON.stringify(fitScore.gaps),
-      risks: JSON.stringify(fitScore.risks),
-      reasoning: fitScore.reasoning,
-    },
-    update: {
-      score: fitScore.score,
-      recommendation: fitScore.recommendation,
-      skillsFit: fitScore.skillsFit,
-      experienceFit: fitScore.experienceFit,
-      domainFit: fitScore.domainFit,
-      trajectoryFit: fitScore.trajectoryFit,
-      strengths: JSON.stringify(fitScore.strengths),
-      gaps: JSON.stringify(fitScore.gaps),
-      risks: JSON.stringify(fitScore.risks),
-      reasoning: fitScore.reasoning,
-    },
-  });
+  let fitScore: FitScore | null = null;
+  try {
+    fitScore = await scoreJobFit(candidateContext, jobContext, aiOptions);
 
-  await prisma.event.create({
-    data: {
-      entityType: "Job",
-      entityId: jobId,
-      eventType: "SCORED",
-      payload: JSON.stringify({
+    await prisma.fitScore.upsert({
+      where: { jobId },
+      create: {
+        jobId,
         score: fitScore.score,
         recommendation: fitScore.recommendation,
-        status: newStatus,
-      }),
-    },
-  });
+        skillsFit: fitScore.skillsFit,
+        experienceFit: fitScore.experienceFit,
+        domainFit: fitScore.domainFit,
+        trajectoryFit: fitScore.trajectoryFit,
+        strengths: JSON.stringify(fitScore.strengths),
+        gaps: JSON.stringify(fitScore.gaps),
+        risks: JSON.stringify(fitScore.risks),
+        reasoning: fitScore.reasoning,
+      },
+      update: {
+        score: fitScore.score,
+        recommendation: fitScore.recommendation,
+        skillsFit: fitScore.skillsFit,
+        experienceFit: fitScore.experienceFit,
+        domainFit: fitScore.domainFit,
+        trajectoryFit: fitScore.trajectoryFit,
+        strengths: JSON.stringify(fitScore.strengths),
+        gaps: JSON.stringify(fitScore.gaps),
+        risks: JSON.stringify(fitScore.risks),
+        reasoning: fitScore.reasoning,
+      },
+    });
+
+    await prisma.event.create({
+      data: {
+        entityType: "Job",
+        entityId: jobId,
+        eventType: "SCORED",
+        payload: JSON.stringify({
+          score: fitScore.score,
+          recommendation: fitScore.recommendation,
+          status: newStatus,
+        }),
+      },
+    });
+  } catch (err) {
+    console.error("AI scoring failed during rescore:", err);
+  }
 
   return {
     jobId,

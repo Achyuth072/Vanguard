@@ -543,6 +543,38 @@ describe("Structured Domain Functions", () => {
     assert.strictEqual(details.currency, "USD");
   });
 
+  it("extractJobDetails correctly maps ₹ rupee symbol and Lakhs to INR full integers", async () => {
+    const rawText = `
+      Senior Fullstack Developer at Swiggy
+      Location: Bengaluru, India
+      Compensation: ₹12L – ₹35L • No equity
+      Looking for experienced React / Node engineer.
+    `;
+
+    const mockModel = createMockModel({
+      generateOutput: {
+        title: "Senior Fullstack Developer",
+        company: "Swiggy",
+        location: "Bengaluru, India",
+        remoteStatus: "HYBRID",
+        salaryMin: 1200000,
+        salaryMax: 3500000,
+        currency: "INR",
+        employmentType: "FULL_TIME",
+        description: rawText.trim(),
+        requiredExperienceYears: 4,
+        skills: ["React", "Node.js"],
+      },
+    });
+
+    const details = await extractJobDetails(rawText, { primaryModel: mockModel });
+    assert.strictEqual(details.title, "Senior Fullstack Developer");
+    assert.strictEqual(details.company, "Swiggy");
+    assert.strictEqual(details.salaryMin, 1200000);
+    assert.strictEqual(details.salaryMax, 3500000);
+    assert.strictEqual(details.currency, "INR");
+  });
+
   it("tailorApplicationSummary generates factual summary and match points", async () => {
     const mockModel = createMockModel({
       generateOutput: {

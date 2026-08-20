@@ -30,6 +30,42 @@ export function getCurrencySymbol(currency: string = "INR"): string {
 }
 
 /**
+ * Normalizes currency symbols, spelled-out words, or abbreviations into canonical ISO-4217 codes.
+ */
+export function normalizeCurrencyCode(input?: string | null): string {
+  if (!input) return "INR";
+  const trimmed = input.trim();
+  const upper = trimmed.toUpperCase();
+
+  if (["INR", "₹", "RS", "RS.", "RUPEE", "RUPEES", "LPA", "LAKH", "LAKHS", "CR", "CRORE"].includes(upper)) {
+    return "INR";
+  }
+  if (["USD", "$", "DOLLAR", "DOLLARS", "US$", "USD$"].includes(upper)) {
+    return "USD";
+  }
+  if (["EUR", "€", "EURO", "EUROS"].includes(upper)) {
+    return "EUR";
+  }
+  if (["GBP", "£", "POUND", "POUNDS", "STERLING"].includes(upper)) {
+    return "GBP";
+  }
+  if (["CAD", "CA$", "CANADIAN DOLLAR", "CANADIAN DOLLARS"].includes(upper)) {
+    return "CAD";
+  }
+  if (["AUD", "A$", "AUSTRALIAN DOLLAR", "AUSTRALIAN DOLLARS"].includes(upper)) {
+    return "AUD";
+  }
+  if (["SGD", "S$", "SINGAPORE DOLLAR", "SINGAPORE DOLLARS"].includes(upper)) {
+    return "SGD";
+  }
+  if (["JPY", "¥", "YEN"].includes(upper)) {
+    return "JPY";
+  }
+
+  return upper.length === 3 ? upper : "INR";
+}
+
+/**
  * Converts an amount from one currency to another using static reference rates.
  * Returns null if either currency is unsupported.
  */

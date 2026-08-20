@@ -5,6 +5,7 @@ import {
   formatSalaryCompact,
   convertCurrency,
   getCurrencySymbol,
+  normalizeCurrencyCode,
 } from "./currency";
 
 describe("Currency Utilities", () => {
@@ -72,6 +73,30 @@ describe("Currency Utilities", () => {
     it("formats USD in k and M", () => {
       assert.strictEqual(formatSalaryCompact(120000, "USD"), "$120k");
       assert.strictEqual(formatSalaryCompact(1500000, "USD"), "$1.5M");
+    });
+  });
+
+  describe("normalizeCurrencyCode", () => {
+    it("normalizes rupee symbols, abbreviations, and words to INR", () => {
+      assert.strictEqual(normalizeCurrencyCode("₹"), "INR");
+      assert.strictEqual(normalizeCurrencyCode("Rs"), "INR");
+      assert.strictEqual(normalizeCurrencyCode("Rs."), "INR");
+      assert.strictEqual(normalizeCurrencyCode("Rupees"), "INR");
+      assert.strictEqual(normalizeCurrencyCode("LPA"), "INR");
+      assert.strictEqual(normalizeCurrencyCode("Lakhs"), "INR");
+    });
+
+    it("normalizes dollar symbols and words to USD", () => {
+      assert.strictEqual(normalizeCurrencyCode("$"), "USD");
+      assert.strictEqual(normalizeCurrencyCode("USD"), "USD");
+      assert.strictEqual(normalizeCurrencyCode("Dollars"), "USD");
+    });
+
+    it("normalizes euro and pound symbols to EUR and GBP", () => {
+      assert.strictEqual(normalizeCurrencyCode("€"), "EUR");
+      assert.strictEqual(normalizeCurrencyCode("Euros"), "EUR");
+      assert.strictEqual(normalizeCurrencyCode("£"), "GBP");
+      assert.strictEqual(normalizeCurrencyCode("Pounds"), "GBP");
     });
   });
 });

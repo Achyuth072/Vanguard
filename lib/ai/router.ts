@@ -428,10 +428,23 @@ EXTRACTION GUIDELINES:
    - "ONSITE": Explicit mention of in-person, on-site, in-office daily, or required relocation to physical office.
    - "UNKNOWN": If neither remote, hybrid, nor onsite status is discernible.
 4. SALARY RANGE & CURRENCY:
-   - Currency: ISO-4217 code (INR, USD, EUR, GBP, CAD, AUD, SGD, etc.). Default to INR if currency symbol is ambiguous or unstated in Indian postings, USD for $, EUR for €, GBP for £.
-   - Base Cash Salary Isolation: Extract the base cash salary and ignore ancillary equity/benefits clauses (e.g. "$20k – $30k • No equity" -> salaryMin: 20000, salaryMax: 30000, currency: "USD").
-   - Handle Dash Variants & Shorthands: Parse hyphens, en-dashes (–), em-dashes (—), and "to" (e.g. "$20k – $30k", "$80k to $100k", "$120,000 - $150,000/yr"). Convert "k" / "K" suffix to thousands (e.g. 20k -> 20000).
-   - INR / LPA: Detect ₹, Rs, INR, and LPA (Lakhs Per Annum). Convert LPA to annualized full integer (e.g. "15 - 25 LPA" -> salaryMin: 1500000, salaryMax: 2500000, currency: "INR").
+   - Currency: Map currency symbols, abbreviations, and spelled-out words to ISO-4217 code:
+     * "INR": ₹, Rs, Rs., INR, "Rupee", "Rupees", "Lakh", "Lakhs", "LPA", "L", "Cr", "Crore".
+     * "USD": $, USD, "Dollar", "Dollars", "US$", "USD$".
+     * "EUR": €, EUR, "Euro", "Euros".
+     * "GBP": £, GBP, "Pound", "Pounds", "Sterling".
+     * "CAD": CA$, CAD, "Canadian Dollar".
+     * "AUD": A$, AUD, "Australian Dollar".
+     * "SGD": S$, SGD, "Singapore Dollar".
+   - CRITICAL CURRENCY INVARIANT: Never convert ₹, Rs, L, Lakhs, or LPA to USD! "₹12L – ₹35L" is strictly INR (salaryMin: 1200000, salaryMax: 3500000, currency: "INR").
+   - Indian Number Suffixes:
+     * "L", "Lac", "Lakh", "Lakhs", "LPA" = multiply by 100,000 (e.g. ₹12L -> 1,200,000, ₹35L -> 3,500,000, 15 LPA -> 1,500,000).
+     * "Cr", "Crore", "Crores" = multiply by 10,000,000 (e.g. 1.2 Cr -> 12,000,000).
+   - Global Number Suffixes:
+     * "k", "K" = multiply by 1,000 (e.g. $20k -> 20000, $120k -> 120000).
+     * "M", "m" = multiply by 1,000,000.
+   - Base Cash Salary Isolation: Extract the base cash salary range and ignore ancillary equity, bonus, or benefits clauses (e.g. "₹12L – ₹35L • No equity" -> salaryMin: 1200000, salaryMax: 3500000, currency: "INR"; "$20k – $30k • No equity" -> salaryMin: 20000, salaryMax: 30000, currency: "USD").
+   - Dash & Range Variants: Handle hyphens (-), en-dashes (–), em-dashes (—), and "to" (e.g. "₹12L – ₹35L", "$20k – $30k", "15 to 25 LPA").
    - Hourly / Monthly: If only hourly rate is given (e.g. "$50 - $70/hr"), annualize assuming 2000 hours/yr (e.g. 100000 - 140000).
    - If no salary is stated or implied in the text, set salaryMin and salaryMax to null. Never hallucinate numbers.
 5. EMPLOYMENT TYPE:

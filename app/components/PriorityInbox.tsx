@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatSalaryCompact } from "@/lib/utils/currency";
 import { SUPPORTED_SOURCES, getSourceBadgeStyle, normalizeSource } from "@/lib/utils/source";
+import { sortJobsForInbox } from "@/lib/utils/sorting";
 import {
   Sparkles,
   MapPin,
@@ -78,23 +79,27 @@ export default function PriorityInbox({ initialJobs }: PriorityInboxProps) {
   // Categorize jobs
   const inboxJobs = useMemo(
     () =>
-      initialJobs.filter((job) => {
-        const s = job.status.toUpperCase();
-        if (s === "ARCHIVED" || s === "IGNORED" || s === "FILTERED_OUT") return false;
-        const score = job.fitScore?.score;
-        return score !== undefined && score !== null && score >= 80;
-      }),
+      sortJobsForInbox(
+        initialJobs.filter((job) => {
+          const s = job.status.toUpperCase();
+          if (s === "ARCHIVED" || s === "IGNORED" || s === "FILTERED_OUT") return false;
+          const score = job.fitScore?.score;
+          return score !== undefined && score !== null && score >= 80;
+        })
+      ),
     [initialJobs]
   );
 
   const reviewJobs = useMemo(
     () =>
-      initialJobs.filter((job) => {
-        const s = job.status.toUpperCase();
-        if (s === "ARCHIVED" || s === "IGNORED" || s === "FILTERED_OUT") return false;
-        const score = job.fitScore?.score;
-        return score !== undefined && score !== null && score >= 60 && score < 80;
-      }),
+      sortJobsForInbox(
+        initialJobs.filter((job) => {
+          const s = job.status.toUpperCase();
+          if (s === "ARCHIVED" || s === "IGNORED" || s === "FILTERED_OUT") return false;
+          const score = job.fitScore?.score;
+          return score !== undefined && score !== null && score >= 60 && score < 80;
+        })
+      ),
     [initialJobs]
   );
 
@@ -141,16 +146,18 @@ export default function PriorityInbox({ initialJobs }: PriorityInboxProps) {
       if (allJobsStatusFilter === "ARCHIVED") {
         list = initialJobs.filter((j) => j.status.toUpperCase() === "ARCHIVED");
       } else if (allJobsStatusFilter === "ACTIVE") {
-        list = initialJobs.filter((j) => {
-          const s = j.status.toUpperCase();
-          return s !== "ARCHIVED" && s !== "IGNORED" && s !== "FILTERED_OUT";
-        });
+        list = sortJobsForInbox(
+          initialJobs.filter((j) => {
+            const s = j.status.toUpperCase();
+            return s !== "ARCHIVED" && s !== "IGNORED" && s !== "FILTERED_OUT";
+          })
+        );
       } else if (allJobsStatusFilter === "SHORTLISTED") {
-        list = initialJobs.filter((j) => j.status.toUpperCase() === "SHORTLISTED");
+        list = sortJobsForInbox(initialJobs.filter((j) => j.status.toUpperCase() === "SHORTLISTED"));
       } else if (allJobsStatusFilter === "APPLIED") {
-        list = initialJobs.filter((j) => j.status.toUpperCase() === "APPLIED");
+        list = sortJobsForInbox(initialJobs.filter((j) => j.status.toUpperCase() === "APPLIED"));
       } else {
-        list = initialJobs;
+        list = sortJobsForInbox(initialJobs);
       }
     }
 

@@ -185,16 +185,21 @@ export default function ProfileDrawer({
     try {
       const res = await parseCandidateResumeAction(trimmed, profile.id, mode);
       if (res.success && res.profile) {
-        setProfile(res.profile);
+        // Auto-save to database immediately so changes take effect everywhere
+        const saveRes = await updateCandidateProfile(res.profile);
+        const finalProfile = saveRes.success ? saveRes.profile : res.profile;
+        setProfile(finalProfile);
+        if (onProfileUpdated) onProfileUpdated(finalProfile);
+
         const methodLabel = res.method === "deterministic" ? "Instant (No AI)" : "AI Parser";
-        const summaryMsg = `[${methodLabel}] Parsed & updated profile: ${res.profile.skills.length} skills, ${res.profile.projects.length} projects, and ${res.profile.experiences.length} experience roles.`;
+        const summaryMsg = `[${methodLabel}] Parsed & saved to database: ${finalProfile.skills.length} skills, ${finalProfile.projects.length} projects, and ${finalProfile.experiences.length} experience roles.`;
         setSuccessMessage(summaryMsg);
         setParseSummary(summaryMsg);
-        if (res.profile.projects.length > 0) {
-          setExpandedProjectId(res.profile.projects[0].id);
+        if (finalProfile.projects.length > 0) {
+          setExpandedProjectId(finalProfile.projects[0].id);
         }
-        if (res.profile.experiences.length > 0) {
-          setExpandedExpId(res.profile.experiences[0].id);
+        if (finalProfile.experiences.length > 0) {
+          setExpandedExpId(finalProfile.experiences[0].id);
         }
         setTimeout(() => setSuccessMessage(null), 5000);
       } else {
@@ -220,8 +225,29 @@ export default function ProfileDrawer({
           ...prev,
           resumeText: res.markdown!,
         }));
+
+        // Automatically parse and sync to DB
+        const parseRes = await parseCandidateResumeAction(res.markdown, profile.id, "deterministic");
+        if (parseRes.success && parseRes.profile) {
+          const saveRes = await updateCandidateProfile(parseRes.profile);
+          const finalProfile = saveRes.success ? saveRes.profile : parseRes.profile;
+          setProfile(finalProfile);
+          if (onProfileUpdated) onProfileUpdated(finalProfile);
+          if (finalProfile.projects.length > 0) {
+            setExpandedProjectId(finalProfile.projects[0].id);
+          }
+          if (finalProfile.experiences.length > 0) {
+            setExpandedExpId(finalProfile.experiences[0].id);
+          }
+          setSuccessMessage(
+            `Loaded and synced local resume (${res.filename || "file"}). Profile saved and updated in database!`
+          );
+          setTimeout(() => setSuccessMessage(null), 4000);
+          return;
+        }
+
         setSuccessMessage(
-          `Loaded local resume (${res.filename || "file"}). Click "Parse & Auto-Fill" to populate all spots.`
+          `Loaded local resume (${res.filename || "file"}). Click "Parse Instantly" to populate and save.`
         );
         setTimeout(() => setSuccessMessage(null), 4000);
       } else {

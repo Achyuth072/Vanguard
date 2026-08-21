@@ -1,16 +1,26 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import type { EnrichedJob } from "@/lib/data";
 import { updateJobStatusAction, autoGhostStaleApplicationsAction } from "../actions";
 import { calculateDaysSinceApplied, identifyGhostableJobs } from "@/lib/lifecycle/auto-ghost";
 import DraftButton from "./DraftButton";
 import EditJobModal from "./EditJobModal";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getSourceBadgeStyle } from "@/lib/utils/source";
+import {
+  Ghost,
+  Archive,
+  RotateCcw,
+  Sparkles,
+  Edit2,
+  Clock,
+  MapPin,
+  Building2,
+  AlertTriangle,
+} from "lucide-react";
 
-interface ApplicationTrackerProps {
+export interface ApplicationTrackerProps {
   jobs: EnrichedJob[];
   onStatusUpdated?: () => void;
   onOpenPreparation?: (job: EnrichedJob) => void;
@@ -18,29 +28,35 @@ interface ApplicationTrackerProps {
 
 interface PipelineStage {
   id: string;
+  code: string;
   label: string;
-  variant: "default" | "secondary" | "destructive" | "outline" | "emerald" | "amber" | "violet" | "blue";
+  accentColor: string;
 }
 
 const PIPELINE_STAGES: PipelineStage[] = [
-  { id: "SHORTLISTED", label: "Shortlisted", variant: "violet" },
-  { id: "PREPARED", label: "Prepared", variant: "blue" },
-  { id: "APPLIED", label: "Applied", variant: "blue" },
-  { id: "SCREENING", label: "Screening", variant: "blue" },
-  { id: "ASSESSMENT", label: "Take-home / OA", variant: "amber" },
-  { id: "INTERVIEW", label: "Interview", variant: "violet" },
-  { id: "OFFER", label: "Offer", variant: "emerald" },
-  { id: "REJECTED", label: "Rejected", variant: "destructive" },
-  { id: "GHOSTED", label: "Ghosted", variant: "secondary" },
+  { id: "SHORTLISTED", code: "01", label: "Shortlisted", accentColor: "#d4a745" },
+  { id: "PREPARED", code: "02", label: "Prepared", accentColor: "#d4a745" },
+  { id: "APPLIED", code: "03", label: "Applied", accentColor: "#d4a745" },
+  { id: "SCREENING", code: "04", label: "Screening", accentColor: "#8ab384" },
+  { id: "ASSESSMENT", code: "05", label: "Take-home / OA", accentColor: "#8ab384" },
+  { id: "INTERVIEW", code: "06", label: "Interview", accentColor: "#8ab384" },
+  { id: "OFFER", code: "07", label: "Offer", accentColor: "#8ab384" },
+  { id: "REJECTED", code: "08", label: "Rejected", accentColor: "#c4634e" },
+  { id: "GHOSTED", code: "09", label: "Ghosted", accentColor: "#a6abbd" },
 ];
 
 const ARCHIVED_STAGE: PipelineStage = {
   id: "ARCHIVED",
+  code: "10",
   label: "Archived",
-  variant: "outline",
+  accentColor: "#797f94",
 };
 
-export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPreparation }: ApplicationTrackerProps) {
+export default function ApplicationTracker({
+  jobs,
+  onStatusUpdated,
+  onOpenPreparation,
+}: ApplicationTrackerProps) {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [draggedJobId, setDraggedJobId] = useState<string | null>(null);
   const [dragOverStageId, setDragOverStageId] = useState<string | null>(null);
@@ -57,17 +73,27 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
     return s;
   };
 
-  const archivedCount = jobs.filter((j) => normalizeStatus(j.status) === "ARCHIVED").length;
-  const displayedStages = showArchived ? [...PIPELINE_STAGES, ARCHIVED_STAGE] : PIPELINE_STAGES;
+  const archivedCount = useMemo(
+    () => jobs.filter((j) => normalizeStatus(j.status) === "ARCHIVED").length,
+    [jobs]
+  );
 
-  const pipelineJobs = jobs.filter((job) => {
-    const s = normalizeStatus(job.status);
-    if (s === "IGNORED" || s === "FILTERED_OUT") return false;
-    if (s === "ARCHIVED") return showArchived;
-    return PIPELINE_STAGES.some((stage) => stage.id === s) || job.application !== null;
-  });
+  const displayedStages = useMemo(
+    () => (showArchived ? [...PIPELINE_STAGES, ARCHIVED_STAGE] : PIPELINE_STAGES),
+    [showArchived]
+  );
+
+  const pipelineJobs = useMemo(() => {
+    return jobs.filter((job) => {
+      const s = normalizeStatus(job.status);
+      if (s === "IGNORED" || s === "FILTERED_OUT") return false;
+      if (s === "ARCHIVED") return showArchived;
+      return PIPELINE_STAGES.some((stage) => stage.id === s) || job.application !== null;
+    });
+  }, [jobs, showArchived]);
 
   const ghostableList = useMemo(() => identifyGhostableJobs(pipelineJobs, 21), [pipelineJobs]);
+  const staleList = useMemo(() => identifyGhostableJobs(pipelineJobs, 14), [pipelineJobs]);
 
   async function handleAutoGhostAll() {
     if (ghostableList.length === 0 || isAutoGhosting) return;
@@ -134,54 +160,67 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
   }
 
   return (
-    <div className="space-y-3 flex flex-col h-full min-h-0">
-      <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight text-zinc-100">Application Pipeline</h2>
-          <p className="text-xs text-zinc-400 mt-0.5">
-            Active tracking stages with automatic audit event logging. Drag cards between columns to change status. Total active: <span className="tabular-nums font-mono font-medium text-zinc-300">{pipelineJobs.filter(j => normalizeStatus(j.status) !== "ARCHIVED").length}</span>
-            {archivedCount > 0 && (
-              <span className="ml-2 text-zinc-500">
-                • Archived: <span className="tabular-nums font-mono text-zinc-400">{archivedCount}</span>
+    <div className="space-y-3 flex flex-col h-full min-h-0 select-none">
+      {/* Tactical Sub-Header & Bulk Action Strip */}
+      <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#0d0e12] p-2.5 rounded-[3px] border border-[#2a2e38]">
+        <div className="flex items-center gap-3 flex-wrap text-xs">
+          <div className="flex items-center gap-1.5 font-mono text-[#f4f2ec] font-semibold">
+            <span className="w-2 h-2 rounded-full bg-[#d4a745] inline-block animate-pulse" />
+            <span>ACTIVE PIPELINE TRACK</span>
+          </div>
+          <span className="text-[#2a2e38]">|</span>
+          <div className="text-[#a6abbd] font-mono text-[11px] flex items-center gap-2">
+            <span>
+              TRACKED:{" "}
+              <strong className="text-[#f4f2ec] tabular-nums font-bold">
+                {pipelineJobs.filter((j) => normalizeStatus(j.status) !== "ARCHIVED").length}
+              </strong>
+            </span>
+            {ghostableList.length > 0 && (
+              <span className="text-[#c4634e] flex items-center gap-1 font-bold">
+                <AlertTriangle className="w-3.5 h-3.5 inline" />
+                {ghostableList.length} GHOST CANDIDATES (&gt;21D)
               </span>
             )}
-          </p>
+            {archivedCount > 0 && (
+              <span className="text-[#797f94]">
+                ARCHIVED: <strong className="text-[#a6abbd] tabular-nums">{archivedCount}</strong>
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
           {ghostableList.length > 0 && (
-            <Button
+            <button
               type="button"
-              variant="outline"
-              size="sm"
               onClick={handleAutoGhostAll}
               disabled={isAutoGhosting}
-              className="h-8 text-xs font-semibold text-amber-300 border-amber-800/80 bg-amber-950/40 hover:bg-amber-900/60 hover:text-amber-200 cursor-pointer flex items-center gap-1.5"
+              className="h-7 px-2.5 text-xs font-mono font-semibold text-[#f4f2ec] border border-[#c4634e]/60 bg-[#c4634e]/20 hover:bg-[#c4634e]/30 rounded-[2px] transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              title="Automatically transition applications pending >21 days without updates to GHOSTED"
             >
-              <span>👻</span>
+              <Ghost className="w-3.5 h-3.5 text-[#c4634e]" />
               <span>{isAutoGhosting ? "Ghosting..." : `Auto-Ghost Stale (${ghostableList.length})`}</span>
-            </Button>
+            </button>
           )}
 
           <button
             type="button"
             onClick={() => setShowArchived((prev) => !prev)}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 ${
+            className={`h-7 px-2.5 rounded-[2px] text-xs font-mono border transition-colors cursor-pointer flex items-center gap-1.5 ${
               showArchived
-                ? "bg-zinc-800 border-zinc-600 text-zinc-200"
-                : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700"
+                ? "bg-[#1f222a] border-[#3d4352] text-[#f4f2ec]"
+                : "bg-[#0d0e12] border-[#2a2e38] text-[#a6abbd] hover:text-[#f4f2ec] hover:border-[#3d4352]"
             }`}
           >
-            <svg className="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-            </svg>
-            <span>{showArchived ? "Hide Archived Column" : `Show Archived (${archivedCount})`}</span>
+            <Archive className="w-3.5 h-3.5 text-[#797f94]" />
+            <span>{showArchived ? "Hide Archived" : `Show Archived (${archivedCount})`}</span>
           </button>
         </div>
       </div>
 
       {/* Horizontally Scrollable Kanban Rail */}
-      <div className="flex gap-4 overflow-x-auto pb-2 pt-1 snap-x select-none flex-1 min-h-0">
+      <div className="flex gap-3 overflow-x-auto pb-2 pt-1 snap-x flex-1 min-h-0">
         {displayedStages.map((stage) => {
           const stageJobs = pipelineJobs.filter((j) => normalizeStatus(j.status) === stage.id);
           const isTargeted = dragOverStageId === stage.id;
@@ -192,33 +231,38 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
               onDragOver={(e) => handleDragOver(e, stage.id)}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, stage.id)}
-              className={`w-72 min-w-[288px] max-w-[288px] shrink-0 snap-start bg-zinc-900 border rounded-lg p-3 flex flex-col h-full min-h-0 transition-colors ${
+              className={`w-72 min-w-[288px] max-w-[288px] shrink-0 snap-start bg-[#15171d] border rounded-[3px] p-2.5 flex flex-col h-full min-h-0 transition-all ${
                 isTargeted
-                  ? "border-violet-500 bg-zinc-800/90 ring-1 ring-violet-400/50"
-                  : "border-zinc-800"
+                  ? "border-2 border-dashed border-[#d4a745] bg-[#1f222a]/60 shadow-[0_0_15px_rgba(212,167,69,0.15)]"
+                  : "border-[#2a2e38]"
               }`}
             >
-              {/* Column Header */}
-              <div className="flex items-center justify-between mb-3 pb-2 border-b border-zinc-800 shrink-0">
-                <Badge variant={stage.variant} className="text-[10px] uppercase tracking-wider font-semibold">
-                  {stage.label}
-                </Badge>
-                <span className="text-xs font-mono text-zinc-400 font-semibold bg-zinc-950 px-2 py-0.5 rounded border border-zinc-800 tabular-nums">
+              {/* Column Header: 12px monospace stage code, stage candidate count badge, clean hairline border */}
+              <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-[#2a2e38] shrink-0">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="font-mono text-xs font-bold tracking-wider"
+                    style={{ color: stage.accentColor }}
+                  >
+                    {stage.code} // {stage.label.toUpperCase()}
+                  </span>
+                </div>
+                <span className="text-[11px] font-mono text-[#f4f2ec] font-bold bg-[#0d0e12] px-2 py-0.5 rounded-[2px] border border-[#2a2e38] tabular-nums">
                   {stageJobs.length}
                 </span>
               </div>
 
               {/* Cards Container */}
-              <div className="space-y-3 flex-1 min-h-0 overflow-y-auto pr-0.5">
+              <div className="space-y-2 flex-1 min-h-0 overflow-y-auto pr-0.5">
                 {stageJobs.length === 0 ? (
                   <div
-                    className={`h-32 flex flex-col items-center justify-center text-xs italic border border-dashed rounded-md transition-colors ${
+                    className={`h-28 flex flex-col items-center justify-center text-xs font-mono italic border border-dashed rounded-[2px] transition-colors ${
                       isTargeted
-                        ? "border-violet-500/50 text-violet-300 bg-zinc-950/40"
-                        : "border-zinc-800/80 text-zinc-600"
+                        ? "border-[#d4a745] text-[#d4a745] bg-[#0d0e12]/60"
+                        : "border-[#2a2e38] text-[#797f94]"
                     }`}
                   >
-                    <span>{isTargeted ? "Drop to move here" : "No jobs"}</span>
+                    <span>{isTargeted ? "Drop candidate here" : "Stage Empty"}</span>
                   </div>
                 ) : (
                   stageJobs.map((job) => {
@@ -226,188 +270,192 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
                     const isDragging = draggedJobId === job.id;
                     const score = job.fitScore?.score;
 
+                    const daysApplied = job.application?.appliedAt
+                      ? calculateDaysSinceApplied(job.application.appliedAt)
+                      : null;
+                    const isAppliedStatus = normalizeStatus(job.status) === "APPLIED";
+                    const isGhostable = isAppliedStatus && daysApplied !== null && daysApplied >= 21;
+                    const isStale = isAppliedStatus && daysApplied !== null && daysApplied >= 14 && daysApplied < 21;
+
                     return (
                       <div
                         key={job.id}
                         draggable={!isUpdating}
                         onDragStart={(e) => handleDragStart(e, job.id)}
                         onDragEnd={handleDragEnd}
-                        className={`bg-zinc-950 border rounded-md p-3 space-y-2.5 transition-colors text-xs cursor-grab active:cursor-grabbing ${
+                        className={`bg-[#0d0e12] border rounded-[3px] p-2.5 space-y-2 transition-all cursor-grab active:cursor-grabbing text-xs group ${
                           isDragging
-                            ? "opacity-40 border-violet-500/50 bg-zinc-900"
+                            ? "opacity-30 border-[#d4a745] bg-[#1f222a]"
                             : isUpdating
-                            ? "opacity-50 pointer-events-none border-zinc-800"
-                            : "border-zinc-800 hover:border-zinc-700 hover:bg-zinc-950/80"
+                            ? "opacity-50 pointer-events-none border-[#2a2e38]"
+                            : "border-[#2a2e38] hover:border-[#3d4352] hover:bg-[#15171d]/90 shadow-sm"
                         }`}
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="font-semibold text-zinc-100 tracking-tight line-clamp-2 leading-snug">
-                            {job.title}
+                        {/* Card Header: Score Anchor Box & Title */}
+                        <div className="flex items-start gap-2 justify-between">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-sans font-bold text-[#f4f2ec] text-xs leading-snug line-clamp-2 group-hover:text-[#d4a745] transition-colors">
+                              {job.title}
+                            </h3>
                           </div>
                           {score !== undefined && score !== null && (
-                            <Badge
-                              variant={score >= 80 ? "emerald" : score >= 60 ? "amber" : "secondary"}
-                              className="px-1.5 py-0 text-[10px] font-bold shrink-0 font-mono tabular-nums"
+                            <div
+                              className={`w-9 h-7 rounded-[2px] flex items-center justify-center font-mono font-bold text-xs tabular-nums border shrink-0 ${
+                                score >= 80
+                                  ? "bg-[#d4a745]/15 text-[#d4a745] border-[#d4a745]/40"
+                                  : score >= 60
+                                  ? "bg-[#8ab384]/15 text-[#8ab384] border-[#8ab384]/40"
+                                  : "bg-[#c4634e]/15 text-[#c4634e] border-[#c4634e]/40"
+                              }`}
                             >
                               {score}
-                            </Badge>
+                            </div>
                           )}
                         </div>
 
-                        <div className="flex items-center justify-between gap-1 text-zinc-400 font-medium text-xs">
-                          <span className="truncate">{job.company}</span>
+                        {/* Middle-dot Metadata: Company · Location · Source */}
+                        <div className="flex items-center flex-wrap gap-1 text-[11px] text-[#a6abbd] font-mono leading-tight">
+                          <span className="text-[#f4f2ec] font-semibold truncate max-w-[130px]">
+                            {job.company}
+                          </span>
+                          {job.location && (
+                            <>
+                              <span className="text-[#797f94]">·</span>
+                              <span className="text-[#797f94] truncate max-w-[100px] flex items-center gap-0.5">
+                                <MapPin className="w-2.5 h-2.5 inline shrink-0" />
+                                {job.location}
+                              </span>
+                            </>
+                          )}
                           {job.source && (
-                            (() => {
-                              const sourceInfo = getSourceBadgeStyle(job.source);
-                              return (
-                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-semibold border shrink-0 ${sourceInfo.colorClass}`}>
-                                  <span className={`w-1 h-1 rounded-full ${sourceInfo.dotColorClass}`} />
-                                  <span>{sourceInfo.label}</span>
-                                </span>
-                              );
-                            })()
+                            <>
+                              <span className="text-[#797f94]">·</span>
+                              {(() => {
+                                const sourceInfo = getSourceBadgeStyle(job.source);
+                                return (
+                                  <span className={`inline-flex items-center gap-1 px-1 py-0.2 rounded-[2px] text-[9px] font-semibold border shrink-0 ${sourceInfo.colorClass}`}>
+                                    <span className={`w-1 h-1 rounded-full ${sourceInfo.dotColorClass}`} />
+                                    <span>{sourceInfo.label}</span>
+                                  </span>
+                                );
+                              })()}
+                            </>
                           )}
                         </div>
 
-                        {job.location && (
-                          <div className="text-zinc-500 text-[10px] flex items-center gap-1 font-mono">
-                            <svg className="w-3 h-3 text-zinc-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                            <span className="truncate">{job.location}</span>
+                        {/* Days Since Applied & Application Telemetry Chips */}
+                        {job.application?.appliedAt && (
+                          <div className="flex items-center justify-between gap-1 text-[10px] font-mono bg-[#15171d] p-1.5 rounded-[2px] border border-[#2a2e38]">
+                            <span className="text-[#797f94] flex items-center gap-1">
+                              <Clock className="w-2.5 h-2.5" />
+                              <span className="tabular-nums">
+                                {new Date(job.application.appliedAt).toLocaleDateString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                })}
+                              </span>
+                            </span>
+                            {daysApplied !== null && (
+                              <span
+                                className={`px-1.5 py-0.5 rounded-[2px] text-[9px] font-bold border tabular-nums ${
+                                  isGhostable
+                                    ? "bg-[#c4634e]/20 text-[#c4634e] border-[#c4634e]/50"
+                                    : isStale
+                                    ? "bg-[#d4a745]/20 text-[#d4a745] border-[#d4a745]/50"
+                                    : "bg-[#1f222a] text-[#a6abbd] border-[#2a2e38]"
+                                }`}
+                              >
+                                {isGhostable ? `👻 ${daysApplied}d Ghosted?` : isStale ? `⏳ ${daysApplied}d Pending` : `${daysApplied}d ago`}
+                              </span>
+                            )}
                           </div>
                         )}
 
-                        {job.application?.appliedAt && (() => {
-                          const days = calculateDaysSinceApplied(job.application.appliedAt);
-                          const isAppliedStatus = normalizeStatus(job.status) === "APPLIED";
-                          const isGhostable = isAppliedStatus && days !== null && days >= 21;
-                          const isStale = isAppliedStatus && days !== null && days >= 14 && days < 21;
-
-                          return (
-                            <div className="flex items-center justify-between gap-1 text-[10px] font-mono">
-                              <span className="text-zinc-500">
-                                Applied: <span className="tabular-nums">{new Date(job.application.appliedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                              </span>
-                              {days !== null && (
-                                <span
-                                  className={`px-1.5 py-0.5 rounded text-[9px] font-medium border tabular-nums ${
-                                    isGhostable
-                                      ? "bg-rose-950/60 text-rose-300 border-rose-800/80"
-                                      : isStale
-                                      ? "bg-amber-950/60 text-amber-300 border-amber-800/80"
-                                      : "bg-zinc-900 text-zinc-400 border-zinc-800"
-                                  }`}
-                                >
-                                  {isGhostable ? `👻 ${days}d (Ghosted?)` : isStale ? `⏳ ${days}d pending` : `${days}d ago`}
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })()}
-
+                        {/* Badges: Response Time & Rejection */}
                         <div className="flex flex-wrap gap-1.5">
                           {job.application?.responseTimeDays !== null && job.application?.responseTimeDays !== undefined && (
-                            <Badge variant="blue" className="text-[10px] font-mono tabular-nums px-1.5 py-0">
+                            <span className="bg-[#1f222a] text-[#d4a745] border border-[#2a2e38] text-[9px] font-mono tabular-nums px-1.5 py-0.5 rounded-[2px]">
                               ⚡ {job.application.responseTimeDays}d response
-                            </Badge>
+                            </span>
                           )}
 
                           {job.application?.rejectionStage && (
-                            <Badge variant="destructive" className="text-[10px] font-mono px-1.5 py-0 truncate">
+                            <span className="bg-[#c4634e]/15 text-[#c4634e] border border-[#c4634e]/40 text-[9px] font-mono px-1.5 py-0.5 rounded-[2px] truncate">
                               🛑 {job.application.rejectionStage.replace(/_/g, " ")}
-                            </Badge>
+                            </span>
                           )}
                         </div>
 
-                        {/* Stage Selector, Prep Trigger & Draft Button */}
-                        <div className="pt-2.5 border-t border-zinc-800/80 space-y-2">
+                        {/* Tactical Action Bar & Accessible Keyboard Stage Selector */}
+                        <div className="pt-2 border-t border-[#2a2e38] space-y-1.5">
                           {normalizeStatus(job.status) === "ARCHIVED" && (
-                            <Button
+                            <button
                               type="button"
-                              variant="outline"
-                              size="sm"
                               onClick={() => handleMoveStage(job.id, "DISCOVERED")}
                               disabled={isUpdating}
-                              className="w-full h-6 text-[10px] font-semibold text-emerald-400 border-emerald-800/80 bg-emerald-950/30 hover:bg-emerald-900/50 hover:text-emerald-300 cursor-pointer flex items-center justify-center gap-1"
+                              className="w-full h-6 text-[10px] font-mono font-semibold text-[#8ab384] border border-[#8ab384]/40 bg-[#8ab384]/15 hover:bg-[#8ab384]/25 rounded-[2px] cursor-pointer flex items-center justify-center gap-1 transition-colors"
                             >
-                              <svg className="w-3 h-3 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                              </svg>
-                              <span>Restore to Inbox</span>
-                            </Button>
+                              <RotateCcw className="w-3 h-3" />
+                              <span>Restore to Discovered Inbox</span>
+                            </button>
                           )}
 
-                          {normalizeStatus(job.status) === "APPLIED" && (() => {
-                            const days = calculateDaysSinceApplied(job.application?.appliedAt);
-                            if (days !== null && days >= 21) {
-                              return (
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleMoveStage(job.id, "GHOSTED")}
-                                  disabled={isUpdating}
-                                  className="w-full h-6 text-[10px] font-semibold text-rose-300 border-rose-800/80 bg-rose-950/40 hover:bg-rose-900/60 hover:text-rose-200 cursor-pointer flex items-center justify-center gap-1"
-                                >
-                                  <span>👻</span>
-                                  <span>Mark Ghosted (&gt; 3 wks)</span>
-                                </Button>
-                              );
-                            }
-                            return null;
-                          })()}
+                          {normalizeStatus(job.status) === "APPLIED" && isGhostable && (
+                            <button
+                              type="button"
+                              onClick={() => handleMoveStage(job.id, "GHOSTED")}
+                              disabled={isUpdating}
+                              className="w-full h-6 text-[10px] font-mono font-semibold text-[#c4634e] border border-[#c4634e]/50 bg-[#c4634e]/20 hover:bg-[#c4634e]/30 rounded-[2px] cursor-pointer flex items-center justify-center gap-1 transition-colors"
+                            >
+                              <Ghost className="w-3 h-3 text-[#c4634e]" />
+                              <span>Mark Ghosted (&gt;3 wks)</span>
+                            </button>
+                          )}
 
+                          {/* Accessible Keyboard Stage Changer */}
                           <div className="flex items-center gap-1.5">
                             <select
                               value={normalizeStatus(job.status)}
                               onChange={(e) => handleMoveStage(job.id, e.target.value)}
-                              aria-label={`Move stage for ${job.title}`}
-                              className="flex-1 bg-zinc-900 border border-zinc-700 text-zinc-300 text-[10px] rounded px-2 py-1 outline-none cursor-pointer hover:border-zinc-600 focus-visible:border-violet-400 focus-visible:ring-1 focus-visible:ring-violet-400 transition-colors"
+                              aria-label={`Move stage for ${job.title} at ${job.company}`}
+                              className="flex-1 bg-[#15171d] border border-[#2a2e38] text-[#f4f2ec] text-[10px] font-mono rounded-[2px] px-2 py-1 outline-none cursor-pointer hover:border-[#3d4352] focus-visible:border-[#d4a745] focus-visible:ring-1 focus-visible:ring-[#d4a745] transition-colors"
                             >
-                              <option value="DISCOVERED">Stage: Inbox (Discovered)</option>
+                              <option value="DISCOVERED">Move: Discovered Inbox</option>
                               {PIPELINE_STAGES.map((s) => (
                                 <option key={s.id} value={s.id}>
-                                  Stage: {s.label}
+                                  Stage: {s.code} // {s.label}
                                 </option>
                               ))}
-                              <option value="ARCHIVED">Stage: Archived</option>
+                              <option value="ARCHIVED">Stage: 10 // Archived</option>
                             </select>
 
                             {onOpenPreparation && (
-                              <Button
+                              <button
                                 type="button"
-                                variant="outline"
-                                size="icon-sm"
                                 onClick={() => onOpenPreparation(job)}
-                                className="h-7 w-7 text-violet-400 hover:text-violet-300 hover:bg-zinc-800 shrink-0 border-zinc-700"
-                                title="Open Tailored Resume & Screening Answers"
+                                className="h-6 w-6 rounded-[2px] text-[#d4a745] bg-[#1f222a] hover:bg-[#d4a745]/20 border border-[#2a2e38] hover:border-[#d4a745] flex items-center justify-center shrink-0 cursor-pointer transition-colors"
+                                title="Deploy Application Dossier & Tailor Resume"
+                                aria-label={`Prepare application for ${job.title}`}
                               >
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                </svg>
-                              </Button>
+                                <Sparkles className="w-3 h-3 text-[#d4a745]" />
+                              </button>
                             )}
                           </div>
 
+                          {/* Bottom controls: Edit Job Modal trigger & Draft Button */}
                           <div className="flex items-center justify-between gap-1.5">
-                            <Button
+                            <button
                               type="button"
-                              variant="ghost"
-                              size="icon-sm"
                               onClick={() => {
                                 setSelectedEditJob(job);
                                 setIsEditModalOpen(true);
                               }}
-                              className="h-7 w-7 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 shrink-0 border border-zinc-800"
+                              className="h-6 w-6 rounded-[2px] text-[#a6abbd] hover:text-[#f4f2ec] bg-[#15171d] hover:bg-[#1f222a] border border-[#2a2e38] flex items-center justify-center shrink-0 cursor-pointer transition-colors"
                               title="Edit Job Details"
                               aria-label={`Edit ${job.title} details`}
                             >
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
-                            </Button>
+                              <Edit2 className="w-2.5 h-2.5" />
+                            </button>
                             <DraftButton company={job.company} role={job.title} />
                           </div>
                         </div>
@@ -433,5 +481,3 @@ export default function ApplicationTracker({ jobs, onStatusUpdated, onOpenPrepar
     </div>
   );
 }
-
-

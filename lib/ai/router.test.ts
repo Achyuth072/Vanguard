@@ -1092,6 +1092,87 @@ describe("In-Flight Circuit Breaker & Zero-Latency Cooldown Cache", () => {
       assert.strictEqual(isCandidateInCooldown("mock-primary-model"), false);
     });
 
+    it("simulates 3-candidate cascade (cand 1 fails 429, cand 2 fails 429, cand 3 succeeds), records cooldowns for cand 1 & 2, and bypasses them on consecutive request", async () => {
+      let cand1Count = 0;
+      let cand2Count = 0;
+      let cand3Count = 0;
+
+      const mockCand1 = createMockModel({
+        id: "mock-cand-1",
+        shouldThrow: true,
+        errorMessage: "HTTP 429: Rate limit exceeded on candidate 1",
+        onCall: () => {
+          cand1Count++;
+        },
+      });
+
+      const mockCand2 = createMockModel({
+        id: "mock-cand-2",
+        shouldThrow: true,
+        errorMessage: "HTTP 429: Quota exhausted on candidate 2",
+        onCall: () => {
+          cand2Count++;
+        },
+      });
+
+      const mockCand3 = createMockModel({
+        id: "mock-cand-3",
+        generateOutput: {
+          score: 90,
+          recommendation: "APPLY",
+          skillsFit: 90,
+          experienceFit: 90,
+          domainFit: 90,
+          trajectoryFit: 90,
+          strengths: ["Candidate 3 Success"],
+          gaps: [],
+          risks: [],
+          reasoning: "Candidate 3 resolved inference successfully.",
+        },
+        onCall: () => {
+          cand3Count++;
+        },
+      });
+
+      const modelsPool = [mockCand1, mockCand2, mockCand3];
+
+      // Request 1: Candidate 1 fails (429) -> Candidate 2 fails (429) -> Candidate 3 succeeds
+      const result1 = await generateStructuredWithFallback({
+        schema: FitScoreSchema,
+        prompt: "Evaluate candidate fit with 3-candidate pool",
+        options: {
+          models: modelsPool,
+        },
+      });
+
+      assert.strictEqual(result1.score, 90);
+      assert.strictEqual(cand1Count, 1);
+      assert.strictEqual(cand2Count, 1);
+      assert.strictEqual(cand3Count, 1);
+
+      // Verify cooldowns recorded for candidates 1 & 2, but not 3
+      assert.strictEqual(isCandidateInCooldown("mock-cand-1"), true);
+      assert.strictEqual(isCandidateInCooldown("mock-cand-2"), true);
+      assert.strictEqual(isCandidateInCooldown("mock-cand-3"), false);
+
+      // Request 2: Candidates 1 & 2 are in cooldown -> Immediately skipped without invocation -> Candidate 3 called directly
+      const result2 = await generateStructuredWithFallback({
+        schema: FitScoreSchema,
+        prompt: "Evaluate candidate fit consecutive call",
+        options: {
+          models: modelsPool,
+        },
+      });
+
+      assert.strictEqual(result2.score, 90);
+      assert.strictEqual(cand1Count, 1); // Not called again
+      assert.strictEqual(cand2Count, 1); // Not called again
+      assert.strictEqual(cand3Count, 2); // Directly reached Candidate 3
+
+      // Candidate 3 is still active and healthy
+      assert.strictEqual(isCandidateInCooldown("mock-cand-3"), false);
+    });
+
     it("clears candidate cooldown on successful completion", async () => {
       recordCandidateCooldown("mock-primary-model", 60_000, "Previous transient error");
       assert.strictEqual(isCandidateInCooldown("mock-primary-model"), true);

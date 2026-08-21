@@ -3,6 +3,8 @@ import VanguardCockpit from "./components/VanguardCockpit";
 import ExportMenu from "./components/ExportMenu";
 import CandidateProfileButton from "./components/CandidateProfileButton";
 
+import VanguardIcon from "./components/VanguardIcon";
+
 export default async function Home() {
   const jobs = await getJobs();
 
@@ -12,7 +14,8 @@ export default async function Home() {
         {/* HEADER: Minimalist & Clean Tactical Command Cockpit */}
         <header className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2.5 border-b border-[#2a2e38]">
           <div>
-            <div className="flex items-center gap-3 mb-0.5">
+            <div className="flex items-center gap-2.5 mb-0.5">
+              <VanguardIcon size={26} className="shrink-0" />
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#f4f2ec] font-sans">
                 Vanguard
               </h1>

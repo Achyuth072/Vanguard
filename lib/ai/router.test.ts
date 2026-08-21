@@ -1,4 +1,4 @@
-import { describe, it, afterEach } from "node:test";
+import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import type { LanguageModel } from "ai";
 import type { LanguageModelV2 } from "@ai-sdk/provider";
@@ -15,11 +15,19 @@ import {
   parseCommaSeparatedList,
   getAllConfiguredModels,
   maskKey,
+  candidateCooldownMap,
+  calculateCooldownDuration,
+  recordCandidateCooldown,
+  isCandidateInCooldown,
+  clearCandidateCooldown,
+  resetAllCooldowns,
+  getCandidateCooldown,
   type CandidateContext,
   type JobContext,
 } from "./router";
 
 function createMockModel(params: {
+  id?: string;
   generateOutput?: Record<string, unknown>;
   shouldThrow?: boolean;
   errorMessage?: string;
@@ -54,6 +62,10 @@ function createMockModel(params: {
       throw new Error("Stream not supported in test mock");
     },
   };
+
+  if (params.id) {
+    (model as unknown as { id: string }).id = params.id;
+  }
 
   return model;
 }
@@ -193,6 +205,10 @@ describe("Candidate Fact Sheet Formatter", () => {
 });
 
 describe("Provider Fallback & Error Handling", () => {
+  beforeEach(() => {
+    resetAllCooldowns();
+  });
+
   it("returns primary provider result when primary succeeds without calling fallback", async () => {
     let primaryCalled = false;
     let fallbackCalled = false;
@@ -510,6 +526,10 @@ describe("Provider Fallback & Error Handling", () => {
 });
 
 describe("Structured Domain Functions", () => {
+  beforeEach(() => {
+    resetAllCooldowns();
+  });
+
   const candidate: CandidateContext = {
     targetRole: "Fullstack Engineer",
     yearsOfExperience: 4,
@@ -582,12 +602,13 @@ describe("Structured Domain Functions", () => {
     });
 
     const customWeights = {
-      skills: 0.50,
-      experience: 0.20,
+      skills: 0.5,
+      experience: 0.2,
       domain: 0.15,
       trajectory: 0.15,
     };
-    const conversionInsights = "CALIBRATED CONVERSION INSIGHTS:\n- Candidate demonstrates strong market conversion in: TypeScript.";
+    const conversionInsights =
+      "CALIBRATED CONVERSION INSIGHTS:\n- Candidate demonstrates strong market conversion in: TypeScript.";
 
     const fitScore = await scoreJobFit(candidate, job, {
       primaryModel: mockModel,
@@ -599,7 +620,11 @@ describe("Structured Domain Functions", () => {
     assert.strictEqual(fitScore.score, 84);
     assert.strictEqual(fitScore.recommendation, "APPLY");
     assert.ok(capturedSystem.includes("CALIBRATED CONVERSION INSIGHTS:"));
-    assert.ok(capturedSystem.includes("Candidate demonstrates strong market conversion in: TypeScript."));
+    assert.ok(
+      capturedSystem.includes(
+        "Candidate demonstrates strong market conversion in: TypeScript."
+      )
+    );
   });
 
   it("extractJobDetails produces structured metadata from unstructured text", async () => {
@@ -709,5 +734,241 @@ describe("Structured Domain Functions", () => {
     const result = await tailorApplicationSummary(candidate, job, { primaryModel: mockModel });
     assert.strictEqual(result.summary, "4 years building robust React and TypeScript systems.");
     assert.strictEqual(result.matchingPoints.length, 2);
+  });
+});
+
+describe("In-Flight Circuit Breaker & Zero-Latency Cooldown Cache", () => {
+  beforeEach(() => {
+    resetAllCooldowns();
+  });
+
+  afterEach(() => {
+    resetAllCooldowns();
+  });
+
+  describe("calculateCooldownDuration", () => {
+    it("parses retry-in with seconds and adds 1-2s jitter", () => {
+      const duration = calculateCooldownDuration("Rate limit reached. retry-in: 15s");
+      assert.ok(duration >= 16000 && duration <= 17000, `Expected 16-17s, got ${duration}`);
+    });
+
+    it("parses retry after with seconds words", () => {
+      const duration = calculateCooldownDuration("Please retry after 5 seconds");
+      assert.ok(duration >= 6000 && duration <= 7000, `Expected 6-7s, got ${duration}`);
+    });
+
+    it("parses retry in ms format", () => {
+      const duration = calculateCooldownDuration("retry in 500ms");
+      assert.ok(duration >= 1500 && duration <= 2500, `Expected 1.5-2.5s, got ${duration}`);
+    });
+
+    it("assigns 300 seconds (5 min) cooldown on quota exhaustion", () => {
+      const duration = calculateCooldownDuration("Resource has been exhausted (check quota and billing)");
+      assert.strictEqual(duration, 300_000);
+    });
+
+    it("assigns 60 seconds cooldown on HTTP 429 rate limit errors without explicit retry header", () => {
+      const duration = calculateCooldownDuration("HTTP 429 Too Many Requests: rate limit exceeded");
+      assert.strictEqual(duration, 60_000);
+    });
+
+    it("assigns 30 seconds cooldown on 503 / overload errors", () => {
+      const duration = calculateCooldownDuration("503 Service Unavailable: The model is overloaded");
+      assert.strictEqual(duration, 30_000);
+    });
+
+    it("defaults to 60 seconds when error reason is empty or generic", () => {
+      assert.strictEqual(calculateCooldownDuration(undefined), 60_000);
+      assert.strictEqual(calculateCooldownDuration("Unknown provider error"), 60_000);
+    });
+  });
+
+  describe("Cooldown Store Management Functions", () => {
+    it("records cooldown, checks cooldown status, and tracks consecutive failures", () => {
+      assert.strictEqual(isCandidateInCooldown("candidate-a"), false);
+      assert.strictEqual(getCandidateCooldown("candidate-a"), undefined);
+
+      recordCandidateCooldown("candidate-a", 10_000, "HTTP 429");
+      assert.strictEqual(isCandidateInCooldown("candidate-a"), true);
+
+      const record1 = getCandidateCooldown("candidate-a");
+      assert.ok(record1);
+      assert.strictEqual(record1.reason, "HTTP 429");
+      assert.strictEqual(record1.consecutiveFailures, 1);
+
+      // Second failure increments consecutiveFailures
+      recordCandidateCooldown("candidate-a", 10_000, "HTTP 429 retry 2");
+      const record2 = getCandidateCooldown("candidate-a");
+      assert.ok(record2);
+      assert.strictEqual(record2.consecutiveFailures, 2);
+    });
+
+    it("clears individual candidate cooldown on clearCandidateCooldown", () => {
+      recordCandidateCooldown("candidate-b", 10_000, "Quota exhausted");
+      assert.strictEqual(isCandidateInCooldown("candidate-b"), true);
+
+      clearCandidateCooldown("candidate-b");
+      assert.strictEqual(isCandidateInCooldown("candidate-b"), false);
+      assert.strictEqual(getCandidateCooldown("candidate-b"), undefined);
+    });
+
+    it("resets all cooldowns on resetAllCooldowns", () => {
+      recordCandidateCooldown("candidate-1", 10_000, "Error 1");
+      recordCandidateCooldown("candidate-2", 10_000, "Error 2");
+      assert.strictEqual(candidateCooldownMap.size, 2);
+
+      resetAllCooldowns();
+      assert.strictEqual(candidateCooldownMap.size, 0);
+      assert.strictEqual(isCandidateInCooldown("candidate-1"), false);
+      assert.strictEqual(isCandidateInCooldown("candidate-2"), false);
+    });
+
+    it("expires cooldown naturally once Date.now() >= expiresAt", () => {
+      // Record a cooldown that expired in the past
+      candidateCooldownMap.set("expired-candidate", {
+        expiresAt: Date.now() - 50,
+        reason: "Old failure",
+        consecutiveFailures: 1,
+      });
+
+      assert.strictEqual(isCandidateInCooldown("expired-candidate"), false);
+      // Confirms expired record is purged from map
+      assert.strictEqual(candidateCooldownMap.has("expired-candidate"), false);
+    });
+  });
+
+  describe("getAllConfiguredModels with Dynamic Cooldown Skipping", () => {
+    const originalEnv = { ...process.env };
+
+    afterEach(() => {
+      process.env = { ...originalEnv };
+      resetAllCooldowns();
+    });
+
+    it("skips cooling candidates immediately with zero network delay", () => {
+      delete process.env.GROQ_API_KEY;
+      delete process.env.OPENROUTER_API_KEY;
+      delete process.env.GOOGLE_API_KEY;
+      delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+
+      process.env.GEMINI_API_KEY = "AIzaSyKey11111111";
+      process.env.GEMINI_MODEL = "gemini-3.7-flash,gemini-3.5-flash";
+
+      const initial = getAllConfiguredModels();
+      assert.strictEqual(initial.length, 2);
+      assert.strictEqual(initial[0].id, "Google Gemini:AIza...1111:gemini-3.7-flash");
+      assert.strictEqual(initial[1].id, "Google Gemini:AIza...1111:gemini-3.5-flash");
+
+      // Mark gemini-3.7-flash in cooldown
+      recordCandidateCooldown(initial[0].id, 60_000, "429 Rate Limit");
+
+      // Next call skips gemini-3.7-flash instantly
+      const active = getAllConfiguredModels();
+      assert.strictEqual(active.length, 1);
+      assert.strictEqual(active[0].id, "Google Gemini:AIza...1111:gemini-3.5-flash");
+    });
+  });
+
+  describe("generateStructuredWithFallback In-Flight Circuit Breaker", () => {
+    it("marks failed candidate in cooldown on 429 and subsequent call bypasses it with 0ms penalty", async () => {
+      let primaryInvocationCount = 0;
+      let fallbackInvocationCount = 0;
+
+      const mockPrimary = createMockModel({
+        id: "mock-primary-model",
+        shouldThrow: true,
+        errorMessage: "HTTP 429 Rate limit exceeded",
+        onCall: () => {
+          primaryInvocationCount++;
+        },
+      });
+
+      const mockFallback = createMockModel({
+        id: "mock-fallback-model",
+        generateOutput: {
+          score: 85,
+          recommendation: "APPLY",
+          skillsFit: 85,
+          experienceFit: 85,
+          domainFit: 85,
+          trajectoryFit: 85,
+          strengths: [],
+          gaps: [],
+          risks: [],
+          reasoning: "Fallback ok",
+        },
+        onCall: () => {
+          fallbackInvocationCount++;
+        },
+      });
+
+      // Request 1: Primary fails (429) -> records cooldown -> Fallback succeeds
+      const result1 = await generateStructuredWithFallback({
+        schema: FitScoreSchema,
+        prompt: "Evaluate candidate",
+        options: {
+          primaryModel: mockPrimary,
+          fallbackModel: mockFallback,
+        },
+      });
+
+      assert.strictEqual(result1.score, 85);
+      assert.strictEqual(primaryInvocationCount, 1);
+      assert.strictEqual(fallbackInvocationCount, 1);
+      assert.strictEqual(isCandidateInCooldown("mock-primary-model"), true);
+
+      // Request 2: Primary is in cooldown -> Primary is SKIPPED (0 calls to Primary) -> Fallback is called directly
+      const result2 = await generateStructuredWithFallback({
+        schema: FitScoreSchema,
+        prompt: "Evaluate candidate again",
+        options: {
+          primaryModel: mockPrimary,
+          fallbackModel: mockFallback,
+        },
+      });
+
+      assert.strictEqual(result2.score, 85);
+      assert.strictEqual(primaryInvocationCount, 1); // Still 1! Never touched primary on request 2!
+      assert.strictEqual(fallbackInvocationCount, 2);
+
+      // Request 3: Cooldown expires/cleared -> Primary model is re-attempted
+      clearCandidateCooldown("mock-primary-model");
+      assert.strictEqual(isCandidateInCooldown("mock-primary-model"), false);
+    });
+
+    it("clears candidate cooldown on successful completion", async () => {
+      recordCandidateCooldown("mock-primary-model", 60_000, "Previous transient error");
+      assert.strictEqual(isCandidateInCooldown("mock-primary-model"), true);
+
+      // Clear manually to allow primary to run
+      clearCandidateCooldown("mock-primary-model");
+
+      const mockPrimary = createMockModel({
+        id: "mock-primary-model",
+        generateOutput: {
+          score: 95,
+          recommendation: "APPLY",
+          skillsFit: 95,
+          experienceFit: 95,
+          domainFit: 95,
+          trajectoryFit: 95,
+          strengths: [],
+          gaps: [],
+          risks: [],
+          reasoning: "Primary restored",
+        },
+      });
+
+      const result = await generateStructuredWithFallback({
+        schema: FitScoreSchema,
+        prompt: "Evaluate candidate",
+        options: {
+          primaryModel: mockPrimary,
+        },
+      });
+
+      assert.strictEqual(result.score, 95);
+      assert.strictEqual(isCandidateInCooldown("mock-primary-model"), false);
+    });
   });
 });

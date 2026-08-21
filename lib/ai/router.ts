@@ -95,10 +95,103 @@ export interface AIRouterOptions {
 }
 
 export interface ConfiguredModelCandidate {
+  id: string;
   providerName: string;
   modelName: string;
   model: LanguageModel;
   keyMask: string;
+}
+
+export interface CooldownRecord {
+  expiresAt: number;
+  reason: string;
+  consecutiveFailures: number;
+}
+
+export const candidateCooldownMap = new Map<string, CooldownRecord>();
+
+export function calculateCooldownDuration(errorOrReason?: string | Error | unknown): number {
+  if (!errorOrReason) return 60_000;
+  const msg = errorOrReason instanceof Error ? errorOrReason.message : String(errorOrReason);
+
+  // 1. Detect retry-in / retry after with seconds or ms
+  const retryMatch = msg.match(
+    /retry(?:-|\s+)(?:in|after)[:\s]+(\d+(?:\.\d+)?)\s*(s|sec|seconds|ms|milliseconds)?/i
+  );
+  if (retryMatch) {
+    const val = parseFloat(retryMatch[1]);
+    const unit = retryMatch[2]?.toLowerCase();
+    const baseMs = unit === "ms" || unit === "milliseconds" ? val : val * 1000;
+    // Add 1-2s jitter
+    const jitter = 1000 + Math.random() * 1000;
+    return Math.round(baseMs + jitter);
+  }
+
+  // 2. Default quota exhaustion cooldown: 300 seconds (5 minutes)
+  if (/quota|resource.*exhausted|daily limit|rate-limit-quota|quota exceeded/i.test(msg)) {
+    return 300_000;
+  }
+
+  // 3. Default 503 / overload cooldown: 30 seconds
+  if (
+    /503|overload|service unavailable|connection refused|econnrefused|econnreset|fetch failed/i.test(
+      msg
+    )
+  ) {
+    return 30_000;
+  }
+
+  // 4. Default 429 / rate-limit cooldown: 60 seconds
+  if (/429|rate[- ]limit|too many requests/i.test(msg)) {
+    return 60_000;
+  }
+
+  // 5. General fallback duration: 60 seconds
+  return 60_000;
+}
+
+export function recordCandidateCooldown(
+  candidateId: string,
+  durationMs?: number,
+  reason?: string
+): void {
+  if (!candidateId) return;
+  const calculatedDuration =
+    durationMs !== undefined ? durationMs : calculateCooldownDuration(reason);
+  const existing = candidateCooldownMap.get(candidateId);
+  const consecutiveFailures = (existing?.consecutiveFailures ?? 0) + 1;
+  const expiresAt = Date.now() + calculatedDuration;
+  candidateCooldownMap.set(candidateId, {
+    expiresAt,
+    reason: reason || "Rate limit or provider failure",
+    consecutiveFailures,
+  });
+}
+
+export function isCandidateInCooldown(candidateId: string): boolean {
+  if (!candidateId) return false;
+  const record = candidateCooldownMap.get(candidateId);
+  if (!record) return false;
+  if (Date.now() >= record.expiresAt) {
+    candidateCooldownMap.delete(candidateId);
+    return false;
+  }
+  return true;
+}
+
+export function clearCandidateCooldown(candidateId: string): void {
+  if (!candidateId) return;
+  candidateCooldownMap.delete(candidateId);
+}
+
+export function resetAllCooldowns(): void {
+  candidateCooldownMap.clear();
+}
+
+export function getCandidateCooldown(candidateId: string): CooldownRecord | undefined {
+  if (!candidateId) return undefined;
+  if (!isCandidateInCooldown(candidateId)) return undefined;
+  return candidateCooldownMap.get(candidateId);
 }
 
 export const DEFAULT_GEMINI_MODELS = [
@@ -194,12 +287,14 @@ export function getAllConfiguredModels(): ConfiguredModelCandidate[] {
   const uniqueGeminiKeys = Array.from(new Set(geminiKeys));
   const geminiModels = parseCommaSeparatedList(process.env.GEMINI_MODEL, DEFAULT_GEMINI_MODELS);
   for (const key of uniqueGeminiKeys) {
+    const keyMask = maskKey(key);
     for (const model of geminiModels) {
       candidates.push({
+        id: `Google Gemini:${keyMask}:${model}`,
         providerName: "Google Gemini",
         modelName: model,
         model: getGeminiModel(key, model),
-        keyMask: maskKey(key),
+        keyMask,
       });
     }
   }
@@ -208,12 +303,14 @@ export function getAllConfiguredModels(): ConfiguredModelCandidate[] {
   const groqKeys = Array.from(new Set(parseCommaSeparatedList(process.env.GROQ_API_KEY)));
   const groqModels = parseCommaSeparatedList(process.env.GROQ_MODEL, ["llama-3.3-70b-versatile"]);
   for (const key of groqKeys) {
+    const keyMask = maskKey(key);
     for (const model of groqModels) {
       candidates.push({
+        id: `Groq:${keyMask}:${model}`,
         providerName: "Groq",
         modelName: model,
         model: getGroqModel(key, model),
-        keyMask: maskKey(key),
+        keyMask,
       });
     }
   }
@@ -225,34 +322,56 @@ export function getAllConfiguredModels(): ConfiguredModelCandidate[] {
     ["openrouter/free"]
   );
   for (const key of openRouterKeys) {
+    const keyMask = maskKey(key);
     for (const model of openRouterModels) {
       candidates.push({
+        id: `OpenRouter:${keyMask}:${model}`,
         providerName: "OpenRouter",
         modelName: model,
         model: getOpenRouterModel(key, model),
-        keyMask: maskKey(key),
+        keyMask,
       });
     }
   }
 
   if (candidates.length === 0) {
-    return [
+    const defaults: ConfiguredModelCandidate[] = [
       {
+        id: `Google Gemini:***:${geminiModels[0]}`,
         providerName: "Google Gemini",
         modelName: geminiModels[0],
         model: getGeminiModel(undefined, geminiModels[0]),
         keyMask: "***",
       },
       {
+        id: `OpenRouter:***:${openRouterModels[0]}`,
         providerName: "OpenRouter",
         modelName: openRouterModels[0],
         model: getOpenRouterModel(undefined, openRouterModels[0]),
         keyMask: "***",
       },
     ];
+    return defaults.filter((c) => !isCandidateInCooldown(c.id));
   }
 
-  return candidates;
+  return candidates.filter((c) => !isCandidateInCooldown(c.id));
+}
+
+let anonModelCounter = 0;
+const anonymousModelIdMap = new WeakMap<object, string>();
+
+function getOrAssignModelId(model: LanguageModel, fallbackPrefix: string): string {
+  const explicitId = (model as { id?: string }).id;
+  if (explicitId) return explicitId;
+  if (typeof model === "object" && model !== null) {
+    let id = anonymousModelIdMap.get(model);
+    if (!id) {
+      id = `${fallbackPrefix}-${++anonModelCounter}`;
+      anonymousModelIdMap.set(model, id);
+    }
+    return id;
+  }
+  return `${fallbackPrefix}-${++anonModelCounter}`;
 }
 
 export async function generateStructuredWithFallback<T>({
@@ -266,32 +385,58 @@ export async function generateStructuredWithFallback<T>({
   system?: string;
   options?: AIRouterOptions;
 }): Promise<T> {
-  let modelCandidates: Array<{ name: string; model: LanguageModel }>;
+  let modelCandidates: Array<{ id: string; name: string; model: LanguageModel }>;
 
   if (options?.models && options.models.length > 0) {
-    modelCandidates = options.models.map((m, idx) => ({
-      name: `Explicit Option Model #${idx + 1}`,
-      model: m,
-    }));
+    modelCandidates = options.models.map((m, idx) => {
+      const id = getOrAssignModelId(m, `explicit-option-model-${idx + 1}`);
+      return {
+        id,
+        name: `Explicit Option Model #${idx + 1}`,
+        model: m,
+      };
+    });
   } else if (options?.primaryModel || options?.fallbackModel) {
     modelCandidates = [];
     if (options.primaryModel) {
-      modelCandidates.push({ name: "Primary Model", model: options.primaryModel });
+      const id = getOrAssignModelId(options.primaryModel, "primary-model");
+      modelCandidates.push({
+        id,
+        name: "Primary Model",
+        model: options.primaryModel,
+      });
     }
     if (options.fallbackModel) {
-      modelCandidates.push({ name: "Fallback Model", model: options.fallbackModel });
+      const id = getOrAssignModelId(options.fallbackModel, "fallback-model");
+      modelCandidates.push({
+        id,
+        name: "Fallback Model",
+        model: options.fallbackModel,
+      });
     }
   } else {
     modelCandidates = getAllConfiguredModels().map((c) => ({
+      id: c.id,
       name: `${c.providerName} (${c.modelName} [${c.keyMask}])`,
       model: c.model,
     }));
   }
 
+  const availableCandidates = modelCandidates.filter((c) => !isCandidateInCooldown(c.id));
   const errors: string[] = [];
 
-  for (let i = 0; i < modelCandidates.length; i++) {
-    const candidate = modelCandidates[i];
+  if (availableCandidates.length === 0) {
+    if (modelCandidates.length > 0) {
+      errors.push(
+        "All configured AI models are currently in cooldown due to previous rate limits or failures."
+      );
+    } else {
+      errors.push("No active AI providers available (all candidates are in cooldown or unconfigured).");
+    }
+  }
+
+  for (let i = 0; i < availableCandidates.length; i++) {
+    const candidate = availableCandidates[i];
     try {
       const result = await generateObject({
         model: candidate.model,
@@ -300,12 +445,14 @@ export async function generateStructuredWithFallback<T>({
         prompt,
         ...(options?.temperature !== undefined ? { temperature: options.temperature } : {}),
       });
+      clearCandidateCooldown(candidate.id);
       return result.object;
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
       errors.push(`${candidate.name}: ${errMsg}`);
+      recordCandidateCooldown(candidate.id, undefined, errMsg);
       console.warn(
-        `AI provider ${candidate.name} failed (${i + 1}/${modelCandidates.length}), attempting next provider in pool:`,
+        `AI provider ${candidate.name} failed (${i + 1}/${availableCandidates.length}), attempting next provider in pool:`,
         errMsg
       );
     }

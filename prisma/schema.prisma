@@ -10,6 +10,7 @@ datasource db {
 model Candidate {
   id                 String   @id @default(uuid())
   name               String   @default("Default Candidate")
+  location           String   @default("")
   targetRole         String   @default("Software Engineer")
   minSalary          Int      @default(0)
   currency           String   @default("INR")

@@ -92,6 +92,7 @@ export default function ProfileDrawer({
   const [profile, setProfile] = useState<CandidateProfile>({
     id: "candidate-default",
     name: "Default Candidate",
+    location: "",
     targetRole: "Software Engineer",
     minSalary: 0,
     currency: "INR",
@@ -561,7 +562,7 @@ export default function ProfileDrawer({
                       <span>PRIMARY CANDIDATE PROFILE</span>
                     </h3>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-1.5">
                         <label className="block text-xs font-semibold text-[#a6abbd]">
                           Candidate Name
@@ -573,6 +574,21 @@ export default function ProfileDrawer({
                             setProfile((prev) => ({ ...prev, name: e.target.value }))
                           }
                           placeholder="e.g. Alex Builder"
+                          className="bg-[#0d0e12] border-[#2a2e38] text-[#f4f2ec] focus-visible:outline-2 focus-visible:outline-[#d4a745] rounded-[2px]"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-semibold text-[#a6abbd]">
+                          Current Residence / Base Location
+                        </label>
+                        <Input
+                          type="text"
+                          value={profile.location || ""}
+                          onChange={(e) =>
+                            setProfile((prev) => ({ ...prev, location: e.target.value }))
+                          }
+                          placeholder="e.g. San Francisco, CA / Kochi, India"
                           className="bg-[#0d0e12] border-[#2a2e38] text-[#f4f2ec] focus-visible:outline-2 focus-visible:outline-[#d4a745] rounded-[2px]"
                         />
                       </div>
@@ -685,7 +701,7 @@ export default function ProfileDrawer({
                         <span>GEOGRAPHIC HUB &amp; LOCATION PREFERENCES</span>
                       </h3>
                       <p className="text-xs text-[#a6abbd]">
-                        Add geographic hubs, cities, or &quot;Remote&quot; used by deterministic filters and fit scorers.
+                        Add preferred relocation hubs, cities, or &quot;Remote&quot;. If an onsite/hybrid role is outside your current residence, the AI checks if it matches these hubs or flags relocation.
                       </p>
                     </div>
 

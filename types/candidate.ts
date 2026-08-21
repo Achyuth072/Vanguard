@@ -54,6 +54,7 @@ export type MasterExperience = z.infer<typeof MasterExperienceSchema>;
 export const CandidateProfileSchema = z.object({
   id: z.string().default("candidate-default"),
   name: z.string().default("Default Candidate"),
+  location: z.string().default(""),
   targetRole: z.string().default("Software Engineer"),
   minSalary: z.number().int().nonnegative().default(0),
   currency: z.string().default("INR"),
@@ -74,6 +75,7 @@ export type CandidateProfileInput = z.input<typeof CandidateProfileSchema>;
 export interface RawCandidateDbRecord {
   id: string;
   name: string;
+  location?: string;
   targetRole: string;
   minSalary: number;
   currency?: string;
@@ -157,6 +159,7 @@ export function serializeCandidateProfile(
   return {
     id: validated.id,
     name: validated.name,
+    location: validated.location,
     targetRole: validated.targetRole,
     minSalary: validated.minSalary,
     currency: validated.currency,
@@ -176,6 +179,7 @@ export function deserializeCandidateProfile(
   return CandidateProfileSchema.parse({
     id: record.id,
     name: record.name,
+    location: record.location || "",
     targetRole: record.targetRole,
     minSalary: record.minSalary,
     currency: record.currency || "INR",

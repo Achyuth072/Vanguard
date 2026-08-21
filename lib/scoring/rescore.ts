@@ -123,6 +123,8 @@ export async function rescoreJob(
 
   // Passed filters -> AI Fit Scoring
   const candidateContext: CandidateContext = {
+    name: candidateRecord?.name,
+    location: candidateRecord?.location,
     targetRole: candidateRecord?.targetRole,
     minSalary: candidateRecord?.minSalary,
     yearsOfExperience: candidateRecord?.yearsOfExperience,

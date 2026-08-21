@@ -60,6 +60,7 @@ export type TailoredSummary = z.infer<typeof TailoredSummarySchema>;
 
 export interface CandidateContext {
   name?: string;
+  location?: string;
   targetRole?: string;
   minSalary?: number;
   currency?: string;
@@ -821,10 +822,11 @@ export function buildCandidateFactSheet(candidate: CandidateContext): string {
 
   const lines = [
     `Target Role: ${candidate.targetRole || "Software Engineer"}`,
+    `Current / Base Location: ${candidate.location || "Not specified"}`,
     `Years of Experience: ${candidate.yearsOfExperience ?? "Not specified"}`,
     `Skills: ${formatList(candidate.skills)}`,
     `Remote Preference: ${candidate.remotePreference || "ANY"}`,
-    `Preferred Locations: ${formatList(candidate.preferredLocations)}`,
+    `Preferred Locations / Relocation Hubs: ${formatList(candidate.preferredLocations)}`,
     `Experience Records: ${formatList(candidate.experiences)}`,
     `Projects: ${formatList(candidate.projects)}`,
     `Resume Text: ${candidate.resumeText || "None provided"}`,
@@ -859,6 +861,10 @@ CRITICAL INVARIANTS:
      * Assess transferable domain knowledge. If candidate built complex full-stack web applications, baseline is 70–80 even if specific niche domain (e.g., fleet management or specialized data grids) is unlisted. Cap domain deduction to at most 15 points unless the role strictly requires a licensed/regulated vertical (e.g. healthcare compliance, high-frequency trading).
    - trajectoryFit (0–100):
      * Score natural career progression (e.g., mid-level engineer advancing into senior or specialist frontend).
+   - Location & Relocation Feasibility:
+     * If the job is REMOTE, location is a non-issue.
+     * If the job is ONSITE or HYBRID, compare the job location with the candidate's Current / Base Location.
+     * If outside candidate's current location, check if it is listed in their Preferred Locations / Relocation Hubs. If not listed in preferred hubs, note the relocation requirement as a risk/gap under risks or gaps.
 5. Provide a clear reasoning string and optional dimension rationale.
 6. Score ranges:
    - APPLY (80-100): High alignment across critical requirements, minimal gaps.

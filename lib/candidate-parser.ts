@@ -18,6 +18,7 @@ import {
 
 export const CandidateResumeExtractionSchema = z.object({
   name: z.string().default("Default Candidate"),
+  location: z.string().default(""),
   targetRole: z.string().default("Software Engineer"),
   minSalary: z.number().int().nonnegative().default(0),
   currency: z.string().default("INR"),
@@ -194,11 +195,12 @@ export function parseResumeMarkdownToProfile(
     return CandidateProfileSchema.parse({
       id: candidateId,
       name: "Default Candidate",
+      location: "",
       targetRole: "Software Engineer",
       minSalary: 0,
       yearsOfExperience: 0,
       remotePreference: "ANY",
-      preferredLocations: ["Remote", "Bengaluru", "India"],
+      preferredLocations: ["Remote"],
       skills: [],
       projects: [],
       experiences: [],
@@ -293,7 +295,7 @@ export function parseResumeMarkdownToProfile(
           id: `exp-${company.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${i + 1}`,
           company,
           title,
-          location: remoteStatus === "REMOTE" ? "Remote" : "Bengaluru, India",
+          location: remoteStatus === "REMOTE" ? "Remote" : "",
           remoteStatus,
           startDate,
           endDate,
@@ -341,16 +343,16 @@ export function parseResumeMarkdownToProfile(
         }
 
         projects.push({
-          id: `proj-${title.toLowerCase().replace(/[^a-z0-9]/g, "-")}`,
+          id: `proj-${title.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${i + 1}`,
           title,
-          company: "Personal",
-          role: "Lead Engineer",
+          company: "Independent",
+          role: "Developer",
           startDate,
           endDate,
           technologies: techList,
           highlights,
           metrics,
-          description: highlights[0] || `${title} application`,
+          description: highlights[0] || `${title} implementation.`,
         });
 
         // Also add unique project technologies to rawSkills
@@ -391,11 +393,12 @@ export function parseResumeMarkdownToProfile(
   return CandidateProfileSchema.parse({
     id: candidateId,
     name,
+    location: "",
     targetRole,
     minSalary: 0,
     yearsOfExperience: calculatedYoE,
     remotePreference: "ANY",
-    preferredLocations: ["Remote", "Bengaluru", "India"],
+    preferredLocations: ["Remote"],
     skills,
     projects,
     experiences,
@@ -432,7 +435,7 @@ CRITICAL INVARIANTS:
    - Categorize each skill into: "LANGUAGE", "FRAMEWORK", "DATABASE", "CLOUD", "TOOL", or "DOMAIN".
    - Assign estimated years of experience based on candidate tenure and usage across roles.
 6. Calculate total professional years of experience accurately based on employment timeline.
-7. Extract preferred locations or remote preference if indicated (defaulting to ["Remote", "Bengaluru", "India"] and "ANY" if flexible).`;
+7. Extract candidate's current residence/location if indicated (or leave empty if not specified). Extract preferred locations or remote preference if indicated (defaulting to ["Remote"] and "ANY" if flexible).`;
 
   const prompt = `RESUME MARKDOWN:
 ${markdown}
@@ -485,11 +488,12 @@ Extract all candidate profile master facts according to the schema.`;
     const preferredLocations =
       extracted.preferredLocations && extracted.preferredLocations.length > 0
         ? extracted.preferredLocations
-        : ["Remote", "Bengaluru", "India"];
+        : ["Remote"];
 
     return CandidateProfileSchema.parse({
       id: candidateId,
       name: extracted.name || "Default Candidate",
+      location: extracted.location || "",
       targetRole: extracted.targetRole || "Software Engineer",
       minSalary: extracted.minSalary || 0,
       currency: extracted.currency || "INR",
@@ -506,4 +510,3 @@ Extract all candidate profile master facts according to the schema.`;
     return parseResumeMarkdownToProfile(markdown, candidateId);
   }
 }
-

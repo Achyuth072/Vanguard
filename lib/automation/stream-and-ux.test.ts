@@ -64,6 +64,7 @@ describe("Assisted Application UX, SSE Progress Stream & Hybrid Submission Detec
       {
         id: "candidate-default",
         name: "Alex Builder",
+        location: "San Francisco, CA",
         targetRole: "Staff Engineer",
         minSalary: 190000,
         currency: "USD",

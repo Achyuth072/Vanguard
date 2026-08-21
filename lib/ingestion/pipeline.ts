@@ -408,6 +408,8 @@ export async function ingestJobPipeline(
 
   // Step 7: Passed filters -> Evaluate Fit Score using AI Router
   const candidateContext: CandidateContext = {
+    name: candidateRecord?.name,
+    location: candidateRecord?.location,
     targetRole: candidateRecord?.targetRole,
     minSalary: candidateRecord?.minSalary,
     currency: candidateRecord?.currency ?? "INR",

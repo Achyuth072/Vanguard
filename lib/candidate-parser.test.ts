@@ -53,6 +53,8 @@ describe("Candidate Resume Markdown Parser", () => {
 
     assert.strictEqual(profile.id, "candidate-default");
     assert.strictEqual(profile.name, "Achyuth S");
+    assert.strictEqual(profile.location, "");
+    assert.deepStrictEqual(profile.preferredLocations, ["Remote"]);
     assert.strictEqual(profile.targetRole, "Core Developer");
     assert.strictEqual(profile.yearsOfExperience, 2);
     assert.strictEqual(profile.experiences.length, 3);

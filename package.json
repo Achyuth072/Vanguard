@@ -1,6 +1,6 @@
 {
-  "name": "pulse-career-module",
-  "version": "0.2.0",
+  "name": "vanguard",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",

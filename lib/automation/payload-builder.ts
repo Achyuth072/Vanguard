@@ -36,6 +36,7 @@ export function buildCandidateProfilePayload(
     profile = {
       id: "candidate-default",
       name: "Alex Builder",
+      location: "",
       targetRole: "Software Engineer",
       minSalary: 0,
       currency: "INR",
@@ -70,7 +71,7 @@ export function buildCandidateProfilePayload(
     }
   }
 
-  const location = profile.preferredLocations?.[0] || "San Francisco, CA";
+  const location = profile.location || profile.preferredLocations?.[0] || "Remote";
   const currentExp = profile.experiences?.find((e) => e.isCurrent) || profile.experiences?.[0];
   const currentCompany = currentExp?.company || "Pulse Technologies";
   const currentTitle = currentExp?.title || profile.targetRole || "Senior Software Engineer";

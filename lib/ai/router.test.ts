@@ -202,6 +202,7 @@ describe("AI Router Schemas", () => {
 describe("Candidate Fact Sheet Formatter", () => {
   it("formats candidate facts with arrays, JSON strings, and defaults", () => {
     const candidate: CandidateContext = {
+      location: "San Francisco, CA",
       targetRole: "Senior Backend Engineer",
       yearsOfExperience: 6,
       skills: ["Node.js", "PostgreSQL", "Docker"],
@@ -214,9 +215,10 @@ describe("Candidate Fact Sheet Formatter", () => {
 
     const sheet = buildCandidateFactSheet(candidate);
     assert.match(sheet, /Target Role: Senior Backend Engineer/);
+    assert.match(sheet, /Current \/ Base Location: San Francisco, CA/);
     assert.match(sheet, /Years of Experience: 6/);
     assert.match(sheet, /Skills: Node\.js, PostgreSQL, Docker/);
-    assert.match(sheet, /Preferred Locations: San Francisco, Remote/);
+    assert.match(sheet, /Preferred Locations \/ Relocation Hubs: San Francisco, Remote/);
     assert.match(sheet, /Remote Preference: REMOTE_ONLY/);
   });
 });

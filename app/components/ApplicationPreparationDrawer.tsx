@@ -62,6 +62,7 @@ interface ApplicationPreparationDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   onStatusUpdated?: () => void;
+  onUpdate?: () => void;
 }
 
 type DrawerTab = "resume" | "answers" | "automate" | "status";
@@ -100,7 +101,9 @@ export default function ApplicationPreparationDrawer({
   isOpen,
   onClose,
   onStatusUpdated,
+  onUpdate,
 }: ApplicationPreparationDrawerProps) {
+  const notifyUpdated = onUpdate || onStatusUpdated;
   const [activeTab, setActiveTab] = useState<DrawerTab>("resume");
   const [isLoading, setIsLoading] = useState(false);
   const [isPreparing, setIsPreparing] = useState(false);
@@ -186,7 +189,7 @@ export default function ApplicationPreparationDrawer({
         setQuestionAnswers(res.questionAnswers);
         setApplicationStatus("PREPARED");
         setApplicationId(res.application.id);
-        if (onStatusUpdated) onStatusUpdated();
+        if (notifyUpdated) notifyUpdated();
       }
     } catch (err: unknown) {
       console.error("Preparation error:", err);
@@ -206,7 +209,7 @@ export default function ApplicationPreparationDrawer({
     try {
       await updateJobStatusAction(job.id, newStatus, payload);
       setApplicationStatus(newStatus);
-      if (onStatusUpdated) onStatusUpdated();
+      if (notifyUpdated) notifyUpdated();
     } catch (err: unknown) {
       console.error("Status update error:", err);
       setError(err instanceof Error ? err.message : "Failed to update status");
@@ -224,7 +227,7 @@ export default function ApplicationPreparationDrawer({
       });
       setApplicationStatus("REJECTED");
       setShowRejectionModal(false);
-      if (onStatusUpdated) onStatusUpdated();
+      if (notifyUpdated) notifyUpdated();
     } catch (err: unknown) {
       console.error("Failed to record rejection:", err);
       setError(err instanceof Error ? err.message : "Failed to record rejection");
@@ -287,7 +290,7 @@ export default function ApplicationPreparationDrawer({
               }
               if (event.state === "SUBMITTED") {
                 setApplicationStatus("APPLIED");
-                if (onStatusUpdated) onStatusUpdated();
+                if (notifyUpdated) notifyUpdated();
               }
             } catch (jsonErr) {
               console.error("Error parsing SSE event:", jsonErr);

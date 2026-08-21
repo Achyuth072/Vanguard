@@ -1,29 +1,63 @@
 @import "tailwindcss";
 
 :root {
-  --background: #09090b;
-  --foreground: #fafafa;
-  --card: #18181b;
-  --card-foreground: #fafafa;
-  --popover: #18181b;
-  --popover-foreground: #fafafa;
-  --primary: #fafafa;
-  --primary-foreground: #18181b;
-  --secondary: #27272a;
-  --secondary-foreground: #fafafa;
-  --muted: #27272a;
-  --muted-foreground: #a1a1aa;
-  --accent: #27272a;
-  --accent-foreground: #fafafa;
-  --destructive: #ef4444;
-  --destructive-foreground: #fafafa;
-  --border: #27272a;
-  --input: #27272a;
-  --ring: #a78bfa;
-  --radius: 0.5rem;
+  --background: #0d0e12;
+  --foreground: #f4f2ec;
+  --card: #15171d;
+  --card-foreground: #f4f2ec;
+  --popover: #15171d;
+  --popover-foreground: #f4f2ec;
+  --primary: #d4a745;
+  --primary-foreground: #0d0e12;
+  --secondary: #1f222a;
+  --secondary-foreground: #f4f2ec;
+  --muted: #1f222a;
+  --muted-foreground: #a6abbd;
+  --accent: #1f222a;
+  --accent-foreground: #f4f2ec;
+  --destructive: #c4634e;
+  --destructive-foreground: #f4f2ec;
+  --border: #2a2e38;
+  --input: #2a2e38;
+  --ring: #d4a745;
+  --radius: 0.1875rem;
+
+  /* Vanguard High-Contrast Accessibility Palette */
+  --ink-950: #0d0e12;
+  --ink-900: #15171d;
+  --ink-800: #1f222a;
+  --hairline: #2a2e38;
+  --hairline-bright: #3d4352;
+  --paper: #f4f2ec;
+  --paper-muted: #a6abbd;
+  --paper-subtle: #797f94;
+  --brass: #d4a745;
+  --brass-dim: #a68132;
+  --brass-bright: #e8bd59;
+  --sage: #8ab384;
+  --rust: #c4634e;
+  --success: #8ab384;
+  --success-foreground: #0d0e12;
 }
 
 @theme inline {
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --color-ink-950: var(--ink-950);
+  --color-ink-900: var(--ink-900);
+  --color-ink-800: var(--ink-800);
+  --color-hairline: var(--hairline);
+  --color-hairline-bright: var(--hairline-bright);
+  --color-paper: var(--paper);
+  --color-paper-muted: var(--paper-muted);
+  --color-paper-subtle: var(--paper-subtle);
+  --color-brass: var(--brass);
+  --color-brass-dim: var(--brass-dim);
+  --color-brass-bright: var(--brass-bright);
+  --color-sage: var(--sage);
+  --color-rust: var(--rust);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -40,11 +74,15 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --radius-sm: calc(var(--radius) - 1px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 1px);
 }
 
 body {
@@ -53,6 +91,16 @@ body {
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@utility focus-ring {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 .tabular-nums {

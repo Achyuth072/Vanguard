@@ -15,6 +15,19 @@ import {
   parseCommaSeparatedList,
   getAllConfiguredModels,
   maskKey,
+  getOpenAICompatibleModel,
+  getNvidiaModel,
+  getOllamaModel,
+  getOpenCodeZenModel,
+  getOpenRouterModel,
+  getGroqModel,
+  getGeminiModel,
+  DEFAULT_GEMINI_MODELS,
+  DEFAULT_NVIDIA_MODELS,
+  DEFAULT_OLLAMA_MODELS,
+  DEFAULT_OPENROUTER_MODELS,
+  DEFAULT_OPENCODE_MODELS,
+  DEFAULT_GROQ_MODELS,
   candidateCooldownMap,
   calculateCooldownDuration,
   recordCandidateCooldown,
@@ -497,27 +510,166 @@ describe("Provider Fallback & Error Handling", () => {
       process.env = { ...originalEnv };
     });
 
-    it("expands multi-provider matrix and deduplicates keys cleanly", () => {
-      delete process.env.OPENROUTER_API_KEY;
-      delete process.env.GOOGLE_API_KEY;
-      delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    it("instantiates OpenAI-compatible models and provider helper wrappers", () => {
+      const openAiModel = getOpenAICompatibleModel(
+        "https://integrate.api.nvidia.com/v1",
+        "nvapi-test12345678",
+        "z-ai/glm-5.2"
+      );
+      assert.ok(openAiModel);
+      assert.strictEqual(typeof openAiModel.doGenerate, "function");
 
-      process.env.GEMINI_API_KEY = "AIzaSyKey11111111, AIzaSyKey11111111 ";
+      const nvidia = getNvidiaModel("nvapi-test12345678", "z-ai/glm-5.2");
+      assert.ok(nvidia);
+
+      const ollama = getOllamaModel("ollama_test12345678", "minimax-m3");
+      assert.ok(ollama);
+
+      const openCode = getOpenCodeZenModel("zen_test12345678", "nemotron-3-ultra-free");
+      assert.ok(openCode);
+
+      const openRouter = getOpenRouterModel("sk-or-test12345678", "nvidia/nemotron-3-ultra:free");
+      assert.ok(openRouter);
+
+      const groq = getGroqModel("gsk_test12345678", "llama-3.3-70b-versatile");
+      assert.ok(groq);
+
+      const gemini = getGeminiModel("AIzaSyTest12345678", "gemini-3.7-flash");
+      assert.ok(gemini);
+    });
+
+    it("verifies default model constants for all supported providers", () => {
+      assert.deepStrictEqual(DEFAULT_GEMINI_MODELS, [
+        "gemini-3.7-flash",
+        "gemini-3.6-flash",
+        "gemini-3.5-flash",
+        "gemini-3.5-flash-lite",
+        "gemini-3.1-flash-lite",
+      ]);
+
+      assert.deepStrictEqual(DEFAULT_NVIDIA_MODELS, [
+        "z-ai/glm-5.2",
+        "deepseek-ai/deepseek-v4-flash",
+        "minimaxai/minimax-m3",
+        "moonshotai/kimi-k2.6",
+      ]);
+
+      assert.deepStrictEqual(DEFAULT_OLLAMA_MODELS, [
+        "minimax-m3",
+        "nemotron-3-ultra",
+        "gpt-oss:120b",
+        "gpt-oss:20b",
+      ]);
+
+      assert.deepStrictEqual(DEFAULT_OPENROUTER_MODELS, [
+        "nvidia/nemotron-3-ultra:free",
+        "google/gemma-4-31b:free",
+        "poolside/laguna-s-2.1:free",
+        "openrouter/free",
+      ]);
+
+      assert.deepStrictEqual(DEFAULT_OPENCODE_MODELS, [
+        "nemotron-3-ultra-free",
+        "mimo-v2.5-free",
+      ]);
+
+      assert.deepStrictEqual(DEFAULT_GROQ_MODELS, [
+        "llama-3.3-70b-versatile",
+      ]);
+    });
+
+    it("expands 6-tier multi-provider matrix in prioritized cascade order", () => {
+      // Configure all 6 providers with custom keys and models
+      process.env.GEMINI_API_KEY = "AIzaGeminiKey11111111";
       process.env.GEMINI_MODEL = "gemini-3.7-flash";
-      process.env.GROQ_API_KEY = "gsk_GroqKey12345678";
-      process.env.GROQ_MODEL = "llama-3.3-70b-versatile, llama-3.1-8b-instant";
+
+      process.env.NVIDIA_API_KEY = "nvapi-NvidiaKey111111";
+      process.env.NVIDIA_MODEL = "z-ai/glm-5.2";
+
+      process.env.OLLAMA_API_KEY = "ollama-Key1111111111";
+      process.env.OLLAMA_MODEL = "minimax-m3";
+
+      process.env.OPENROUTER_API_KEY = "sk-or-OpenRouterKey1";
+      process.env.OPENROUTER_MODEL = "nvidia/nemotron-3-ultra:free";
+
+      process.env.OPENCODE_API_KEY = "zen_OpenCodeKey11111";
+      process.env.OPENCODE_MODEL = "nemotron-3-ultra-free";
+
+      process.env.GROQ_API_KEY = "gsk_GroqKey1111111111";
+      process.env.GROQ_MODEL = "llama-3.3-70b-versatile";
 
       const candidates = getAllConfiguredModels();
 
-      // Gemini: 1 unique key * 1 model = 1 candidate
-      // Groq: 1 unique key * 2 models = 2 candidates
-      assert.strictEqual(candidates.length, 3);
+      assert.strictEqual(candidates.length, 6);
+
+      // Verify exact prioritized cascade sequence
       assert.strictEqual(candidates[0].providerName, "Google Gemini");
-      assert.strictEqual(candidates[0].modelName, "gemini-3.7-flash");
-      assert.strictEqual(candidates[1].providerName, "Groq");
-      assert.strictEqual(candidates[1].modelName, "llama-3.3-70b-versatile");
-      assert.strictEqual(candidates[2].providerName, "Groq");
-      assert.strictEqual(candidates[2].modelName, "llama-3.1-8b-instant");
+      assert.strictEqual(candidates[0].id, "Google Gemini:AIza...1111:gemini-3.7-flash");
+
+      assert.strictEqual(candidates[1].providerName, "NVIDIA NIM");
+      assert.strictEqual(candidates[1].id, "NVIDIA NIM:nvap...1111:z-ai/glm-5.2");
+
+      assert.strictEqual(candidates[2].providerName, "Ollama Cloud");
+      assert.strictEqual(candidates[2].id, "Ollama Cloud:olla...1111:minimax-m3");
+
+      assert.strictEqual(candidates[3].providerName, "OpenRouter");
+      assert.strictEqual(candidates[3].id, "OpenRouter:sk-o...Key1:nvidia/nemotron-3-ultra:free");
+
+      assert.strictEqual(candidates[4].providerName, "OpenCode Zen");
+      assert.strictEqual(candidates[4].id, "OpenCode Zen:zen_...1111:nemotron-3-ultra-free");
+
+      assert.strictEqual(candidates[5].providerName, "Groq");
+      assert.strictEqual(candidates[5].id, "Groq:gsk_...1111:llama-3.3-70b-versatile");
+
+      // Restore env
+      process.env = { ...originalEnv };
+    });
+
+    it("supports OLLAMA_CLOUD_API_KEY alias and default models for NVIDIA, Ollama, OpenRouter, and OpenCode", () => {
+      delete process.env.GEMINI_API_KEY;
+      delete process.env.GOOGLE_API_KEY;
+      delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+      delete process.env.GROQ_API_KEY;
+      delete process.env.OPENROUTER_API_KEY;
+
+      process.env.NVIDIA_API_KEY = "nvapi-NvidiaKey111111";
+      delete process.env.NVIDIA_MODEL;
+
+      process.env.OLLAMA_CLOUD_API_KEY = "ollama-CloudKey1111";
+      delete process.env.OLLAMA_API_KEY;
+      delete process.env.OLLAMA_MODEL;
+
+      process.env.OPENCODE_API_KEY = "zen_OpenCodeKey11111";
+      delete process.env.OPENCODE_MODEL;
+
+      const candidates = getAllConfiguredModels();
+
+      // NVIDIA: 4 default models
+      // Ollama: 4 default models
+      // OpenCode: 2 default models
+      // Total = 10 candidates
+      assert.strictEqual(candidates.length, 10);
+
+      const nvidiaCandidates = candidates.filter((c) => c.providerName === "NVIDIA NIM");
+      assert.strictEqual(nvidiaCandidates.length, 4);
+      assert.deepStrictEqual(
+        nvidiaCandidates.map((c) => c.modelName),
+        DEFAULT_NVIDIA_MODELS
+      );
+
+      const ollamaCandidates = candidates.filter((c) => c.providerName === "Ollama Cloud");
+      assert.strictEqual(ollamaCandidates.length, 4);
+      assert.deepStrictEqual(
+        ollamaCandidates.map((c) => c.modelName),
+        DEFAULT_OLLAMA_MODELS
+      );
+
+      const openCodeCandidates = candidates.filter((c) => c.providerName === "OpenCode Zen");
+      assert.strictEqual(openCodeCandidates.length, 2);
+      assert.deepStrictEqual(
+        openCodeCandidates.map((c) => c.modelName),
+        DEFAULT_OPENCODE_MODELS
+      );
 
       // Restore env
       process.env = { ...originalEnv };

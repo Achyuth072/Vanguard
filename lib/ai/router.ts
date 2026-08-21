@@ -202,6 +202,36 @@ export const DEFAULT_GEMINI_MODELS = [
   "gemini-3.1-flash-lite",
 ];
 
+export const DEFAULT_NVIDIA_MODELS = [
+  "z-ai/glm-5.2",
+  "deepseek-ai/deepseek-v4-flash",
+  "minimaxai/minimax-m3",
+  "moonshotai/kimi-k2.6",
+];
+
+export const DEFAULT_OLLAMA_MODELS = [
+  "minimax-m3",
+  "nemotron-3-ultra",
+  "gpt-oss:120b",
+  "gpt-oss:20b",
+];
+
+export const DEFAULT_OPENROUTER_MODELS = [
+  "nvidia/nemotron-3-ultra:free",
+  "google/gemma-4-31b:free",
+  "poolside/laguna-s-2.1:free",
+  "openrouter/free",
+];
+
+export const DEFAULT_OPENCODE_MODELS = [
+  "nemotron-3-ultra-free",
+  "mimo-v2.5-free",
+];
+
+export const DEFAULT_GROQ_MODELS = [
+  "llama-3.3-70b-versatile",
+];
+
 export function parseCommaSeparatedList(value?: string, defaultList: string[] = []): string[] {
   if (!value) return defaultList;
   const parsed = value
@@ -221,17 +251,47 @@ export function maskKey(key: string): string {
   return `${key.slice(0, 4)}...${key.slice(-4)}`;
 }
 
-export function getGroqModel(apiKey?: string, modelName?: string): LanguageModel {
-  const resolvedKey = apiKey || parseCommaSeparatedList(process.env.GROQ_API_KEY)[0] || "";
-  const resolvedModel = modelName || process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
-  const baseURL = process.env.GROQ_BASE_URL || "https://api.groq.com/openai/v1";
-
+export function getOpenAICompatibleModel(
+  baseURL: string,
+  apiKey: string,
+  modelName: string
+): LanguageModel {
   const client = createOpenAI({
-    apiKey: resolvedKey,
     baseURL,
+    apiKey,
   });
+  return client(modelName);
+}
 
-  return client(resolvedModel);
+export function getNvidiaModel(apiKey?: string, modelName?: string): LanguageModel {
+  const resolvedKey = apiKey || parseCommaSeparatedList(process.env.NVIDIA_API_KEY)[0] || "";
+  const resolvedModel =
+    modelName || parseCommaSeparatedList(process.env.NVIDIA_MODEL, DEFAULT_NVIDIA_MODELS)[0];
+  const baseURL = process.env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1";
+
+  return getOpenAICompatibleModel(baseURL, resolvedKey, resolvedModel);
+}
+
+export function getOllamaModel(apiKey?: string, modelName?: string): LanguageModel {
+  const resolvedKey =
+    apiKey ||
+    parseCommaSeparatedList(process.env.OLLAMA_API_KEY)[0] ||
+    parseCommaSeparatedList(process.env.OLLAMA_CLOUD_API_KEY)[0] ||
+    "";
+  const resolvedModel =
+    modelName || parseCommaSeparatedList(process.env.OLLAMA_MODEL, DEFAULT_OLLAMA_MODELS)[0];
+  const baseURL = process.env.OLLAMA_BASE_URL || "https://api.ollama.com/v1";
+
+  return getOpenAICompatibleModel(baseURL, resolvedKey, resolvedModel);
+}
+
+export function getOpenCodeZenModel(apiKey?: string, modelName?: string): LanguageModel {
+  const resolvedKey = apiKey || parseCommaSeparatedList(process.env.OPENCODE_API_KEY)[0] || "";
+  const resolvedModel =
+    modelName || parseCommaSeparatedList(process.env.OPENCODE_MODEL, DEFAULT_OPENCODE_MODELS)[0];
+  const baseURL = process.env.OPENCODE_BASE_URL || "https://opencode.ai/zen/v1";
+
+  return getOpenAICompatibleModel(baseURL, resolvedKey, resolvedModel);
 }
 
 export function getOpenRouterModel(apiKey?: string, modelName?: string): LanguageModel {
@@ -241,14 +301,18 @@ export function getOpenRouterModel(apiKey?: string, modelName?: string): Languag
     "";
   const baseURL = process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1";
   const resolvedModel =
-    modelName || process.env.OPENROUTER_MODEL || "openrouter/free";
+    modelName || parseCommaSeparatedList(process.env.OPENROUTER_MODEL, DEFAULT_OPENROUTER_MODELS)[0];
 
-  const client = createOpenAI({
-    apiKey: resolvedKey,
-    baseURL,
-  });
+  return getOpenAICompatibleModel(baseURL, resolvedKey, resolvedModel);
+}
 
-  return client(resolvedModel);
+export function getGroqModel(apiKey?: string, modelName?: string): LanguageModel {
+  const resolvedKey = apiKey || parseCommaSeparatedList(process.env.GROQ_API_KEY)[0] || "";
+  const resolvedModel =
+    modelName || parseCommaSeparatedList(process.env.GROQ_MODEL, DEFAULT_GROQ_MODELS)[0];
+  const baseURL = process.env.GROQ_BASE_URL || "https://api.groq.com/openai/v1";
+
+  return getOpenAICompatibleModel(baseURL, resolvedKey, resolvedModel);
 }
 
 export function getGeminiModel(apiKey?: string, modelName?: string): LanguageModel {
@@ -279,14 +343,15 @@ export function getAllConfiguredModels(): ConfiguredModelCandidate[] {
 
   // Prioritized Provider Order:
   // 1. Google Gemini (primary: fast, generous free tier, highly consistent structured output)
-  const geminiKeys = [
-    ...parseCommaSeparatedList(process.env.GEMINI_API_KEY),
-    ...parseCommaSeparatedList(process.env.GOOGLE_API_KEY),
-    ...parseCommaSeparatedList(process.env.GOOGLE_GENERATIVE_AI_API_KEY),
-  ];
-  const uniqueGeminiKeys = Array.from(new Set(geminiKeys));
+  const geminiKeys = Array.from(
+    new Set([
+      ...parseCommaSeparatedList(process.env.GEMINI_API_KEY),
+      ...parseCommaSeparatedList(process.env.GOOGLE_API_KEY),
+      ...parseCommaSeparatedList(process.env.GOOGLE_GENERATIVE_AI_API_KEY),
+    ])
+  );
   const geminiModels = parseCommaSeparatedList(process.env.GEMINI_MODEL, DEFAULT_GEMINI_MODELS);
-  for (const key of uniqueGeminiKeys) {
+  for (const key of geminiKeys) {
     const keyMask = maskKey(key);
     for (const model of geminiModels) {
       candidates.push({
@@ -299,28 +364,52 @@ export function getAllConfiguredModels(): ConfiguredModelCandidate[] {
     }
   }
 
-  // 2. Groq (fast fallback)
-  const groqKeys = Array.from(new Set(parseCommaSeparatedList(process.env.GROQ_API_KEY)));
-  const groqModels = parseCommaSeparatedList(process.env.GROQ_MODEL, ["llama-3.3-70b-versatile"]);
-  for (const key of groqKeys) {
+  // 2. NVIDIA NIM (high throughput 40 RPM tier)
+  const nvidiaKeys = Array.from(new Set(parseCommaSeparatedList(process.env.NVIDIA_API_KEY)));
+  const nvidiaModels = parseCommaSeparatedList(process.env.NVIDIA_MODEL, DEFAULT_NVIDIA_MODELS);
+  const nvidiaBaseURL = process.env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1";
+  for (const key of nvidiaKeys) {
     const keyMask = maskKey(key);
-    for (const model of groqModels) {
+    for (const model of nvidiaModels) {
       candidates.push({
-        id: `Groq:${keyMask}:${model}`,
-        providerName: "Groq",
+        id: `NVIDIA NIM:${keyMask}:${model}`,
+        providerName: "NVIDIA NIM",
         modelName: model,
-        model: getGroqModel(key, model),
+        model: getOpenAICompatibleModel(nvidiaBaseURL, key, model),
         keyMask,
       });
     }
   }
 
-  // 3. OpenRouter (general fallback pool)
+  // 3. Ollama Cloud (hosted open models pool)
+  const ollamaKeys = Array.from(
+    new Set([
+      ...parseCommaSeparatedList(process.env.OLLAMA_API_KEY),
+      ...parseCommaSeparatedList(process.env.OLLAMA_CLOUD_API_KEY),
+    ])
+  );
+  const ollamaModels = parseCommaSeparatedList(process.env.OLLAMA_MODEL, DEFAULT_OLLAMA_MODELS);
+  const ollamaBaseURL = process.env.OLLAMA_BASE_URL || "https://api.ollama.com/v1";
+  for (const key of ollamaKeys) {
+    const keyMask = maskKey(key);
+    for (const model of ollamaModels) {
+      candidates.push({
+        id: `Ollama Cloud:${keyMask}:${model}`,
+        providerName: "Ollama Cloud",
+        modelName: model,
+        model: getOpenAICompatibleModel(ollamaBaseURL, key, model),
+        keyMask,
+      });
+    }
+  }
+
+  // 4. OpenRouter (general fallback & free model pool)
   const openRouterKeys = Array.from(new Set(parseCommaSeparatedList(process.env.OPENROUTER_API_KEY)));
   const openRouterModels = parseCommaSeparatedList(
     process.env.OPENROUTER_MODEL,
-    ["openrouter/free"]
+    DEFAULT_OPENROUTER_MODELS
   );
+  const openRouterBaseURL = process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1";
   for (const key of openRouterKeys) {
     const keyMask = maskKey(key);
     for (const model of openRouterModels) {
@@ -328,7 +417,44 @@ export function getAllConfiguredModels(): ConfiguredModelCandidate[] {
         id: `OpenRouter:${keyMask}:${model}`,
         providerName: "OpenRouter",
         modelName: model,
-        model: getOpenRouterModel(key, model),
+        model: getOpenAICompatibleModel(openRouterBaseURL, key, model),
+        keyMask,
+      });
+    }
+  }
+
+  // 5. OpenCode Zen (coding gateway)
+  const openCodeKeys = Array.from(new Set(parseCommaSeparatedList(process.env.OPENCODE_API_KEY)));
+  const openCodeModels = parseCommaSeparatedList(
+    process.env.OPENCODE_MODEL,
+    DEFAULT_OPENCODE_MODELS
+  );
+  const openCodeBaseURL = process.env.OPENCODE_BASE_URL || "https://opencode.ai/zen/v1";
+  for (const key of openCodeKeys) {
+    const keyMask = maskKey(key);
+    for (const model of openCodeModels) {
+      candidates.push({
+        id: `OpenCode Zen:${keyMask}:${model}`,
+        providerName: "OpenCode Zen",
+        modelName: model,
+        model: getOpenAICompatibleModel(openCodeBaseURL, key, model),
+        keyMask,
+      });
+    }
+  }
+
+  // 6. Groq (fast fallback)
+  const groqKeys = Array.from(new Set(parseCommaSeparatedList(process.env.GROQ_API_KEY)));
+  const groqModels = parseCommaSeparatedList(process.env.GROQ_MODEL, DEFAULT_GROQ_MODELS);
+  const groqBaseURL = process.env.GROQ_BASE_URL || "https://api.groq.com/openai/v1";
+  for (const key of groqKeys) {
+    const keyMask = maskKey(key);
+    for (const model of groqModels) {
+      candidates.push({
+        id: `Groq:${keyMask}:${model}`,
+        providerName: "Groq",
+        modelName: model,
+        model: getOpenAICompatibleModel(groqBaseURL, key, model),
         keyMask,
       });
     }

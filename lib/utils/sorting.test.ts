@@ -1,6 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { compareJobsForInbox, sortJobsForInbox, getStatusSortPriority } from "./sorting";
+import {
+  compareJobsForInbox,
+  compareJobsByRelevance,
+  compareJobsByScore,
+  compareJobsByRecent,
+  sortJobsForInbox,
+  sortJobsByRelevance,
+  sortJobsByScore,
+  sortJobsByRecent,
+  getStatusSortPriority,
+} from "./sorting";
 import type { EnrichedJob } from "@/lib/data";
 
 function createMockJob(overrides: Partial<EnrichedJob> = {}): EnrichedJob {
@@ -48,8 +58,8 @@ test("getStatusSortPriority", async (t) => {
   });
 });
 
-test("compareJobsForInbox and sortJobsForInbox", async (t) => {
-  await t.test("sorts DISCOVERED jobs with highest score first, then APPLIED jobs with highest score", () => {
+test("compareJobsForInbox and sortJobsByRelevance", async (t) => {
+  await t.test("Priority Inbox: sorts DISCOVERED jobs with highest score first, then APPLIED jobs with highest score", () => {
     const jobDiscovered90 = createMockJob({
       id: "disc-90",
       status: "DISCOVERED",
@@ -81,7 +91,7 @@ test("compareJobsForInbox and sortJobsForInbox", async (t) => {
     });
 
     const unsorted = [jobApplied95, jobDiscovered80, jobApplied85, jobDiscovered90];
-    const sorted = sortJobsForInbox(unsorted);
+    const sorted = sortJobsByRelevance(unsorted);
 
     assert.deepEqual(
       sorted.map((j) => j.id),
@@ -111,7 +121,7 @@ test("compareJobsForInbox and sortJobsForInbox", async (t) => {
     );
   });
 
-  await t.test("works identically for Review tab score range (60-79)", () => {
+  await t.test("Review tab (60-79): DISCOVERED sorted by score desc, then APPLIED sorted by score desc", () => {
     const disc75 = createMockJob({
       id: "disc-75",
       status: "DISCOVERED",
@@ -140,10 +150,57 @@ test("compareJobsForInbox and sortJobsForInbox", async (t) => {
       discoveredAt: new Date("2026-08-01"),
     });
 
-    const sorted = sortJobsForInbox([app78, disc65, app62, disc75]);
+    const sorted = sortJobsByRelevance([app78, disc65, app62, disc75]);
     assert.deepEqual(
       sorted.map((j) => j.id),
       ["disc-75", "disc-65", "app-78", "app-62"]
+    );
+  });
+
+  await t.test("All Jobs: DISCOVERED + score desc, then SHORTLISTED + score desc, then APPLIED + score desc, then REJECTED", () => {
+    const disc95 = createMockJob({
+      id: "disc-95",
+      status: "DISCOVERED",
+      fitScore: { score: 95 } as any,
+      discoveredAt: new Date("2026-08-10"),
+    });
+    const disc65 = createMockJob({
+      id: "disc-65",
+      status: "DISCOVERED",
+      fitScore: { score: 65 } as any,
+      discoveredAt: new Date("2026-08-12"),
+    });
+    const short88 = createMockJob({
+      id: "short-88",
+      status: "SHORTLISTED",
+      fitScore: { score: 88 } as any,
+      discoveredAt: new Date("2026-08-08"),
+    });
+    const app90 = createMockJob({
+      id: "app-90",
+      status: "APPLIED",
+      fitScore: { score: 90 } as any,
+      discoveredAt: new Date("2026-08-05"),
+    });
+    const app70 = createMockJob({
+      id: "app-70",
+      status: "APPLIED",
+      fitScore: { score: 70 } as any,
+      discoveredAt: new Date("2026-08-03"),
+    });
+    const rej99 = createMockJob({
+      id: "rej-99",
+      status: "REJECTED",
+      fitScore: { score: 99 } as any,
+      discoveredAt: new Date("2026-08-01"),
+    });
+
+    const unsorted = [rej99, app70, disc65, app90, short88, disc95];
+    const sorted = sortJobsByRelevance(unsorted);
+
+    assert.deepEqual(
+      sorted.map((j) => j.id),
+      ["disc-95", "disc-65", "short-88", "app-90", "app-70", "rej-99"]
     );
   });
 
@@ -166,3 +223,54 @@ test("compareJobsForInbox and sortJobsForInbox", async (t) => {
     );
   });
 });
+
+test("sortJobsByScore", async (t) => {
+  await t.test("sorts strictly by fit score descending across all statuses", () => {
+    const disc80 = createMockJob({
+      id: "disc-80",
+      status: "DISCOVERED",
+      fitScore: { score: 80 } as any,
+    });
+    const app95 = createMockJob({
+      id: "app-95",
+      status: "APPLIED",
+      fitScore: { score: 95 } as any,
+    });
+    const rej90 = createMockJob({
+      id: "rej-90",
+      status: "REJECTED",
+      fitScore: { score: 90 } as any,
+    });
+
+    const sorted = sortJobsByScore([disc80, app95, rej90]);
+    assert.deepEqual(
+      sorted.map((j) => j.id),
+      ["app-95", "rej-90", "disc-80"]
+    );
+  });
+});
+
+test("sortJobsByRecent", async (t) => {
+  await t.test("sorts strictly by recency (appliedAt or discoveredAt descending)", () => {
+    const olderJob = createMockJob({
+      id: "older",
+      discoveredAt: new Date("2026-08-01"),
+    });
+    const newerJob = createMockJob({
+      id: "newer",
+      discoveredAt: new Date("2026-08-15"),
+    });
+    const appliedRecent = createMockJob({
+      id: "applied-recent",
+      discoveredAt: new Date("2026-08-01"),
+      application: { appliedAt: new Date("2026-08-20") } as any,
+    });
+
+    const sorted = sortJobsByRecent([olderJob, appliedRecent, newerJob]);
+    assert.deepEqual(
+      sorted.map((j) => j.id),
+      ["applied-recent", "newer", "older"]
+    );
+  });
+});
+

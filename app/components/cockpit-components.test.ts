@@ -44,6 +44,16 @@ describe("Tactical Intelligence Cockpit — Master-Detail View (Issue 03)", () =
       assert.ok(content.includes('"/"') || content.includes("'/'"));
       assert.ok(content.includes("searchInputRef") || content.includes(".focus()"));
     });
+
+    it("implements relevance, score, and recency sorting options", () => {
+      const content = fs.readFileSync(jobListTablePath, "utf-8");
+      assert.ok(content.includes("compareJobsByRelevance") || content.includes("compareJobsForInbox"));
+      assert.ok(content.includes("compareJobsByScore"));
+      assert.ok(content.includes("compareJobsByRecent"));
+      assert.ok(content.includes("RELEVANCE"));
+      assert.ok(content.includes("SCORE"));
+      assert.ok(content.includes("TIME"));
+    });
   });
 
   describe("JobIntelligenceView Component Specification", () => {

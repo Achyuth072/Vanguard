@@ -4,6 +4,11 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import type { EnrichedJob } from "@/lib/data";
 import { formatSalaryRange } from "@/lib/utils/currency";
 import { normalizeSource } from "@/lib/utils/source";
+import {
+  compareJobsByRelevance,
+  compareJobsByScore,
+  compareJobsByRecent,
+} from "@/lib/utils/sorting";
 import { Search, ArrowUpDown } from "lucide-react";
 
 export interface JobListTableProps {
@@ -21,7 +26,7 @@ export function JobListTable({
 }: JobListTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [sourceFilter, setSourceFilter] = useState<string>("ALL");
-  const [sortMode, setSortMode] = useState<"score" | "recent">("score");
+  const [sortMode, setSortMode] = useState<"relevance" | "score" | "recent">("relevance");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Extract distinct sources for the dropdown filter
@@ -51,17 +56,12 @@ export function JobListTable({
       );
     });
 
-    if (sortMode === "score") {
-      result = [...result].sort((a, b) => {
-        const scoreA = a.fitScore?.score ?? -1;
-        const scoreB = b.fitScore?.score ?? -1;
-        if (scoreB !== scoreA) return scoreB - scoreA;
-        return new Date(b.discoveredAt).getTime() - new Date(a.discoveredAt).getTime();
-      });
+    if (sortMode === "relevance") {
+      result = [...result].sort(compareJobsByRelevance);
+    } else if (sortMode === "score") {
+      result = [...result].sort(compareJobsByScore);
     } else {
-      result = [...result].sort(
-        (a, b) => new Date(b.discoveredAt).getTime() - new Date(a.discoveredAt).getTime()
-      );
+      result = [...result].sort(compareJobsByRecent);
     }
 
     return result;
@@ -164,12 +164,24 @@ export function JobListTable({
           {/* Sort toggle */}
           <button
             type="button"
-            onClick={() => setSortMode(sortMode === "score" ? "recent" : "score")}
-            title={`Sorting by ${sortMode === "score" ? "Fit Score" : "Discovered Time"}`}
+            onClick={() =>
+              setSortMode((prev) =>
+                prev === "relevance" ? "score" : prev === "score" ? "recent" : "relevance"
+              )
+            }
+            title={`Sorting by ${
+              sortMode === "relevance"
+                ? "Relevance (Status & Score)"
+                : sortMode === "score"
+                ? "Fit Score"
+                : "Discovered Time"
+            }`}
             className="px-2.5 py-1.5 bg-[#0d0e12] border border-[#2a2e38] text-xs font-mono text-[#a6abbd] hover:text-[#f4f2ec] rounded-[2px] flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <ArrowUpDown className="w-3.5 h-3.5" />
-            <span className="uppercase">{sortMode === "score" ? "SCORE" : "TIME"}</span>
+            <span className="uppercase">
+              {sortMode === "relevance" ? "RELEVANCE" : sortMode === "score" ? "SCORE" : "TIME"}
+            </span>
           </button>
         </div>
       </div>

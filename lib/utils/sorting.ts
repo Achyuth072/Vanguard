@@ -56,10 +56,10 @@ export function getStatusSortPriority(status?: string | null): number {
 }
 
 /**
- * Comparator for ordering jobs in the Priority Inbox and Review feeds:
- * 1. Status group order (DISCOVERED first, then SHORTLISTED/PREPARED, then APPLIED/active, then terminal).
+ * Comparator for ordering jobs by Relevance:
+ * 1. Status group order (DISCOVERED first, then SHORTLISTED/PREPARED, then APPLIED/active stages, then terminal/archived).
  * 2. Fit Score descending within the same status group.
- * 3. Date descending (discoveredAt or appliedAt) as tiebreaker.
+ * 3. Date descending (appliedAt or discoveredAt) as tiebreaker.
  */
 export function compareJobsForInbox(a: EnrichedJob, b: EnrichedJob): number {
   const priorityA = getStatusSortPriority(a.status);
@@ -89,8 +89,72 @@ export function compareJobsForInbox(a: EnrichedJob, b: EnrichedJob): number {
 }
 
 /**
- * Returns a new sorted array of jobs ordered for Inbox / Review display.
+ * Alias for compareJobsForInbox - sorts by Relevance (Status priority + Fit Score descending).
+ */
+export function compareJobsByRelevance(a: EnrichedJob, b: EnrichedJob): number {
+  return compareJobsForInbox(a, b);
+}
+
+/**
+ * Comparator for ordering jobs purely by Fit Score descending, regardless of status.
+ */
+export function compareJobsByScore(a: EnrichedJob, b: EnrichedJob): number {
+  const scoreA = a.fitScore?.score ?? -1;
+  const scoreB = b.fitScore?.score ?? -1;
+
+  if (scoreB !== scoreA) {
+    return scoreB - scoreA;
+  }
+
+  const dateA = a.application?.appliedAt
+    ? new Date(a.application.appliedAt).getTime()
+    : new Date(a.discoveredAt).getTime();
+  const dateB = b.application?.appliedAt
+    ? new Date(b.application.appliedAt).getTime()
+    : new Date(b.discoveredAt).getTime();
+
+  return dateB - dateA;
+}
+
+/**
+ * Comparator for ordering jobs purely by Recency (most recent date descending).
+ */
+export function compareJobsByRecent(a: EnrichedJob, b: EnrichedJob): number {
+  const dateA = a.application?.appliedAt
+    ? new Date(a.application.appliedAt).getTime()
+    : new Date(a.discoveredAt).getTime();
+  const dateB = b.application?.appliedAt
+    ? new Date(b.application.appliedAt).getTime()
+    : new Date(b.discoveredAt).getTime();
+
+  return dateB - dateA;
+}
+
+/**
+ * Returns a new sorted array of jobs ordered for Inbox / Review display by Relevance.
  */
 export function sortJobsForInbox(jobs: EnrichedJob[]): EnrichedJob[] {
   return [...jobs].sort(compareJobsForInbox);
 }
+
+/**
+ * Returns a new sorted array of jobs ordered by Relevance (Status + Score).
+ */
+export function sortJobsByRelevance(jobs: EnrichedJob[]): EnrichedJob[] {
+  return [...jobs].sort(compareJobsByRelevance);
+}
+
+/**
+ * Returns a new sorted array of jobs ordered purely by Fit Score descending.
+ */
+export function sortJobsByScore(jobs: EnrichedJob[]): EnrichedJob[] {
+  return [...jobs].sort(compareJobsByScore);
+}
+
+/**
+ * Returns a new sorted array of jobs ordered purely by Recency descending.
+ */
+export function sortJobsByRecent(jobs: EnrichedJob[]): EnrichedJob[] {
+  return [...jobs].sort(compareJobsByRecent);
+}
+

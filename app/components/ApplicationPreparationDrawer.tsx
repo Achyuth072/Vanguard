@@ -16,6 +16,8 @@ import {
   ShieldAlert,
   CheckCircle2,
   Clock,
+  ExternalLink,
+  Download,
 } from "lucide-react";
 import type { EnrichedJob } from "@/lib/data";
 import type { TailoredResume, ApplicationAnswer } from "@/types/tailoring";
@@ -325,6 +327,23 @@ export default function ApplicationPreparationDrawer({
     }, 2000);
   }
 
+  function handleExportResume() {
+    if (!tailoredResume?.markdownContent) return;
+    const slug = `${job?.company?.replace(/\s+/g, "-")}-${job?.title?.replace(/\s+/g, "-")}`
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, "");
+    const filename = `${slug || "tailored"}-resume.md`;
+    const blob = new Blob([tailoredResume.markdownContent], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
   const isPrepared = tailoredResume !== null || questionAnswers.length > 0;
   const currentRunnerState = lastAutomationEvent?.state;
 
@@ -348,7 +367,7 @@ export default function ApplicationPreparationDrawer({
       <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
         <SheetContent
           side="right"
-          className="w-full sm:max-w-2xl lg:max-w-4xl p-0 flex flex-col h-full bg-zinc-900 border-l border-zinc-800 text-zinc-100 shadow-none gap-0 overflow-hidden"
+          className="w-full sm:max-w-2xl lg:max-w-4xl p-0 flex flex-col h-full bg-[#0d0e12] border-l border-[#2a2e38] text-[#f4f2ec] shadow-none gap-0 overflow-hidden"
         >
           <Tabs
             value={activeTab}
@@ -356,703 +375,756 @@ export default function ApplicationPreparationDrawer({
             className="flex flex-col h-full overflow-hidden"
           >
             {/* Header */}
-            <SheetHeader className="p-6 border-b border-zinc-800 bg-zinc-900 shrink-0 space-y-4 text-left">
-            <div className="flex items-start justify-between gap-4 pr-6">
-              <div className="space-y-1.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="violet" className="font-mono uppercase tracking-wider text-[10px]">
-                    Application Preparation
-                  </Badge>
-                  <Badge variant="secondary" className="font-mono text-[10px] uppercase tracking-wider">
-                    {applicationStatus}
-                  </Badge>
-                  {job.fitScore && (
-                    <Badge variant="emerald" className="font-mono text-[10px] font-bold">
-                      Score: {job.fitScore.score}/100
-                    </Badge>
-                  )}
+            <SheetHeader className="p-6 border-b border-[#2a2e38] bg-[#15171d] shrink-0 space-y-4 text-left">
+              <div className="flex items-start justify-between gap-4 pr-6">
+                <div className="space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-mono text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-[2px] bg-[#0d0e12] border border-[#2a2e38] text-[#d4a745]">
+                      APPLICATION PREPARATION
+                    </span>
+                    <span className="font-mono text-xs uppercase tracking-wider px-2 py-0.5 rounded-[2px] bg-[#1f222a] border border-[#2a2e38] text-[#a6abbd]">
+                      {applicationStatus}
+                    </span>
+                    {job.fitScore && (
+                      <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-[2px] border border-[#d4a745]/60 bg-[#d4a745]/10 text-[#d4a745]">
+                        Score: {job.fitScore.score}/100
+                      </span>
+                    )}
+                  </div>
+
+                  <SheetTitle className="text-xl font-bold tracking-tight text-[#f4f2ec]">
+                    {job.title}
+                  </SheetTitle>
+                  <SheetDescription className="flex flex-wrap items-center gap-2 text-xs text-[#a6abbd]">
+                    <span className="font-semibold text-[#d4a745]">{job.company}</span>
+                    {job.location && (
+                      <>
+                        <span>·</span>
+                        <span>{job.location}</span>
+                      </>
+                    )}
+                    {job.remoteStatus && job.remoteStatus !== "UNKNOWN" && (
+                      <>
+                        <span>·</span>
+                        <span className="font-mono text-xs text-[#a6abbd] uppercase">{job.remoteStatus}</span>
+                      </>
+                    )}
+                    {job.source && (
+                      <>
+                        <span>·</span>
+                        <span className="font-mono text-xs text-[#a6abbd] uppercase">{job.source}</span>
+                      </>
+                    )}
+                  </SheetDescription>
                 </div>
 
-                <SheetTitle className="text-xl font-bold tracking-tight text-zinc-100">
-                  {job.title}
-                </SheetTitle>
-                <SheetDescription className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
-                  <span className="font-semibold text-zinc-200">{job.company}</span>
-                  {job.location && (
-                    <>
-                      <span>•</span>
-                      <span>{job.location}</span>
-                    </>
-                  )}
-                  {job.remoteStatus && job.remoteStatus !== "UNKNOWN" && (
-                    <>
-                      <span>•</span>
-                      <span className="font-mono text-[11px] text-zinc-400 uppercase">{job.remoteStatus}</span>
-                    </>
-                  )}
-                </SheetDescription>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                {/* Fill Application in Browser Action */}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={startBrowserAutomation}
-                  disabled={isAutomating}
-                  className="gap-1.5 font-semibold text-xs border-violet-800/60 bg-violet-950/30 text-violet-300 hover:bg-violet-900/40 hover:text-zinc-100"
-                  title="Open dedicated Chrome session and auto-fill fields"
-                >
-                  {isAutomating ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Running Automation...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Bot className="w-3.5 h-3.5 text-violet-400" />
-                      <span>Fill in Browser</span>
-                    </>
-                  )}
-                </Button>
-
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handlePrepare}
-                  disabled={isPreparing}
-                  className="gap-1.5 font-semibold text-xs"
-                >
-                  {isPreparing ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Tailoring...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-3.5 h-3.5 text-violet-400" />
-                      <span>{isPrepared ? "Re-tailor" : "Prepare"}</span>
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            {/* Error Message */}
-            {(error || automationError) && (
-              <div className="p-3 rounded-md bg-red-950/50 border border-red-800 text-red-300 text-xs flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
-                  <span>{error || automationError}</span>
-                </div>
-                {automationError && (
-                  <button
+                <div className="flex items-center gap-2 shrink-0">
+                  {/* Fill Application in Browser Action */}
+                  <Button
                     type="button"
-                    onClick={() => setAutomationError(null)}
-                    className="text-red-400 hover:text-red-200 text-xs font-mono"
+                    variant="outline"
+                    size="sm"
+                    onClick={startBrowserAutomation}
+                    disabled={isAutomating}
+                    className="gap-1.5 font-mono text-xs rounded-[2px] border-[#2a2e38] bg-[#15171d] text-[#f4f2ec] hover:bg-[#1f222a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4a745]"
+                    title="Open dedicated Chrome session and auto-fill fields"
                   >
-                    ✕
-                  </button>
-                )}
-              </div>
-            )}
+                    {isAutomating ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Running...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Bot className="w-3.5 h-3.5 text-[#d4a745]" />
+                        <span>Fill in Browser</span>
+                      </>
+                    )}
+                  </Button>
 
-            {/* Sub-Dimension Score Visual Breakdown */}
-            {job.fitScore && (
-              <div className="pt-2 border-t border-zinc-800">
-                <SubDimensionScores
-                  skillsFit={job.fitScore.skillsFit}
-                  experienceFit={job.fitScore.experienceFit}
-                  domainFit={job.fitScore.domainFit}
-                  trajectoryFit={job.fitScore.trajectoryFit}
-                />
-              </div>
-            )}
-
-            {/* Tab Navigation */}
-            <TabsList className="w-full flex h-auto p-1 bg-zinc-950 border border-zinc-800">
-              <TabsTrigger
-                value="resume"
-                className="flex-1 py-1.5 text-xs font-semibold gap-1.5"
-              >
-                <FileText className="w-3.5 h-3.5" />
-                <span>Tailored Resume</span>
-                {tailoredResume && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
-              </TabsTrigger>
-
-              <TabsTrigger
-                value="answers"
-                className="flex-1 py-1.5 text-xs font-semibold gap-1.5"
-              >
-                <MessageSquare className="w-3.5 h-3.5" />
-                <span>Screening Answers</span>
-                <span className="px-1.5 py-0.2 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-400 font-mono text-[10px]">
-                  {questionAnswers.length}
-                </span>
-              </TabsTrigger>
-
-              <TabsTrigger
-                value="automate"
-                className="flex-1 py-1.5 text-xs font-semibold gap-1.5"
-              >
-                <Workflow className="w-3.5 h-3.5" />
-                <span>Browser Assist</span>
-                {isAutomating && <span className="w-2 h-2 rounded-full bg-violet-400 animate-ping" />}
-                {mappedFields.length > 0 && !isAutomating && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                )}
-              </TabsTrigger>
-
-              <TabsTrigger
-                value="status"
-                className="flex-1 py-1.5 text-xs font-semibold gap-1.5"
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Pipeline Stage</span>
-              </TabsTrigger>
-            </TabsList>
-          </SheetHeader>
-
-          {/* Drawer Body */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-zinc-900">
-            {isLoading ? (
-              <div className="h-64 flex items-center justify-center text-zinc-500 text-xs">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin text-violet-400" />
-                  <span>Loading application materials...</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handlePrepare}
+                    disabled={isPreparing}
+                    className="gap-1.5 font-bold text-xs bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] rounded-[2px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4a745]"
+                  >
+                    {isPreparing ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Tailoring...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>{isPrepared ? "Re-tailor" : "Prepare Application"}</span>
+                      </>
+                    )}
+                  </Button>
                 </div>
               </div>
-            ) : (
-              <>
-                {/* 1. Resume Tab */}
-                <TabsContent value="resume" className="mt-0 focus-visible:ring-0 focus-visible:outline-none">
-                  {!isPrepared ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-4">
-                      <div className="w-16 h-16 rounded-2xl bg-zinc-950 border border-zinc-800 flex items-center justify-center text-violet-400">
-                        <Sparkles className="w-8 h-8" />
-                      </div>
-                      <div className="space-y-1.5 max-w-sm">
-                        <h3 className="text-base font-semibold text-zinc-100 tracking-tight">
-                          Application Not Prepared Yet
-                        </h3>
-                        <p className="text-xs text-zinc-400 leading-relaxed">
-                          Generate role-specific tailored resume and screening answers grounded strictly in your verified profile facts.
-                        </p>
-                      </div>
-                      <Button
-                        type="button"
-                        onClick={handlePrepare}
-                        disabled={isPreparing}
-                        className="font-semibold text-xs gap-2"
-                      >
-                        {isPreparing ? (
-                          <>
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            <span>Generating Tailored Materials...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="w-3.5 h-3.5 text-violet-400" />
-                            <span>Prepare Application with AI</span>
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  ) : (
-                    tailoredResume && (
-                      <TailoredResumeEditor
-                        applicationId={applicationId || job.id}
-                        jobTitle={job.title}
-                        company={job.company}
-                        tailoredResume={tailoredResume}
-                        onUpdated={(updated) => setTailoredResume(updated)}
-                      />
-                    )
-                  )}
-                </TabsContent>
 
-                {/* 2. Answers Tab */}
-                <TabsContent value="answers" className="mt-0 focus-visible:ring-0 focus-visible:outline-none">
-                  <QuestionAnswersList
-                    jobId={job.id}
-                    answers={questionAnswers}
-                    onAnswersUpdated={(updated) => setQuestionAnswers(updated)}
+              {/* Error Message */}
+              {(error || automationError) && (
+                <div className="p-3 rounded-[2px] bg-[#15171d] border border-[#c4634e] text-[#c4634e] text-xs flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-[#c4634e]" />
+                    <span>{error || automationError}</span>
+                  </div>
+                  {automationError && (
+                    <button
+                      type="button"
+                      onClick={() => setAutomationError(null)}
+                      className="text-[#c4634e] hover:text-[#f4f2ec] text-xs font-mono"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Sub-Dimension Score Visual Breakdown */}
+              {job.fitScore && (
+                <div className="pt-2 border-t border-[#2a2e38]">
+                  <SubDimensionScores
+                    skillsFit={job.fitScore.skillsFit}
+                    experienceFit={job.fitScore.experienceFit}
+                    domainFit={job.fitScore.domainFit}
+                    trajectoryFit={job.fitScore.trajectoryFit}
                   />
-                </TabsContent>
+                </div>
+              )}
 
-                {/* 3. Browser Assist Tab */}
-                <TabsContent value="automate" className="mt-0 space-y-6 focus-visible:ring-0 focus-visible:outline-none">
-                  {/* Bot Challenge Banner */}
-                  {currentRunnerState === "BOT_CHECK_PAUSED" && (
-                    <div className="p-4 rounded-lg bg-amber-950/50 border border-amber-800 text-amber-200 text-xs flex items-start gap-3">
-                      <div className="p-2 rounded-md bg-amber-900/60 text-amber-400 shrink-0 text-base">
-                        <ShieldAlert className="w-5 h-5" />
+              {/* Tab Navigation with 12px mono indicators */}
+              <TabsList className="w-full flex h-auto p-1 bg-[#0d0e12] border border-[#2a2e38] rounded-[2px]">
+                <TabsTrigger
+                  value="resume"
+                  className="flex-1 py-1.5 text-xs font-mono font-semibold gap-1.5 rounded-[2px] text-[#a6abbd] data-[state=active]:bg-[#1f222a] data-[state=active]:text-[#f4f2ec] data-[state=active]:border data-[state=active]:border-[#3d4352] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                >
+                  <FileText className="w-3.5 h-3.5 text-[#d4a745]" />
+                  <span>01 · TAILORED RESUME</span>
+                  {tailoredResume && <span className="w-1.5 h-1.5 rounded-full bg-[#8ab384]" />}
+                </TabsTrigger>
+
+                <TabsTrigger
+                  value="answers"
+                  className="flex-1 py-1.5 text-xs font-mono font-semibold gap-1.5 rounded-[2px] text-[#a6abbd] data-[state=active]:bg-[#1f222a] data-[state=active]:text-[#f4f2ec] data-[state=active]:border data-[state=active]:border-[#3d4352] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                >
+                  <MessageSquare className="w-3.5 h-3.5 text-[#d4a745]" />
+                  <span>02 · CITED Q&amp;A</span>
+                  <span className="px-1.5 py-0.2 rounded-[2px] bg-[#15171d] border border-[#2a2e38] text-[#a6abbd] font-mono text-[10px]">
+                    {questionAnswers.length}
+                  </span>
+                </TabsTrigger>
+
+                <TabsTrigger
+                  value="automate"
+                  className="flex-1 py-1.5 text-xs font-mono font-semibold gap-1.5 rounded-[2px] text-[#a6abbd] data-[state=active]:bg-[#1f222a] data-[state=active]:text-[#f4f2ec] data-[state=active]:border data-[state=active]:border-[#3d4352] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                >
+                  <Workflow className="w-3.5 h-3.5 text-[#d4a745]" />
+                  <span>03 · AUTOMATION</span>
+                  {isAutomating && <span className="w-2 h-2 rounded-full bg-[#d4a745] animate-ping" />}
+                  {mappedFields.length > 0 && !isAutomating && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#8ab384]" />
+                  )}
+                </TabsTrigger>
+
+                <TabsTrigger
+                  value="status"
+                  className="flex-1 py-1.5 text-xs font-mono font-semibold gap-1.5 rounded-[2px] text-[#a6abbd] data-[state=active]:bg-[#1f222a] data-[state=active]:text-[#f4f2ec] data-[state=active]:border data-[state=active]:border-[#3d4352] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#d4a745]" />
+                  <span>04 · AUDIT &amp; STAGE</span>
+                </TabsTrigger>
+              </TabsList>
+            </SheetHeader>
+
+            {/* Drawer Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-[#0d0e12]">
+              {isLoading ? (
+                <div className="h-64 flex items-center justify-center text-[#a6abbd] text-xs">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-[#d4a745]" />
+                    <span className="font-mono">Loading application materials...</span>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* 1. Resume Tab */}
+                  <TabsContent value="resume" className="mt-0 focus-visible:ring-0 focus-visible:outline-none">
+                    {!isPrepared ? (
+                      <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-4">
+                        <div className="w-16 h-16 rounded-[3px] bg-[#15171d] border border-[#2a2e38] flex items-center justify-center text-[#d4a745]">
+                          <Sparkles className="w-8 h-8" />
+                        </div>
+                        <div className="space-y-1.5 max-w-sm">
+                          <h3 className="text-base font-semibold text-[#f4f2ec] tracking-tight">
+                            Application Not Prepared Yet
+                          </h3>
+                          <p className="text-xs text-[#a6abbd] leading-relaxed">
+                            Generate role-specific tailored resume and screening answers grounded strictly in your verified profile facts.
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          onClick={handlePrepare}
+                          disabled={isPreparing}
+                          className="font-bold text-xs gap-2 bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] rounded-[2px] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                        >
+                          {isPreparing ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              <span>Generating Tailored Materials...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-3.5 h-3.5" />
+                              <span>Prepare Application with AI</span>
+                            </>
+                          )}
+                        </Button>
                       </div>
-                      <div className="space-y-1">
-                        <h4 className="font-semibold text-amber-300 text-sm">
-                          Anti-Bot Verification Challenge Detected
-                        </h4>
-                        <p className="text-amber-200/90 leading-relaxed">
-                          Cloudflare Turnstile or CAPTCHA challenge is currently active in the opened Google Chrome window. Please complete the verification in your browser — Pulse is monitoring and will continue automatically.
-                        </p>
+                    ) : (
+                      tailoredResume && (
+                        <TailoredResumeEditor
+                          applicationId={applicationId || job.id}
+                          jobTitle={job.title}
+                          company={job.company}
+                          tailoredResume={tailoredResume}
+                          onUpdated={(updated) => setTailoredResume(updated)}
+                        />
+                      )
+                    )}
+                  </TabsContent>
+
+                  {/* 2. Answers Tab */}
+                  <TabsContent value="answers" className="mt-0 focus-visible:ring-0 focus-visible:outline-none">
+                    <QuestionAnswersList
+                      jobId={job.id}
+                      answers={questionAnswers}
+                      onAnswersUpdated={(updated) => setQuestionAnswers(updated)}
+                    />
+                  </TabsContent>
+
+                  {/* 3. Browser Assist Tab */}
+                  <TabsContent value="automate" className="mt-0 space-y-6 focus-visible:ring-0 focus-visible:outline-none">
+                    {/* Bot Challenge Banner */}
+                    {currentRunnerState === "BOT_CHECK_PAUSED" && (
+                      <div className="p-4 rounded-[3px] bg-[#15171d] border border-[#d4a745] text-[#f4f2ec] text-xs flex items-start gap-3">
+                        <div className="p-2 rounded-[2px] bg-[#1f222a] text-[#d4a745] shrink-0 text-base">
+                          <ShieldAlert className="w-5 h-5" />
+                        </div>
+                        <div className="space-y-1">
+                          <h4 className="font-semibold text-[#d4a745] text-sm">
+                            Anti-Bot Verification Challenge Detected
+                          </h4>
+                          <p className="text-[#a6abbd] leading-relaxed">
+                            Cloudflare Turnstile or CAPTCHA challenge is currently active in the opened Google Chrome window. Please complete the verification in your browser — Vanguard is monitoring and will continue automatically.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Submitted Success Banner */}
+                    {(currentRunnerState === "SUBMITTED" || applicationStatus === "APPLIED") && (
+                      <div className="p-4 rounded-[3px] bg-[#15171d] border border-[#8ab384] text-[#f4f2ec] text-xs flex items-start gap-3">
+                        <div className="p-2 rounded-[2px] bg-[#1f222a] text-[#8ab384] shrink-0 text-base">
+                          <CheckCircle2 className="w-5 h-5" />
+                        </div>
+                        <div className="space-y-1">
+                          <h4 className="font-semibold text-[#8ab384] text-sm">
+                            Application Successfully Submitted
+                          </h4>
+                          <p className="text-[#a6abbd] leading-relaxed">
+                            Automated post-submission confirmation detected on ATS portal. Application lifecycle state has been updated to <strong className="font-mono text-[#f4f2ec]">APPLIED</strong> and audit event recorded.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Real-time Runner Progress Stepper */}
+                    <div className="bg-[#15171d] p-5 rounded-[3px] border border-[#2a2e38] space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-sm font-semibold text-[#f4f2ec] tracking-tight flex items-center gap-2 font-mono">
+                            <Bot className="w-4 h-4 text-[#d4a745]" />
+                            <span>BROWSER AUTOMATION RUNNER</span>
+                          </h3>
+                          <p className="text-xs text-[#a6abbd] mt-0.5">
+                            {lastAutomationEvent?.message || "Launches persistent Chrome session, matches fields, and injects visual inspection highlights."}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {job.url && (
+                            <a
+                              href={job.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-mono rounded-[2px] border border-[#2a2e38] bg-[#0d0e12] text-[#f4f2ec] hover:bg-[#1f222a]"
+                            >
+                              <ExternalLink className="w-3 h-3 text-[#d4a745]" />
+                              <span>Portal Link ↗</span>
+                            </a>
+                          )}
+
+                          {isAutomating ? (
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              onClick={handleAbortAutomation}
+                              className="font-mono text-xs gap-1.5 rounded-[2px]"
+                            >
+                              <Square className="w-3.5 h-3.5" />
+                              <span>Abort Run</span>
+                            </Button>
+                          ) : (
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={startBrowserAutomation}
+                              className="font-bold text-xs gap-1.5 bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] rounded-[2px] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                            >
+                              <Play className="w-3.5 h-3.5" />
+                              <span>{mappedFields.length > 0 ? "Re-run in Browser" : "Launch & Auto-fill"}</span>
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Stepper Progress Bar */}
+                      <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 pt-2">
+                        {RUNNER_STEPS.map((step, idx) => {
+                          const stepNum = idx + 1;
+                          const isDone = activeStepNumber > stepNum || currentRunnerState === "SUBMITTED";
+                          const isCurrent = activeStepNumber === stepNum && isAutomating;
+
+                          return (
+                            <div
+                              key={step.state}
+                              className={cn(
+                                "p-2.5 rounded-[2px] border text-left flex flex-col justify-between transition-colors",
+                                isCurrent
+                                  ? "bg-[#1f222a] border-[#d4a745] ring-1 ring-[#d4a745]"
+                                  : isDone
+                                  ? "bg-[#15171d] border-[#8ab384]/60 text-[#f4f2ec]"
+                                  : "bg-[#0d0e12] border-[#2a2e38] text-[#a6abbd]"
+                              )}
+                            >
+                              <div className="flex items-center justify-between text-[10px] font-mono">
+                                <span>0{stepNum}</span>
+                                {isDone && <Check className="w-3 h-3 text-[#8ab384]" />}
+                                {isCurrent && (
+                                  <span className="w-2 h-2 rounded-full bg-[#d4a745] animate-ping" />
+                                )}
+                              </div>
+                              <div className="mt-1">
+                                <span className={cn(
+                                  "text-xs font-semibold block",
+                                  isCurrent ? "text-[#d4a745]" : isDone ? "text-[#f4f2ec]" : "text-[#a6abbd]"
+                                )}>
+                                  {step.label}
+                                </span>
+                                <span className="text-[10px] text-[#a6abbd] line-clamp-1 block">
+                                  {step.description}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-                  )}
 
-                  {/* Submitted Success Banner */}
-                  {(currentRunnerState === "SUBMITTED" || applicationStatus === "APPLIED") && (
-                    <div className="p-4 rounded-lg bg-emerald-950/50 border border-emerald-800 text-emerald-200 text-xs flex items-start gap-3">
-                      <div className="p-2 rounded-md bg-emerald-900/60 text-emerald-400 shrink-0 text-base">
-                        <CheckCircle2 className="w-5 h-5" />
+                    {/* Interactive Inspection Checklist */}
+                    <div className="bg-[#15171d] p-5 rounded-[3px] border border-[#2a2e38] space-y-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <h4 className="text-xs font-mono font-bold text-[#f4f2ec] tracking-tight flex items-center gap-2">
+                            <FileText className="w-3.5 h-3.5 text-[#d4a745]" />
+                            <span>IN-DRAWER INSPECTION CHECKLIST</span>
+                          </h4>
+                          <p className="text-xs text-[#a6abbd] mt-0.5">
+                            Visual audit breakdown of auto-filled inputs, confidence scores, and unmapped fields.
+                          </p>
+                        </div>
+
+                        {/* Filter Pills */}
+                        <div className="flex items-center gap-1 bg-[#0d0e12] p-1 rounded-[2px] border border-[#2a2e38] text-xs font-mono">
+                          <button
+                            type="button"
+                            onClick={() => setChecklistFilter("all")}
+                            className={cn(
+                              "px-2.5 py-0.5 rounded-[2px] font-semibold transition-colors focus-visible:outline-1 focus-visible:outline-[#d4a745]",
+                              checklistFilter === "all" ? "bg-[#1f222a] text-[#f4f2ec]" : "text-[#a6abbd] hover:text-[#f4f2ec]"
+                            )}
+                          >
+                            All ({mappedFields.length + unmappedFields.length})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setChecklistFilter("filled")}
+                            className={cn(
+                              "px-2.5 py-0.5 rounded-[2px] font-semibold transition-colors flex items-center gap-1 focus-visible:outline-1 focus-visible:outline-[#d4a745]",
+                              checklistFilter === "filled" ? "bg-[#1f222a] text-[#8ab384] border border-[#8ab384]/60" : "text-[#a6abbd] hover:text-[#f4f2ec]"
+                            )}
+                          >
+                            <span>Filled</span>
+                            <span className="text-[10px] text-[#8ab384]">
+                              ({mappedFields.filter((f) => f.tier === 1).length})
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setChecklistFilter("review")}
+                            className={cn(
+                              "px-2.5 py-0.5 rounded-[2px] font-semibold transition-colors flex items-center gap-1 focus-visible:outline-1 focus-visible:outline-[#d4a745]",
+                              checklistFilter === "review" ? "bg-[#1f222a] text-[#d4a745] border border-[#d4a745]/60" : "text-[#a6abbd] hover:text-[#f4f2ec]"
+                            )}
+                          >
+                            <span>Review</span>
+                            <span className="text-[10px] text-[#d4a745]">
+                              ({mappedFields.filter((f) => f.tier === 2).length})
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setChecklistFilter("missing")}
+                            className={cn(
+                              "px-2.5 py-0.5 rounded-[2px] font-semibold transition-colors flex items-center gap-1 focus-visible:outline-1 focus-visible:outline-[#d4a745]",
+                              checklistFilter === "missing" ? "bg-[#1f222a] text-[#c4634e] border border-[#c4634e]/60" : "text-[#a6abbd] hover:text-[#f4f2ec]"
+                            )}
+                          >
+                            <span>Unmapped</span>
+                            <span className="text-[10px] text-[#c4634e]">
+                              ({unmappedFields.length})
+                            </span>
+                          </button>
+                        </div>
                       </div>
-                      <div className="space-y-1">
-                        <h4 className="font-semibold text-emerald-300 text-sm">
-                          Application Successfully Submitted!
-                        </h4>
-                        <p className="text-emerald-200/90 leading-relaxed">
-                          Automated post-submission confirmation detected on ATS portal. Application lifecycle state has been updated to <strong className="font-mono text-zinc-100">APPLIED</strong> and audit event recorded.
-                        </p>
-                      </div>
+
+                      {/* Checklist Item Cards */}
+                      {mappedFields.length === 0 && unmappedFields.length === 0 ? (
+                        <div className="p-6 rounded-[2px] bg-[#0d0e12] border border-[#2a2e38] text-center space-y-2">
+                          <p className="text-xs text-[#a6abbd]">
+                            No active inspection scan yet. Launch browser automation to scan live ATS form fields.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={startBrowserAutomation}
+                            className="text-xs text-[#d4a745] hover:text-[#e8bd59] font-mono font-semibold underline focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                          >
+                            Start Browser Assisted Fill
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                          {/* Mapped Fields */}
+                          {filteredMapped.map((mapping, idx) => {
+                            const isReview = mapping.tier === 2;
+                            return (
+                              <div
+                                key={`mapped-${idx}-${mapping.selector}`}
+                                className={cn(
+                                  "p-3 rounded-[2px] border text-xs flex items-start justify-between gap-3",
+                                  isReview
+                                    ? "bg-[#0d0e12] border-[#d4a745]/40 text-[#f4f2ec]"
+                                    : "bg-[#0d0e12] border-[#8ab384]/40 text-[#f4f2ec]"
+                                )}
+                              >
+                                <div className="space-y-1 min-w-0 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      className={cn(
+                                        "font-mono text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-[2px] border",
+                                        isReview
+                                          ? "border-[#d4a745]/60 bg-[#15171d] text-[#d4a745]"
+                                          : "border-[#8ab384]/60 bg-[#15171d] text-[#8ab384]"
+                                      )}
+                                    >
+                                      {isReview ? "Tier 2 Semantic" : "Tier 1 Exact"}
+                                    </span>
+                                    <span className="font-semibold text-[#f4f2ec] truncate">{mapping.field}</span>
+                                    <span className="text-[10px] text-[#a6abbd] font-mono">
+                                      ({Math.round(mapping.confidence * 100)}% confidence)
+                                    </span>
+                                  </div>
+
+                                  <div className="font-mono text-xs text-[#f4f2ec] bg-[#15171d] px-2 py-1 rounded-[2px] border border-[#2a2e38] truncate">
+                                    {mapping.value ? String(mapping.value) : `[Action: ${mapping.action || "fill"}]`}
+                                  </div>
+                                </div>
+
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  onClick={() => copyToClipboard(String(mapping.value || ""), `mapped-${idx}`)}
+                                  className="text-[#a6abbd] hover:text-[#f4f2ec] shrink-0 rounded-[2px] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                                  title="Copy value"
+                                >
+                                  {copiedChipId === `mapped-${idx}` ? (
+                                    <Check className="w-3.5 h-3.5 text-[#8ab384]" />
+                                  ) : (
+                                    <Copy className="w-3.5 h-3.5" />
+                                  )}
+                                </Button>
+                              </div>
+                            );
+                          })}
+
+                          {/* Unmapped Fields */}
+                          {filteredUnmapped.map((field, idx) => (
+                            <div
+                              key={`unmapped-${idx}-${field.selector}`}
+                              className="p-3 rounded-[2px] border bg-[#0d0e12] border-[#c4634e]/40 text-[#f4f2ec] text-xs space-y-2"
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="font-mono text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-[2px] border border-[#c4634e]/60 bg-[#15171d] text-[#c4634e]">
+                                    {field.required ? "Required Unmapped" : "Optional Unmapped"}
+                                  </span>
+                                  <span className="font-semibold text-[#f4f2ec] truncate">
+                                    {field.label || field.name || field.id || "Custom Question"}
+                                  </span>
+                                </div>
+                                <span className="text-[10px] text-[#c4634e] font-mono shrink-0">
+                                  Manual Paste
+                                </span>
+                              </div>
+
+                              {/* Quick Fact Copy Chips */}
+                              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                                <span className="text-[10px] text-[#a6abbd] font-mono">Copy Fact:</span>
+                                {[
+                                  { label: "Role", val: job.title },
+                                  { label: "Company", val: job.company },
+                                  { label: "Location", val: job.location || "Remote" },
+                                ].map((fact, fIdx) => (
+                                  <button
+                                    key={fIdx}
+                                    type="button"
+                                    onClick={() => copyToClipboard(fact.val, `fact-${idx}-${fIdx}`)}
+                                    className="px-2 py-0.5 rounded-[2px] bg-[#15171d] hover:bg-[#1f222a] border border-[#2a2e38] text-[10px] font-mono text-[#f4f2ec] flex items-center gap-1 transition-colors focus-visible:outline-1 focus-visible:outline-[#d4a745]"
+                                  >
+                                    <span>{fact.label}</span>
+                                    {copiedChipId === `fact-${idx}-${fIdx}` && (
+                                      <Check className="w-3 h-3 text-[#8ab384]" />
+                                    )}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
 
-                  {/* Real-time Runner Progress Stepper */}
-                  <div className="bg-zinc-950 p-5 rounded-lg border border-zinc-800 space-y-4">
-                    <div className="flex items-center justify-between">
+                    {/* Persistent Manual Reconciliation Controls */}
+                    <div className="p-4 rounded-[3px] bg-[#15171d] border border-[#2a2e38] flex flex-wrap items-center justify-between gap-3">
                       <div>
-                        <h3 className="text-sm font-semibold text-zinc-100 tracking-tight flex items-center gap-2">
-                          <Bot className="w-4 h-4 text-violet-400" />
-                          <span>Browser Automation Runner</span>
-                        </h3>
-                        <p className="text-xs text-zinc-400 mt-0.5">
-                          {lastAutomationEvent?.message || "Launches persistent Chrome session, matches fields, and injects visual inspection highlights."}
+                        <h4 className="text-xs font-mono font-bold text-[#f4f2ec] tracking-tight">
+                          MANUAL STATE RECONCILIATION
+                        </h4>
+                        <p className="text-xs text-[#a6abbd] mt-0.5">
+                          Directly confirm application submission or maintain draft state.
                         </p>
                       </div>
 
                       <div className="flex items-center gap-2">
-                        {isAutomating ? (
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            onClick={handleAbortAutomation}
-                            className="font-semibold text-xs gap-1.5"
-                          >
-                            <Square className="w-3.5 h-3.5" />
-                            <span>Abort Run</span>
-                          </Button>
-                        ) : (
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={startBrowserAutomation}
-                            className="font-semibold text-xs gap-1.5"
-                          >
-                            <Play className="w-3.5 h-3.5 text-violet-400" />
-                            <span>{mappedFields.length > 0 ? "Re-run in Browser" : "Launch & Auto-fill"}</span>
-                          </Button>
-                        )}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleStatusChange("PREPARED")}
+                          className="font-mono text-xs rounded-[2px] border-[#2a2e38] bg-[#0d0e12] text-[#f4f2ec] hover:bg-[#1f222a]"
+                        >
+                          Keep Draft
+                        </Button>
+
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => handleStatusChange("APPLIED")}
+                          className="font-bold text-xs gap-1.5 bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] rounded-[2px] transition-colors focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Mark as Applied</span>
+                        </Button>
                       </div>
                     </div>
+                  </TabsContent>
 
-                    {/* Stepper Progress Bar */}
-                    <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 pt-2">
-                      {RUNNER_STEPS.map((step, idx) => {
-                        const stepNum = idx + 1;
-                        const isDone = activeStepNumber > stepNum || currentRunnerState === "SUBMITTED";
-                        const isCurrent = activeStepNumber === stepNum && isAutomating;
+                  {/* 4. Pipeline Stage Tab */}
+                  <TabsContent value="status" className="mt-0 space-y-6 focus-visible:ring-0 focus-visible:outline-none">
+                    {/* Lifecycle Telemetry / Latency Card */}
+                    {(job.application?.appliedAt || job.application?.firstResponseAt || job.application?.rejectionStage) && (
+                      <div className="bg-[#15171d] p-4 rounded-[3px] border border-[#2a2e38] space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-xs font-mono font-bold text-[#f4f2ec] tracking-tight flex items-center gap-2">
+                            <Clock className="w-3.5 h-3.5 text-[#d4a745]" />
+                            <span>APPLICATION LIFECYCLE TELEMETRY</span>
+                          </h4>
+                          {job.application?.responseTimeDays !== null && job.application?.responseTimeDays !== undefined && (
+                            <span className="font-mono text-xs font-bold text-[#8ab384] px-2 py-0.5 rounded-[2px] bg-[#0d0e12] border border-[#2a2e38]">
+                              ⚡ {job.application.responseTimeDays} days response latency
+                            </span>
+                          )}
+                        </div>
 
-                        return (
-                          <div
-                            key={step.state}
-                            className={cn(
-                              "p-2.5 rounded-md border text-left flex flex-col justify-between transition-all",
-                              isCurrent
-                                ? "bg-zinc-900 border-violet-500 shadow-none ring-1 ring-violet-500"
-                                : isDone
-                                ? "bg-emerald-950/30 border-emerald-900 text-zinc-300"
-                                : "bg-zinc-900 border-zinc-800 text-zinc-500"
-                            )}
-                          >
-                            <div className="flex items-center justify-between text-[10px] font-mono">
-                              <span>0{stepNum}</span>
-                              {isDone && <Check className="w-3 h-3 text-emerald-400" />}
-                              {isCurrent && (
-                                <span className="w-2 h-2 rounded-full bg-violet-400 animate-ping" />
-                              )}
-                            </div>
-                            <div className="mt-1">
-                              <span className={cn(
-                                "text-[11px] font-semibold block",
-                                isCurrent ? "text-violet-300" : isDone ? "text-zinc-200" : "text-zinc-400"
-                              )}>
-                                {step.label}
-                              </span>
-                              <span className="text-[9px] text-zinc-500 line-clamp-1 block">
-                                {step.description}
-                              </span>
-                            </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                          <div className="bg-[#0d0e12] p-2.5 rounded-[2px] border border-[#2a2e38]">
+                            <span className="text-[10px] text-[#a6abbd] font-mono block">Applied Date</span>
+                            <span className="text-[#f4f2ec] font-semibold font-mono text-xs">
+                              {job.application.appliedAt
+                                ? new Date(job.application.appliedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                                : "—"}
+                            </span>
                           </div>
-                        );
-                      })}
-                    </div>
-                  </div>
 
-                  {/* Interactive Inspection Checklist */}
-                  <div className="bg-zinc-950 p-5 rounded-lg border border-zinc-800 space-y-4">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <h4 className="text-xs font-semibold text-zinc-100 tracking-tight flex items-center gap-2">
-                          <FileText className="w-3.5 h-3.5 text-violet-400" />
-                          <span>In-Drawer Inspection Checklist</span>
-                        </h4>
-                        <p className="text-[11px] text-zinc-400 mt-0.5">
-                          Visual audit breakdown of auto-filled inputs, confidence scores, and unmapped fields.
-                        </p>
-                      </div>
-
-                      {/* Filter Pills */}
-                      <div className="flex items-center gap-1 bg-zinc-900 p-1 rounded-md border border-zinc-800 text-[11px]">
-                        <button
-                          type="button"
-                          onClick={() => setChecklistFilter("all")}
-                          className={cn(
-                            "px-2.5 py-0.5 rounded font-semibold transition-all",
-                            checklistFilter === "all" ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:text-zinc-200"
-                          )}
-                        >
-                          All ({mappedFields.length + unmappedFields.length})
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setChecklistFilter("filled")}
-                          className={cn(
-                            "px-2.5 py-0.5 rounded font-semibold transition-all flex items-center gap-1",
-                            checklistFilter === "filled" ? "bg-emerald-950 text-emerald-300 border border-emerald-800" : "text-zinc-400 hover:text-zinc-200"
-                          )}
-                        >
-                          <span>Filled</span>
-                          <span className="font-mono text-[10px] text-emerald-400">
-                            ({mappedFields.filter((f) => f.tier === 1).length})
-                          </span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setChecklistFilter("review")}
-                          className={cn(
-                            "px-2.5 py-0.5 rounded font-semibold transition-all flex items-center gap-1",
-                            checklistFilter === "review" ? "bg-amber-950 text-amber-300 border border-amber-800" : "text-zinc-400 hover:text-zinc-200"
-                          )}
-                        >
-                          <span>Review</span>
-                          <span className="font-mono text-[10px] text-amber-400">
-                            ({mappedFields.filter((f) => f.tier === 2).length})
-                          </span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setChecklistFilter("missing")}
-                          className={cn(
-                            "px-2.5 py-0.5 rounded font-semibold transition-all flex items-center gap-1",
-                            checklistFilter === "missing" ? "bg-red-950 text-red-300 border border-red-800" : "text-zinc-400 hover:text-zinc-200"
-                          )}
-                        >
-                          <span>Unmapped</span>
-                          <span className="font-mono text-[10px] text-red-400">
-                            ({unmappedFields.length})
-                          </span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Checklist Item Cards */}
-                    {mappedFields.length === 0 && unmappedFields.length === 0 ? (
-                      <div className="p-6 rounded-md bg-zinc-900 border border-zinc-800 text-center space-y-2">
-                        <p className="text-xs text-zinc-400">
-                          No active inspection scan yet. Launch browser automation to scan live ATS form fields.
-                        </p>
-                        <button
-                          type="button"
-                          onClick={startBrowserAutomation}
-                          className="text-xs text-violet-400 hover:text-violet-300 font-semibold underline"
-                        >
-                          Start Browser Assisted Fill
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
-                        {/* Mapped Fields */}
-                        {filteredMapped.map((mapping, idx) => {
-                          const isReview = mapping.tier === 2;
-                          return (
-                            <div
-                              key={`mapped-${idx}-${mapping.selector}`}
-                              className={cn(
-                                "p-3 rounded-md border text-xs flex items-start justify-between gap-3",
-                                isReview
-                                  ? "bg-amber-950/20 border-amber-800/50 text-amber-100"
-                                  : "bg-emerald-950/20 border-emerald-800/50 text-emerald-100"
-                              )}
-                            >
-                              <div className="space-y-1 min-w-0 flex-1">
-                                <div className="flex items-center gap-2">
-                                  <Badge
-                                    variant={isReview ? "amber" : "emerald"}
-                                    className="font-mono text-[10px] font-bold uppercase tracking-wider"
-                                  >
-                                    {isReview ? "Tier 2 Semantic" : "Tier 1 Exact"}
-                                  </Badge>
-                                  <span className="font-semibold text-zinc-100 truncate">{mapping.field}</span>
-                                  <span className="text-[10px] text-zinc-400 font-mono">
-                                    ({Math.round(mapping.confidence * 100)}% confidence)
-                                  </span>
-                                </div>
-
-                                <div className="font-mono text-[11px] text-zinc-300 bg-zinc-950 px-2 py-1 rounded border border-zinc-800 truncate">
-                                  {mapping.value ? String(mapping.value) : `[Action: ${mapping.action || "fill"}]`}
-                                </div>
-                              </div>
-
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon-sm"
-                                onClick={() => copyToClipboard(String(mapping.value || ""), `mapped-${idx}`)}
-                                className="text-zinc-400 hover:text-zinc-100 shrink-0"
-                                title="Copy value"
-                              >
-                                {copiedChipId === `mapped-${idx}` ? (
-                                  <Check className="w-3.5 h-3.5 text-emerald-400" />
-                                ) : (
-                                  <Copy className="w-3.5 h-3.5" />
-                                )}
-                              </Button>
-                            </div>
-                          );
-                        })}
-
-                        {/* Unmapped Fields */}
-                        {filteredUnmapped.map((field, idx) => (
-                          <div
-                            key={`unmapped-${idx}-${field.selector}`}
-                            className="p-3 rounded-md border bg-red-950/20 border-red-800/50 text-red-100 text-xs space-y-2"
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <Badge
-                                  variant="destructive"
-                                  className="font-mono text-[10px] font-bold uppercase tracking-wider"
-                                >
-                                  {field.required ? "Required Unmapped" : "Optional Unmapped"}
-                                </Badge>
-                                <span className="font-semibold text-zinc-100 truncate">
-                                  {field.label || field.name || field.id || "Custom Question"}
-                                </span>
-                              </div>
-                              <span className="text-[10px] text-red-400 font-mono shrink-0">
-                                Manual Paste
-                              </span>
-                            </div>
-
-                            {/* Quick Fact Copy Chips */}
-                            <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                              <span className="text-[10px] text-zinc-500 font-mono">Copy Fact:</span>
-                              {[
-                                { label: "Role", val: job.title },
-                                { label: "Company", val: job.company },
-                                { label: "Location", val: job.location || "Remote" },
-                              ].map((fact, fIdx) => (
-                                <button
-                                  key={fIdx}
-                                  type="button"
-                                  onClick={() => copyToClipboard(fact.val, `fact-${idx}-${fIdx}`)}
-                                  className="px-2 py-0.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-[10px] font-mono text-zinc-300 hover:text-zinc-100 flex items-center gap-1 transition-all"
-                                >
-                                  <span>{fact.label}</span>
-                                  {copiedChipId === `fact-${idx}-${fIdx}` && (
-                                    <Check className="w-3 h-3 text-emerald-400" />
-                                  )}
-                                </button>
-                              ))}
-                            </div>
+                          <div className="bg-[#0d0e12] p-2.5 rounded-[2px] border border-[#2a2e38]">
+                            <span className="text-[10px] text-[#a6abbd] font-mono block">First Response</span>
+                            <span className="text-[#f4f2ec] font-semibold font-mono text-xs">
+                              {job.application.firstResponseAt
+                                ? new Date(job.application.firstResponseAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                                : "Awaiting response"}
+                            </span>
                           </div>
-                        ))}
+
+                          <div className="bg-[#0d0e12] p-2.5 rounded-[2px] border border-[#2a2e38]">
+                            <span className="text-[10px] text-[#a6abbd] font-mono block">Rejection Stage</span>
+                            <span className="text-[#c4634e] font-semibold font-mono text-xs truncate block">
+                              {job.application.rejectionStage ? job.application.rejectionStage.replace(/_/g, " ") : "N/A"}
+                            </span>
+                          </div>
+
+                          <div className="bg-[#0d0e12] p-2.5 rounded-[2px] border border-[#2a2e38]">
+                            <span className="text-[10px] text-[#a6abbd] font-mono block">Rejection Reason</span>
+                            <span className="text-[#d4a745] font-semibold font-mono text-xs truncate block">
+                              {job.application.rejectionReason ? job.application.rejectionReason.replace(/_/g, " ") : "N/A"}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     )}
-                  </div>
 
-                  {/* Persistent Manual Reconciliation Controls */}
-                  <div className="p-4 rounded-lg bg-zinc-950 border border-zinc-800 flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <h4 className="text-xs font-semibold text-zinc-100 tracking-tight">
-                        Manual State Reconciliation
-                      </h4>
-                      <p className="text-[11px] text-zinc-400 mt-0.5">
-                        Directly confirm application submission or maintain draft state.
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleStatusChange("PREPARED")}
-                        className="font-semibold text-xs"
-                      >
-                        Keep Draft
-                      </Button>
-
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => handleStatusChange("APPLIED")}
-                        className="font-semibold text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                        <span>Confirm Applied</span>
-                      </Button>
-                    </div>
-                  </div>
-                </TabsContent>
-
-                {/* 4. Pipeline Stage Tab */}
-                <TabsContent value="status" className="mt-0 space-y-6 focus-visible:ring-0 focus-visible:outline-none">
-                  {/* Lifecycle Telemetry / Latency Card */}
-                  {(job.application?.appliedAt || job.application?.firstResponseAt || job.application?.rejectionStage) && (
-                    <div className="bg-zinc-950 p-4 rounded-lg border border-zinc-800 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-semibold text-zinc-100 tracking-tight flex items-center gap-2">
-                          <Clock className="w-3.5 h-3.5 text-violet-400" />
-                          <span>Application Lifecycle Telemetry</span>
-                        </h4>
-                        {job.application?.responseTimeDays !== null && job.application?.responseTimeDays !== undefined && (
-                          <Badge variant="emerald" className="font-mono text-[11px] font-bold">
-                            ⚡ {job.application.responseTimeDays} days response latency
-                          </Badge>
-                        )}
+                    <div className="bg-[#15171d] p-5 rounded-[3px] border border-[#2a2e38] space-y-4">
+                      <div>
+                        <h3 className="text-xs font-mono font-bold text-[#f4f2ec] tracking-tight">
+                          TRANSITION PIPELINE STAGE
+                        </h3>
+                        <p className="text-xs text-[#a6abbd] mt-0.5">
+                          Transition the job across tracking stages. Status changes automatically record audit events.
+                        </p>
                       </div>
 
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
-                        <div className="bg-zinc-900 p-2.5 rounded-md border border-zinc-800">
-                          <span className="text-[10px] text-zinc-500 font-mono block">Applied Date</span>
-                          <span className="text-zinc-200 font-semibold font-mono text-[11px]">
-                            {job.application.appliedAt
-                              ? new Date(job.application.appliedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-                              : "—"}
-                          </span>
-                        </div>
-
-                        <div className="bg-zinc-900 p-2.5 rounded-md border border-zinc-800">
-                          <span className="text-[10px] text-zinc-500 font-mono block">First Response</span>
-                          <span className="text-zinc-200 font-semibold font-mono text-[11px]">
-                            {job.application.firstResponseAt
-                              ? new Date(job.application.firstResponseAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-                              : "Awaiting response"}
-                          </span>
-                        </div>
-
-                        <div className="bg-zinc-900 p-2.5 rounded-md border border-zinc-800">
-                          <span className="text-[10px] text-zinc-500 font-mono block">Rejection Stage</span>
-                          <span className="text-red-400 font-semibold font-mono text-[11px] truncate block">
-                            {job.application.rejectionStage ? job.application.rejectionStage.replace(/_/g, " ") : "N/A"}
-                          </span>
-                        </div>
-
-                        <div className="bg-zinc-900 p-2.5 rounded-md border border-zinc-800">
-                          <span className="text-[10px] text-zinc-500 font-mono block">Rejection Reason</span>
-                          <span className="text-amber-400 font-semibold font-mono text-[11px] truncate block">
-                            {job.application.rejectionReason ? job.application.rejectionReason.replace(/_/g, " ") : "N/A"}
-                          </span>
-                        </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {[
+                          { id: "SHORTLISTED", label: "Shortlisted" },
+                          { id: "PREPARED", label: "Prepared" },
+                          { id: "APPLIED", label: "Mark Applied" },
+                          { id: "SCREENING", label: "Screening" },
+                          { id: "ASSESSMENT", label: "Take-home / OA" },
+                          { id: "INTERVIEW", label: "Interviewing" },
+                          { id: "OFFER", label: "Offer Received" },
+                          { id: "REJECTED", label: "Rejected" },
+                          { id: "GHOSTED", label: "Ghosted" },
+                          { id: "WITHDRAWN", label: "Withdrawn" },
+                        ].map((stage) => {
+                          const isActive = applicationStatus.toUpperCase() === stage.id;
+                          return (
+                            <button
+                              key={stage.id}
+                              type="button"
+                              onClick={() => handleStatusChange(stage.id)}
+                              className={cn(
+                                "p-3 rounded-[2px] border text-xs font-semibold transition-colors text-left flex flex-col justify-between focus-visible:outline-2 focus-visible:outline-[#d4a745]",
+                                isActive
+                                  ? "bg-[#1f222a] border-[#d4a745] text-[#f4f2ec]"
+                                  : "bg-[#0d0e12] border-[#2a2e38] text-[#a6abbd] hover:border-[#3d4352] hover:text-[#f4f2ec]"
+                              )}
+                            >
+                              <span>{stage.label}</span>
+                              {isActive && (
+                                <span className="text-[10px] text-[#d4a745] mt-1 font-mono">ACTIVE STAGE</span>
+                              )}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
-                  )}
 
-                  <div className="bg-zinc-950 p-5 rounded-lg border border-zinc-800 space-y-4">
-                    <div>
-                      <h3 className="text-sm font-semibold text-zinc-100 tracking-tight">
-                        Update Pipeline Stage
-                      </h3>
-                      <p className="text-xs text-zinc-400 mt-0.5">
-                        Transition the job across tracking stages. Status changes automatically record audit events.
+                    {/* Job Details Reference */}
+                    <div className="bg-[#15171d] p-5 rounded-[3px] border border-[#2a2e38] space-y-3 text-xs">
+                      <h4 className="font-mono font-bold text-[#f4f2ec] tracking-tight">JOB POSTING DESCRIPTION</h4>
+                      <p className="text-[#f4f2ec] leading-relaxed whitespace-pre-wrap max-h-60 overflow-y-auto bg-[#0d0e12] p-3 rounded-[2px] border border-[#2a2e38] font-mono text-xs">
+                        {job.description}
                       </p>
                     </div>
+                  </TabsContent>
+                </>
+              )}
+            </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                      {[
-                        { id: "SHORTLISTED", label: "Shortlisted" },
-                        { id: "PREPARED", label: "Prepared" },
-                        { id: "APPLIED", label: "Mark Applied" },
-                        { id: "SCREENING", label: "Screening" },
-                        { id: "ASSESSMENT", label: "Take-home / OA" },
-                        { id: "INTERVIEW", label: "Interviewing" },
-                        { id: "OFFER", label: "Offer Received" },
-                        { id: "REJECTED", label: "Rejected" },
-                        { id: "GHOSTED", label: "Ghosted" },
-                        { id: "WITHDRAWN", label: "Withdrawn" },
-                      ].map((stage) => {
-                        const isActive = applicationStatus.toUpperCase() === stage.id;
-                        return (
-                          <button
-                            key={stage.id}
-                            type="button"
-                            onClick={() => handleStatusChange(stage.id)}
-                            className={cn(
-                              "p-3 rounded-lg border text-xs font-semibold transition-all text-left flex flex-col justify-between",
-                              isActive
-                                ? "bg-zinc-800 border-zinc-700 text-zinc-100 shadow-none ring-1 ring-violet-400/50"
-                                : "bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700 hover:text-zinc-100"
-                            )}
-                          >
-                            <span>{stage.label}</span>
-                            {isActive && (
-                              <span className="text-[10px] text-violet-400 mt-1 font-mono">Current Stage</span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+            {/* Action Footer */}
+            <SheetFooter className="p-4 border-t border-[#2a2e38] bg-[#15171d] flex flex-wrap items-center justify-between shrink-0 text-xs font-mono gap-3">
+              <div className="flex items-center gap-2 text-[#a6abbd]">
+                <span>JOB // {job.id.slice(0, 8)}</span>
+                <span>·</span>
+                <span className="text-[#d4a745]">STAGE // {applicationStatus}</span>
+              </div>
 
-                  {/* Job Details Reference */}
-                  <div className="bg-zinc-950 p-5 rounded-lg border border-zinc-800 space-y-3 text-xs">
-                    <h4 className="font-semibold text-zinc-100 tracking-tight">Job Posting Description</h4>
-                    <p className="text-zinc-300 leading-relaxed whitespace-pre-wrap max-h-60 overflow-y-auto bg-zinc-900 p-3 rounded-md border border-zinc-800 font-mono text-[11px]">
-                      {job.description}
-                    </p>
-                  </div>
-                </TabsContent>
-              </>
-            )}
-          </div>
+              <div className="flex items-center gap-2">
+                {tailoredResume?.markdownContent && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportResume}
+                    className="font-mono text-xs rounded-[2px] border-[#2a2e38] bg-[#0d0e12] text-[#f4f2ec] hover:bg-[#1f222a] flex items-center gap-1.5 focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                    title="Export Tailored Resume"
+                  >
+                    <Download className="w-3.5 h-3.5 text-[#d4a745]" />
+                    <span>Export PDF/MD</span>
+                  </Button>
+                )}
 
-          {/* Footer */}
-          <SheetFooter className="p-4 border-t border-zinc-800 bg-zinc-900 flex items-center justify-between shrink-0 text-xs text-zinc-500 font-mono">
-            <span>Job ID: {job.id.slice(0, 8)}...</span>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onClose}
-            >
-              Done
-            </Button>
-          </SheetFooter>
-        </Tabs>
-      </SheetContent>
-    </Sheet>
+                {applicationStatus !== "APPLIED" && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => handleStatusChange("APPLIED")}
+                    className="font-bold text-xs gap-1.5 bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] rounded-[2px] transition-colors focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Mark as Applied</span>
+                  </Button>
+                )}
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onClose}
+                  className="font-mono text-xs rounded-[2px] border-[#2a2e38] bg-[#0d0e12] text-[#a6abbd] hover:text-[#f4f2ec] hover:bg-[#1f222a]"
+                >
+                  Close
+                </Button>
+              </div>
+            </SheetFooter>
+          </Tabs>
+        </SheetContent>
+      </Sheet>
 
       {/* Rejection Modal Dialog */}
       <Dialog open={showRejectionModal} onOpenChange={setShowRejectionModal}>
-        <DialogContent className="max-w-md bg-zinc-900 border-zinc-800 text-zinc-100">
+        <DialogContent className="max-w-md bg-[#15171d] border-[#2a2e38] text-[#f4f2ec] rounded-[3px]">
           <DialogHeader>
-            <DialogTitle className="text-base font-semibold text-red-400 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-red-400" />
+            <DialogTitle className="text-base font-semibold text-[#c4634e] flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-[#c4634e]" />
               <span>Record Application Rejection</span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-zinc-400 mt-0.5">
+            <DialogDescription className="text-xs text-[#a6abbd] mt-0.5">
               Capture structured outcome signals to calibrate ranking weights and improve future job matches.
             </DialogDescription>
           </DialogHeader>
@@ -1060,13 +1132,13 @@ export default function ApplicationPreparationDrawer({
           <div className="space-y-3.5 text-xs py-2">
             {/* Rejection Stage Dropdown */}
             <div className="space-y-1.5">
-              <label className="font-semibold text-zinc-300">
-                Rejection Stage <span className="text-red-400">*</span>
+              <label className="font-semibold text-[#f4f2ec]">
+                Rejection Stage <span className="text-[#c4634e]">*</span>
               </label>
               <select
                 value={selectedRejectionStage}
                 onChange={(e) => setSelectedRejectionStage(e.target.value)}
-                className="flex h-9 w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-1 text-sm text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+                className="flex h-9 w-full rounded-[2px] border border-[#2a2e38] bg-[#0d0e12] px-3 py-1 text-xs text-[#f4f2ec] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
               >
                 {REJECTION_STAGE_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -1078,13 +1150,13 @@ export default function ApplicationPreparationDrawer({
 
             {/* Rejection Reason Dropdown */}
             <div className="space-y-1.5">
-              <label className="font-semibold text-zinc-300">
-                Primary Rejection Reason <span className="text-red-400">*</span>
+              <label className="font-semibold text-[#f4f2ec]">
+                Primary Rejection Reason <span className="text-[#c4634e]">*</span>
               </label>
               <select
                 value={selectedRejectionReason}
                 onChange={(e) => setSelectedRejectionReason(e.target.value)}
-                className="flex h-9 w-full rounded-md border border-zinc-800 bg-zinc-950 px-3 py-1 text-sm text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+                className="flex h-9 w-full rounded-[2px] border border-[#2a2e38] bg-[#0d0e12] px-3 py-1 text-xs text-[#f4f2ec] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
               >
                 {REJECTION_REASON_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -1096,7 +1168,7 @@ export default function ApplicationPreparationDrawer({
 
             {/* Rejection Notes */}
             <div className="space-y-1.5">
-              <label className="font-semibold text-zinc-300">
+              <label className="font-semibold text-[#f4f2ec]">
                 Recruiter Feedback / Notes (Optional)
               </label>
               <Textarea
@@ -1104,7 +1176,7 @@ export default function ApplicationPreparationDrawer({
                 value={rejectionNotes}
                 onChange={(e) => setRejectionNotes(e.target.value)}
                 placeholder="e.g. Requires 5+ years with Golang; team restructured."
-                className="font-mono text-xs"
+                className="font-mono text-xs bg-[#0d0e12] border-[#2a2e38] text-[#f4f2ec] placeholder:text-[#a6abbd] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
               />
             </div>
           </div>
@@ -1115,6 +1187,7 @@ export default function ApplicationPreparationDrawer({
               variant="outline"
               size="sm"
               onClick={() => setShowRejectionModal(false)}
+              className="rounded-[2px] border-[#2a2e38] text-[#a6abbd] hover:text-[#f4f2ec]"
             >
               Cancel
             </Button>
@@ -1124,7 +1197,7 @@ export default function ApplicationPreparationDrawer({
               size="sm"
               onClick={handleConfirmRejection}
               disabled={isSubmittingRejection}
-              className="gap-1.5 font-semibold text-xs"
+              className="gap-1.5 font-bold text-xs rounded-[2px] bg-[#c4634e] hover:bg-[#b0523e] text-white"
             >
               {isSubmittingRejection ? (
                 <>

@@ -55,42 +55,42 @@ export default function SubDimensionScores({
   ];
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return "text-emerald-400";
-    if (score >= 60) return "text-amber-400";
-    return "text-zinc-400";
+    if (score >= 80) return "text-[#d4a745]";
+    if (score >= 60) return "text-[#8ab384]";
+    return "text-[#a6abbd]";
   };
 
   const getBarColor = (score: number) => {
-    if (score >= 80) return "bg-emerald-500";
-    if (score >= 60) return "bg-amber-500";
-    return "bg-zinc-600";
+    if (score >= 80) return "bg-[#d4a745]";
+    if (score >= 60) return "bg-[#8ab384]";
+    return "bg-[#3d4352]";
   };
 
   return (
     <div className={`space-y-2.5 ${className}`}>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {dimensions.map((dim) => (
           <div
             key={dim.key}
-            className="bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 flex flex-col justify-between group/dim hover:border-zinc-700 transition-colors"
+            className="bg-[#15171d] border border-[#2a2e38] rounded-[3px] p-2.5 flex flex-col justify-between hover:border-[#3d4352] transition-colors"
             title={dim.description}
           >
-            <div className="flex items-center justify-between gap-1 text-[11px] mb-1.5">
-              <span className="font-semibold text-zinc-300 truncate">{dim.label}</span>
-              <span className="text-[9px] font-mono tabular-nums text-zinc-500 shrink-0">{dim.weight}</span>
+            <div className="flex items-center justify-between gap-1 text-xs mb-1">
+              <span className="font-semibold text-[#f4f2ec] truncate">{dim.label}</span>
+              <span className="text-[10px] font-mono tabular-nums text-[#a6abbd] shrink-0">{dim.weight}</span>
             </div>
 
             <div className="flex items-baseline justify-between gap-1 mb-1.5">
-              <span className={`text-sm font-bold font-mono tabular-nums ${getScoreColor(dim.score)}`}>
+              <span className={`text-base font-bold font-mono tabular-nums ${getScoreColor(dim.score)}`}>
                 {dim.score}
               </span>
-              <span className="text-[10px] text-zinc-500 font-mono tabular-nums">/100</span>
+              <span className="text-[10px] text-[#a6abbd] font-mono tabular-nums">/100</span>
             </div>
 
             {/* Visual Progress Bar */}
-            <div className="w-full bg-zinc-900 rounded-full h-1.5 overflow-hidden border border-zinc-800">
+            <div className="w-full bg-[#0d0e12] rounded-[1px] h-1.5 overflow-hidden border border-[#2a2e38]">
               <div
-                className={`h-full rounded-full transition-all duration-300 ${getBarColor(dim.score)}`}
+                className={`h-full rounded-[1px] transition-all duration-300 ${getBarColor(dim.score)}`}
                 style={{ width: `${Math.min(100, Math.max(0, dim.score))}%` }}
               />
             </div>
@@ -100,4 +100,3 @@ export default function SubDimensionScores({
     </div>
   );
 }
-

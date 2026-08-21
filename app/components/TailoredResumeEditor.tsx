@@ -11,6 +11,8 @@ import {
   Loader2,
   Sparkles,
   AlertCircle,
+  X,
+  Plus,
 } from "lucide-react";
 import type { TailoredResume } from "@/types/tailoring";
 import { updateTailoredResume } from "@/app/actions/tailoring";
@@ -39,6 +41,8 @@ export default function TailoredResumeEditor({
   const [copied, setCopied] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [newSkillInput, setNewSkillInput] = useState("");
+  const [isAddingSkill, setIsAddingSkill] = useState(false);
 
   useEffect(() => {
     setMarkdownText(tailoredResume.markdownContent || "");
@@ -88,40 +92,65 @@ export default function TailoredResumeEditor({
     }
   }
 
+  function handleRemoveSkill(skillToRemove: string) {
+    if (!tailoredResume.matchingSkills) return;
+    const updatedSkills = tailoredResume.matchingSkills.filter((s) => s !== skillToRemove);
+    const updated = {
+      ...tailoredResume,
+      matchingSkills: updatedSkills,
+    };
+    if (onUpdated) onUpdated(updated);
+  }
+
+  function handleAddSkill() {
+    const trimmed = newSkillInput.trim();
+    if (!trimmed) return;
+    const current = tailoredResume.matchingSkills || [];
+    if (!current.includes(trimmed)) {
+      const updated = {
+        ...tailoredResume,
+        matchingSkills: [...current, trimmed],
+      };
+      if (onUpdated) onUpdated(updated);
+    }
+    setNewSkillInput("");
+    setIsAddingSkill(false);
+  }
+
   const isDirty = markdownText !== (tailoredResume.markdownContent || "");
 
   return (
     <div className="space-y-4">
       {/* Action Toolbar & View Toggle */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 bg-zinc-950 p-2.5 rounded-lg border border-zinc-800">
-        <div className="flex rounded-md bg-zinc-900 p-1 border border-zinc-800 text-xs font-semibold">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 bg-[#15171d] p-2.5 rounded-[3px] border border-[#2a2e38]">
+        <div className="flex rounded-[2px] bg-[#0d0e12] p-0.5 border border-[#2a2e38] text-xs font-mono">
           <button
             type="button"
             onClick={() => setActiveView("highlights")}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded text-xs transition-all",
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] text-xs transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4a745]",
               activeView === "highlights"
-                ? "bg-zinc-800 text-zinc-100 font-semibold shadow-none"
-                : "text-zinc-400 hover:text-zinc-200"
+                ? "bg-[#1f222a] text-[#f4f2ec] font-semibold border border-[#3d4352]"
+                : "text-[#a6abbd] hover:text-[#f4f2ec]"
             )}
           >
-            <List className="w-3.5 h-3.5" />
-            <span>Structured Highlights</span>
+            <List className="w-3.5 h-3.5 text-[#d4a745]" />
+            <span>01 · Structured Highlights</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveView("markdown")}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded text-xs transition-all",
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] text-xs transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4a745]",
               activeView === "markdown"
-                ? "bg-zinc-800 text-zinc-100 font-semibold shadow-none"
-                : "text-zinc-400 hover:text-zinc-200"
+                ? "bg-[#1f222a] text-[#f4f2ec] font-semibold border border-[#3d4352]"
+                : "text-[#a6abbd] hover:text-[#f4f2ec]"
             )}
           >
-            <FileText className="w-3.5 h-3.5" />
-            <span>Markdown Resume Editor</span>
-            {isDirty && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />}
+            <FileText className="w-3.5 h-3.5 text-[#d4a745]" />
+            <span>02 · Markdown Editor</span>
+            {isDirty && <span className="w-1.5 h-1.5 rounded-full bg-[#d4a745]" />}
           </button>
         </div>
 
@@ -133,10 +162,10 @@ export default function TailoredResumeEditor({
               onClick={handleSave}
               disabled={isSaving || !isDirty}
               className={cn(
-                "font-semibold text-xs",
+                "font-bold text-xs rounded-[2px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4a745]",
                 isDirty
-                  ? "bg-emerald-600 hover:bg-emerald-500 text-white"
-                  : "opacity-50"
+                  ? "bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12]"
+                  : "bg-[#1f222a] text-[#a6abbd] border border-[#2a2e38] opacity-60"
               )}
             >
               {isSaving ? (
@@ -146,7 +175,7 @@ export default function TailoredResumeEditor({
                 </>
               ) : saveStatus === "saved" ? (
                 <>
-                  <Check className="w-3.5 h-3.5 text-emerald-300" />
+                  <Check className="w-3.5 h-3.5 text-[#8ab384]" />
                   <span>Saved!</span>
                 </>
               ) : (
@@ -163,16 +192,16 @@ export default function TailoredResumeEditor({
             variant="outline"
             size="sm"
             onClick={handleCopy}
-            className="text-xs font-semibold"
+            className="text-xs font-mono rounded-[2px] border-[#2a2e38] bg-[#15171d] text-[#f4f2ec] hover:bg-[#1f222a] hover:text-[#f4f2ec] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4a745]"
           >
             {copied ? (
               <>
-                <Check className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-emerald-400">Copied!</span>
+                <Check className="w-3.5 h-3.5 text-[#8ab384]" />
+                <span className="text-[#8ab384]">Copied!</span>
               </>
             ) : (
               <>
-                <Copy className="w-3.5 h-3.5 text-zinc-400" />
+                <Copy className="w-3.5 h-3.5 text-[#a6abbd]" />
                 <span>Copy Markdown</span>
               </>
             )}
@@ -183,11 +212,11 @@ export default function TailoredResumeEditor({
             variant="outline"
             size="sm"
             onClick={handleDownload}
-            className="text-xs font-semibold"
+            className="text-xs font-mono rounded-[2px] border-[#2a2e38] bg-[#15171d] text-[#f4f2ec] hover:bg-[#1f222a] hover:text-[#f4f2ec] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4a745]"
             title="Download .md file"
           >
-            <Download className="w-3.5 h-3.5 text-zinc-400" />
-            <span>Download .md</span>
+            <Download className="w-3.5 h-3.5 text-[#d4a745]" />
+            <span>Export PDF/MD</span>
           </Button>
         </div>
       </div>
@@ -196,68 +225,141 @@ export default function TailoredResumeEditor({
       {activeView === "highlights" ? (
         <div className="space-y-4">
           {/* Executive Summary Card */}
-          <div className="p-4 rounded-lg bg-zinc-950 border border-zinc-800 space-y-2">
-            <div className="flex items-center gap-2 text-violet-400 text-xs font-semibold uppercase tracking-wider">
-              <Sparkles className="w-4 h-4" />
-              <span>Tailored Executive Summary</span>
+          <div className="p-4 rounded-[3px] bg-[#15171d] border border-[#2a2e38] space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-mono font-bold tracking-wider text-[#d4a745]">
+                <Sparkles className="w-3.5 h-3.5 text-[#d4a745]" />
+                <span>01 · TAILORED EXECUTIVE SUMMARY</span>
+              </div>
+              <span className="text-[11px] font-mono text-[#a6abbd] tabular-nums">
+                {tailoredResume.summary?.length || 0} characters
+              </span>
             </div>
-            <p className="text-xs text-zinc-200 leading-relaxed font-sans">
+            <p className="text-sm text-[#f4f2ec] leading-relaxed font-sans bg-[#0d0e12] p-3 rounded-[2px] border border-[#2a2e38]">
               {tailoredResume.summary}
             </p>
           </div>
 
           {/* Matching Skills */}
-          {tailoredResume.matchingSkills && tailoredResume.matchingSkills.length > 0 && (
-            <div className="p-4 rounded-lg bg-zinc-950 border border-zinc-800 space-y-2">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-                <Check className="w-3.5 h-3.5" />
-                <span>Prioritized Matching Skills</span>
+          <div className="p-4 rounded-[3px] bg-[#15171d] border border-[#2a2e38] space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-mono font-bold tracking-wider text-[#8ab384] flex items-center gap-1.5">
+                <Check className="w-3.5 h-3.5 text-[#8ab384]" />
+                <span>02 · PRIORITIZED MATCHING SKILLS</span>
+                <span className="text-[11px] text-[#a6abbd] font-normal">
+                  ({tailoredResume.matchingSkills?.length || 0})
+                </span>
               </div>
-              <div className="flex flex-wrap gap-1.5">
-                {tailoredResume.matchingSkills.map((skill, idx) => (
-                  <Badge
-                    key={idx}
-                    variant="emerald"
-                    className="font-mono text-xs"
+
+              {!isAddingSkill ? (
+                <button
+                  type="button"
+                  onClick={() => setIsAddingSkill(true)}
+                  className="text-xs font-mono text-[#d4a745] hover:text-[#e8bd59] flex items-center gap-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4a745]"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Add Skill</span>
+                </button>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={newSkillInput}
+                    onChange={(e) => setNewSkillInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddSkill();
+                      }
+                      if (e.key === "Escape") {
+                        setIsAddingSkill(false);
+                      }
+                    }}
+                    placeholder="Skill name..."
+                    autoFocus
+                    className="h-7 px-2 rounded-[2px] bg-[#0d0e12] border border-[#2a2e38] text-xs font-mono text-[#f4f2ec] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleAddSkill}
+                    className="h-7 px-2 text-xs font-bold bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] rounded-[2px]"
                   >
-                    {skill}
-                  </Badge>
-                ))}
-              </div>
+                    Add
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsAddingSkill(false)}
+                    className="h-7 px-1.5 text-xs text-[#a6abbd] hover:text-[#f4f2ec]"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
             </div>
-          )}
+
+            <div className="flex flex-wrap gap-1.5">
+              {tailoredResume.matchingSkills && tailoredResume.matchingSkills.length > 0 ? (
+                tailoredResume.matchingSkills.map((skill, idx) => (
+                  <div
+                    key={idx}
+                    className="inline-flex items-center gap-1.5 rounded-[2px] border border-[#2a2e38] bg-[#1f222a] text-[#f4f2ec] px-2.5 py-1 text-xs font-mono font-medium hover:border-[#3d4352] transition-colors"
+                  >
+                    <span>{skill}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveSkill(skill)}
+                      className="text-[#a6abbd] hover:text-[#c4634e] transition-colors focus-visible:outline-1 focus-visible:outline-[#d4a745]"
+                      title={`Remove ${skill}`}
+                      aria-label={`Remove skill ${skill}`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <span className="text-xs text-[#a6abbd] font-mono">No matching skills added.</span>
+              )}
+            </div>
+          </div>
 
           {/* Selected Projects */}
-          <div className="p-4 rounded-lg bg-zinc-950 border border-zinc-800 space-y-3">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-violet-400" />
-              <span>Selected Master Projects ({tailoredResume.selectedProjects.length})</span>
+          <div className="p-4 rounded-[3px] bg-[#15171d] border border-[#2a2e38] space-y-3">
+            <div className="text-xs font-mono font-bold tracking-wider text-[#d4a745] flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-[#d4a745]" />
+              <span>03 · SELECTED MASTER PROJECTS ({tailoredResume.selectedProjects?.length || 0})</span>
             </div>
 
             <div className="space-y-3">
-              {tailoredResume.selectedProjects.map((proj) => (
+              {tailoredResume.selectedProjects?.map((proj) => (
                 <div
                   key={proj.id}
-                  className="p-3.5 rounded-lg bg-zinc-900 border border-zinc-800 space-y-2"
+                  className="p-3.5 rounded-[3px] bg-[#0d0e12] border border-[#2a2e38] space-y-2.5"
                 >
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-semibold text-zinc-100">
+                    <h4 className="text-sm font-semibold text-[#f4f2ec]">
                       {proj.title}
                     </h4>
-                    <Badge variant="violet" className="font-mono text-[10px]">
+                    <span className="font-mono text-xs px-2 py-0.5 rounded-[2px] bg-[#15171d] border border-[#2a2e38] text-[#d4a745]">
                       ID: {proj.id}
-                    </Badge>
+                    </span>
                   </div>
 
-                  <div className="text-[11px] text-zinc-400 bg-zinc-950 p-2.5 rounded border border-zinc-800">
-                    <span className="font-semibold text-zinc-300">Why Selected: </span>
-                    <span>{proj.relevanceRationale}</span>
+                  <div className="text-sm text-[#f4f2ec] leading-relaxed bg-[#15171d] p-3 rounded-[2px] border border-[#2a2e38]">
+                    <span className="font-semibold text-[#d4a745] font-mono text-xs block mb-1">
+                      AI RELEVANCE RATIONALE:
+                    </span>
+                    <span className="text-xs text-[#f4f2ec] leading-relaxed font-sans">
+                      {proj.relevanceRationale}
+                    </span>
                   </div>
 
                   {proj.bulletPoints && proj.bulletPoints.length > 0 && (
-                    <ul className="list-disc list-inside text-xs text-zinc-300 space-y-1 pl-1">
+                    <ul className="list-disc list-inside text-xs text-[#f4f2ec] space-y-1.5 pl-1">
                       {proj.bulletPoints.map((bp, bpIdx) => (
-                        <li key={bpIdx} className="leading-relaxed">
+                        <li key={bpIdx} className="leading-relaxed text-[#f4f2ec]">
                           {bp}
                         </li>
                       ))}
@@ -270,23 +372,23 @@ export default function TailoredResumeEditor({
 
           {/* Experience Highlights */}
           {tailoredResume.experienceHighlights && tailoredResume.experienceHighlights.length > 0 && (
-            <div className="p-4 rounded-lg bg-zinc-950 border border-zinc-800 space-y-3">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-                <List className="w-3.5 h-3.5 text-blue-400" />
-                <span>Targeted Experience Highlights</span>
+            <div className="p-4 rounded-[3px] bg-[#15171d] border border-[#2a2e38] space-y-3">
+              <div className="text-xs font-mono font-bold tracking-wider text-[#a6abbd] flex items-center gap-1.5">
+                <List className="w-3.5 h-3.5 text-[#d4a745]" />
+                <span>04 · TARGETED EXPERIENCE HIGHLIGHTS</span>
               </div>
 
               <div className="space-y-2.5">
                 {tailoredResume.experienceHighlights.map((exp, idx) => (
-                  <div key={idx} className="p-3 rounded-lg bg-zinc-900 border border-zinc-800 space-y-1.5">
-                    <div className="flex items-center justify-between text-xs font-semibold text-zinc-200">
-                      <span>{exp.company}</span>
-                      <span className="text-zinc-400 font-normal">{exp.role}</span>
+                  <div key={idx} className="p-3.5 rounded-[3px] bg-[#0d0e12] border border-[#2a2e38] space-y-2">
+                    <div className="flex items-center justify-between text-xs font-semibold text-[#f4f2ec]">
+                      <span className="text-sm font-semibold text-[#f4f2ec]">{exp.company}</span>
+                      <span className="text-[#a6abbd] font-mono text-xs">{exp.role}</span>
                     </div>
                     {exp.bulletPoints && exp.bulletPoints.length > 0 && (
-                      <ul className="list-disc list-inside text-xs text-zinc-300 space-y-1 pl-1">
+                      <ul className="list-disc list-inside text-xs text-[#f4f2ec] space-y-1.5 pl-1">
                         {exp.bulletPoints.map((bp, bpIdx) => (
-                          <li key={bpIdx} className="leading-relaxed">
+                          <li key={bpIdx} className="leading-relaxed text-[#f4f2ec]">
                             {bp}
                           </li>
                         ))}
@@ -301,9 +403,9 @@ export default function TailoredResumeEditor({
       ) : (
         /* Markdown Editor View */
         <div className="space-y-3">
-          <div className="flex items-center justify-between text-xs text-zinc-400">
-            <span>Direct Markdown Editor (Live-editable text)</span>
-            <span className="font-mono text-[11px] text-zinc-500 tabular-nums">
+          <div className="flex items-center justify-between text-xs text-[#a6abbd]">
+            <span className="font-mono">Direct Markdown Editor (Live-editable text)</span>
+            <span className="font-mono text-xs text-[#a6abbd] tabular-nums">
               {markdownText.length} characters • {markdownText.split("\n").length} lines
             </span>
           </div>
@@ -313,15 +415,15 @@ export default function TailoredResumeEditor({
               value={markdownText}
               onChange={(e) => setMarkdownText(e.target.value)}
               rows={18}
-              className="font-mono text-xs leading-relaxed resize-y min-h-[380px]"
+              className="font-mono text-xs leading-relaxed resize-y min-h-[380px] bg-[#0d0e12] border-[#2a2e38] text-[#f4f2ec] placeholder:text-[#a6abbd] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4a745]"
               placeholder="# Resume Title..."
             />
           </div>
 
           {isDirty && (
-            <div className="flex items-center justify-between p-3 rounded-md bg-amber-950/40 border border-amber-800 text-amber-300 text-xs">
-              <span className="flex items-center gap-1.5">
-                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+            <div className="flex items-center justify-between p-3 rounded-[3px] bg-[#15171d] border border-[#d4a745]/60 text-[#f4f2ec] text-xs">
+              <span className="flex items-center gap-1.5 font-mono text-[#d4a745]">
+                <AlertCircle className="w-4 h-4 text-[#d4a745] shrink-0" />
                 You have unsaved changes to this Markdown resume.
               </span>
               <Button
@@ -329,7 +431,7 @@ export default function TailoredResumeEditor({
                 size="sm"
                 onClick={handleSave}
                 disabled={isSaving}
-                className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs"
+                className="bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] font-bold text-xs rounded-[2px] transition-colors focus-visible:outline-2 focus-visible:outline-[#d4a745]"
               >
                 {isSaving ? "Saving..." : "Save Changes"}
               </Button>

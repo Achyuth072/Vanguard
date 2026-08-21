@@ -20,6 +20,7 @@ import {
   Building2,
   AlertTriangle,
   ArrowUpDown,
+  GripVertical,
 } from "lucide-react";
 
 export interface ApplicationTrackerProps {
@@ -148,12 +149,19 @@ export default function ApplicationTracker({
     }
   }
 
-  function handleDragStart(e: React.DragEvent<HTMLDivElement>, jobId: string) {
+  function handleDragStart(e: React.DragEvent<HTMLElement>, jobId: string) {
     setIsPanning(false);
     panStartRef.current = null;
     e.dataTransfer.setData("text/plain", jobId);
     e.dataTransfer.effectAllowed = "move";
     setDraggedJobId(jobId);
+
+    // Set drag preview to the card element for crisp visual feedback
+    const cardElem = (e.currentTarget as HTMLElement).closest("[data-card-id]") as HTMLElement;
+    if (cardElem && e.dataTransfer.setDragImage) {
+      const rect = cardElem.getBoundingClientRect();
+      e.dataTransfer.setDragImage(cardElem, Math.min(e.clientX - rect.left, 24), Math.min(e.clientY - rect.top, 24));
+    }
   }
 
   function handleDragEnd() {
@@ -187,9 +195,24 @@ export default function ApplicationTracker({
     }
   }
 
+  // Edge auto-scroll during drag and drop
+  const handleRailDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!railRef.current || !draggedJobId) return;
+    const rect = railRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const threshold = 90;
+    const scrollSpeed = 16;
+
+    if (x < threshold) {
+      railRef.current.scrollLeft -= scrollSpeed;
+    } else if (x > rect.width - threshold) {
+      railRef.current.scrollLeft += scrollSpeed;
+    }
+  };
+
   // Mouse hold-and-drag horizontal canvas panning handlers
   const handleRailMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 && e.button !== 1) return;
     const target = e.target as HTMLElement | null;
     if (!target) return;
 
@@ -314,6 +337,7 @@ export default function ApplicationTracker({
         onMouseMove={handleRailMouseMove}
         onMouseUp={handleRailMouseUp}
         onWheel={handleRailWheel}
+        onDragOver={handleRailDragOver}
         className={`flex gap-3 overflow-x-auto pb-3 pt-1 flex-1 min-h-0 ${
           isPanning ? "cursor-grabbing select-none" : "cursor-grab snap-x"
         }`}
@@ -325,7 +349,10 @@ export default function ApplicationTracker({
           return (
             <div
               key={stage.id}
-              onDragOver={(e) => handleDragOver(e, stage.id)}
+              onDragOver={(e) => {
+                handleDragOver(e, stage.id);
+                handleRailDragOver(e);
+              }}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, stage.id)}
               className={`w-72 min-w-[288px] max-w-[288px] shrink-0 snap-start bg-[#15171d] border rounded-[3px] p-2.5 flex flex-col h-full min-h-0 transition-all ${
@@ -377,10 +404,8 @@ export default function ApplicationTracker({
                     return (
                       <div
                         key={job.id}
-                        draggable={!isUpdating}
-                        onDragStart={(e) => handleDragStart(e, job.id)}
-                        onDragEnd={handleDragEnd}
-                        className={`bg-[#0d0e12] border rounded-[3px] p-2.5 space-y-2 transition-all cursor-grab active:cursor-grabbing text-xs group ${
+                        data-card-id={job.id}
+                        className={`bg-[#0d0e12] border rounded-[3px] p-2.5 space-y-2 transition-all text-xs group ${
                           isDragging
                             ? "opacity-30 border-[#d4a745] bg-[#1f222a]"
                             : isUpdating
@@ -388,9 +413,19 @@ export default function ApplicationTracker({
                             : "border-[#2a2e38] hover:border-[#3d4352] hover:bg-[#15171d]/90 shadow-sm"
                         }`}
                       >
-                        {/* Card Header: Score Anchor Box & Title */}
-                        <div className="flex items-start gap-2 justify-between">
-                          <div className="flex-1 min-w-0">
+                        {/* Card Header: Drag Grip Handle, Title & Score Anchor Box */}
+                        <div className="flex items-start gap-1.5 justify-between">
+                          <div
+                            draggable={!isUpdating}
+                            onDragStart={(e) => handleDragStart(e, job.id)}
+                            onDragEnd={handleDragEnd}
+                            className="cursor-grab active:cursor-grabbing p-0.5 -ml-1 text-[#797f94] hover:text-[#d4a745] transition-colors rounded-[2px] hover:bg-[#1f222a] shrink-0"
+                            title="Drag handle to move candidate across pipeline stages"
+                            aria-label={`Drag handle for ${job.title}`}
+                          >
+                            <GripVertical className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="flex-1 min-w-0 pt-0.5">
                             <h3 className="font-sans font-bold text-[#f4f2ec] text-xs leading-snug line-clamp-2 group-hover:text-[#d4a745] transition-colors">
                               {job.title}
                             </h3>

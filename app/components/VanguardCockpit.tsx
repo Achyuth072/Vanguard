@@ -183,7 +183,7 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
               <span>Active Application Pipeline · Interactive Kanban</span>
               <span className="text-[#d4a745]">DRAG &amp; DROP READY</span>
             </div>
-            <div className="flex-1 min-h-0 overflow-x-auto">
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
               <ApplicationTracker
                 jobs={initialJobs}
                 onStatusUpdated={handleDataRefreshed}

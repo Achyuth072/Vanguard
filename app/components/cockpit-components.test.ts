@@ -98,11 +98,12 @@ describe("Tactical Intelligence Cockpit — Master-Detail View (Issue 03)", () =
       assert.ok(content.includes("description") || content.includes("Target Description"));
     });
 
-    it("wires status change and rescore action triggers", () => {
+    it("wires status change, rescore, and edit action triggers", () => {
       const content = fs.readFileSync(jobIntelligenceViewPath, "utf-8");
       assert.ok(content.includes("onStatusChange"));
       assert.ok(content.includes("onRescore"));
       assert.ok(content.includes("onDeployApplication"));
+      assert.ok(content.includes("onEdit"));
     });
   });
 
@@ -119,6 +120,7 @@ describe("Tactical Intelligence Cockpit — Master-Detail View (Issue 03)", () =
       assert.ok(content.includes("ApplicationTracker"));
       assert.ok(content.includes("ApplicationPreparationDrawer"));
       assert.ok(content.includes("IngestModal"));
+      assert.ok(content.includes("EditJobModal"));
     });
 
     it("renders split 5/7 columns master-detail layout on non-pipeline tabs", () => {

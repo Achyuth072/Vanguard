@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   AlertTriangle,
   Send,
+  Edit2,
 } from "lucide-react";
 
 export interface JobIntelligenceViewProps {
@@ -18,6 +19,7 @@ export interface JobIntelligenceViewProps {
   onDeployApplication?: (job: EnrichedJob) => void;
   onStatusChange?: (jobId: string, newStatus: string) => void;
   onRescore?: (jobId: string) => void;
+  onEdit?: (job: EnrichedJob) => void;
   className?: string;
 }
 
@@ -26,6 +28,7 @@ export function JobIntelligenceView({
   onDeployApplication,
   onStatusChange,
   onRescore,
+  onEdit,
   className = "",
 }: JobIntelligenceViewProps) {
   const [activeTab, setActiveTab] = useState<"brief" | "description">("brief");
@@ -139,6 +142,18 @@ export function JobIntelligenceView({
                 <span>Link Out</span>
                 <ExternalLink className="w-3.5 h-3.5 text-[#a6abbd]" />
               </a>
+            )}
+
+            {onEdit && (
+              <button
+                type="button"
+                onClick={() => onEdit(job)}
+                title="Edit Target Details"
+                aria-label="Edit Target Details"
+                className="p-2 bg-[#1f222a] hover:bg-[#2a2e38] border border-[#2a2e38] text-[#a6abbd] hover:text-[#f4f2ec] rounded-[2px] transition-colors cursor-pointer"
+              >
+                <Edit2 className="w-4 h-4" />
+              </button>
             )}
 
             {onRescore && (

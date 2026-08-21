@@ -9,6 +9,7 @@ import { JobIntelligenceView } from "./JobIntelligenceView";
 import ApplicationTracker from "./ApplicationTracker";
 import ApplicationPreparationDrawer from "./ApplicationPreparationDrawer";
 import IngestModal from "./IngestModal";
+import EditJobModal from "./EditJobModal";
 import { updateJobStatusAction, rescoreJobAction } from "@/app/actions";
 import { PlusCircle } from "lucide-react";
 
@@ -26,6 +27,8 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
   const [ingestMode, setIngestMode] = useState<"paste" | "url" | "manual">("paste");
   const [selectedPrepJob, setSelectedPrepJob] = useState<EnrichedJob | null>(null);
   const [isPrepDrawerOpen, setIsPrepDrawerOpen] = useState(false);
+  const [selectedEditJob, setSelectedEditJob] = useState<EnrichedJob | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Listen for global command palette triggers
   useEffect(() => {
@@ -207,6 +210,10 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
                 onDeployApplication={handleDeploy}
                 onStatusChange={handleStatusChange}
                 onRescore={handleRescore}
+                onEdit={(job) => {
+                  setSelectedEditJob(job);
+                  setIsEditModalOpen(true);
+                }}
               />
             </div>
           </>
@@ -219,6 +226,16 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
         onClose={() => setIsIngestOpen(false)}
         onSuccess={handleDataRefreshed}
         initialMode={ingestMode}
+      />
+
+      <EditJobModal
+        job={selectedEditJob}
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedEditJob(null);
+        }}
+        onSuccess={handleDataRefreshed}
       />
 
       {selectedPrepJob && (

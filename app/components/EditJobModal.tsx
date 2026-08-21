@@ -50,7 +50,7 @@ export default function EditJobModal({
   const [url, setUrl] = useState("");
   const [source, setSource] = useState("MANUAL");
   const [description, setDescription] = useState("");
-  const [rerunAI, setRerunAI] = useState(true);
+  const [rerunAI, setRerunAI] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -68,7 +68,7 @@ export default function EditJobModal({
       setUrl(job.url || "");
       setSource(job.source ? normalizeSource(job.source, job.url) : "MANUAL");
       setDescription(job.description || "");
-      setRerunAI(true);
+      setRerunAI(false);
       setError(null);
       setSuccessMessage(null);
     }

@@ -92,7 +92,7 @@ npm run db:seed
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to access the Vanguard dashboard.
+Open [http://localhost:3001](http://localhost:3001) to access the Vanguard dashboard.
 
 ---
 

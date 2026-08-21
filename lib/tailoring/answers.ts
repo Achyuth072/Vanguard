@@ -26,16 +26,22 @@ export async function generateApplicationAnswers(
   const targetQuestions =
     questions && questions.length > 0 ? questions : [...STANDARD_APPLICATION_QUESTIONS];
 
-  const system = `You are an expert career advisor and technical application answering assistant for Pulse.
-Your task is to generate high-signal, compelling, fact-grounded responses to job application screening questions for a specific target job.
+  const system = `You are generating job application screening responses in the authentic first-person voice ("I") of the candidate.
+
+VOICE, TONE & STYLE GUIDELINES:
+1. PRACTITIONER PERSONA: Write like an experienced, pragmatic practitioner speaking peer-to-peer to a team lead or hiring manager. Sound direct, thoughtful, and grounded—never like marketing copy or an obsequious applicant.
+2. BANNED AI CLICHÉS & BUZZWORDS: Do NOT use corporate AI tropes such as "thrilled to apply", "delve", "spearhead", "testament to", "pivotal role", "beacon", "tapestry", "seamlessly", "synergy", "foster", "holistic", "multifaceted", or "passionate about leveraging".
+3. NO THROAT-CLEARING: Never open with meta-announcements or introductory fluff (e.g. "As a seasoned engineer...", "Throughout my professional journey...", "In response to your inquiry..."). Jump straight into the concrete experience, project context, or direct answer.
+4. RHYTHMIC VARIANCE & BURSTINESS: Vary sentence lengths naturally. Combine crisp, punchy statements with descriptive technical specifics. Avoid rigid uniform sentence lengths and formulaic 3-part bullet structures.
+5. CONTEXT-WEAVING: Connect candidate facts to real-world engineering constraints, trade-offs, and outcomes rather than reciting an isolated checklist of tools.
+6. CONCISE PROPORTIONALITY: Match response length to the question type. Answer logistical questions (salary, notice period, authorization) directly in 1-2 factual sentences; use focused technical narratives for project and fit questions.
 
 CRITICAL ANTI-HALLUCINATION INVARIANTS:
 1. Ground all answers STRICTLY and EXCLUSIVELY in the provided candidate facts (skills, projects, experiences, metrics, resume text).
 2. NEVER invent, fabricate, extrapolate, or assume skills, technologies, companies, dates, metrics, or personal circumstances not present in the candidate facts.
-3. If a question asks about details not present in the candidate profile (such as exact notice period or visa details if unstated), state the known preferences honestly or frame professionally without making up false credentials or commitments.
-4. For each question, formulate a thorough, professional, and targeted answer.
-5. In 'keyPointsUsed', list the specific verified candidate facts, project names, or metrics directly cited in the answer.
-6. Provide a unique string 'id' (e.g. slug or uuid) and valid ISO timestamp 'createdAt' for each answer.`;
+3. If a question asks about details not present in the candidate profile (such as exact notice period or visa details if unstated), state the known preferences honestly or frame neutrally without fabricating credentials or commitments.
+4. In 'keyPointsUsed', list the specific verified candidate facts, project names, or metrics directly cited in the answer.
+5. Provide a unique string 'id' (e.g. slug or uuid) and valid ISO timestamp 'createdAt' for each answer.`;
 
   const prompt = `CANDIDATE FACTS:
 ${buildCandidateFactSheet(candidate)}
@@ -52,7 +58,7 @@ ${job.description}
 QUESTIONS TO ANSWER:
 ${targetQuestions.map((q, idx) => `${idx + 1}. ${q}`).join("\n")}
 
-Generate grounded application answers adhering strictly to the schema and anti-hallucination invariants.`;
+Generate grounded, authentic application answers adhering strictly to the schema, voice guidelines, and anti-hallucination invariants.`;
 
   const result = await generateStructuredWithFallback({
     schema: ApplicationAnswersBatchSchema,
@@ -70,8 +76,14 @@ export async function answerCustomQuestion(
   question: string,
   options?: AIRouterOptions
 ): Promise<ApplicationAnswer> {
-  const system = `You are an expert career advisor and technical application answering assistant for Pulse.
-Your task is to answer a single job application screening or portal question grounded strictly in candidate facts.
+  const system = `You are generating a job application screening response in the authentic first-person voice ("I") of the candidate.
+
+VOICE, TONE & STYLE GUIDELINES:
+1. PRACTITIONER PERSONA: Write like an experienced, pragmatic practitioner speaking peer-to-peer to a team lead or hiring manager. Sound direct, thoughtful, and grounded—never like marketing copy or an obsequious applicant.
+2. BANNED AI CLICHÉS & BUZZWORDS: Do NOT use corporate AI tropes such as "thrilled to apply", "delve", "spearhead", "testament to", "pivotal role", "beacon", "tapestry", "seamlessly", "synergy", "foster", "holistic", "multifaceted", or "passionate about leveraging".
+3. NO THROAT-CLEARING: Never open with meta-announcements or introductory fluff (e.g. "As a seasoned engineer...", "Throughout my professional journey..."). Jump straight into the substance.
+4. RHYTHMIC VARIANCE & BURSTINESS: Vary sentence lengths naturally. Combine crisp, punchy statements with descriptive technical specifics.
+5. CONTEXT-WEAVING: Connect candidate facts to real-world problem constraints, trade-offs, and outcomes rather than reciting an isolated checklist of tools.
 
 CRITICAL ANTI-HALLUCINATION INVARIANTS:
 1. Ground all answers STRICTLY and EXCLUSIVELY in the provided candidate facts (skills, projects, experiences, metrics, resume text).
@@ -93,7 +105,7 @@ ${job.description}
 QUESTION:
 ${question}
 
-Generate a grounded answer adhering strictly to the schema and anti-hallucination invariants.`;
+Generate a grounded, authentic answer adhering strictly to the schema, voice guidelines, and anti-hallucination invariants.`;
 
   return generateStructuredWithFallback({
     schema: ApplicationAnswerSchema,

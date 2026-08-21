@@ -225,9 +225,13 @@ describe("Grounded Application Question Answering Engine", () => {
       "Pulse Career Module",
     ]);
 
-    // Verify anti-hallucination constraints and prompt details
+    // Verify anti-hallucination constraints, voice guidelines, and prompt details
     assert.ok(capturedSystem.includes("CRITICAL ANTI-HALLUCINATION INVARIANTS"));
     assert.ok(capturedSystem.includes("Ground all answers STRICTLY and EXCLUSIVELY in the provided candidate facts"));
+    assert.ok(capturedSystem.includes("VOICE, TONE & STYLE GUIDELINES"));
+    assert.ok(capturedSystem.includes("PRACTITIONER PERSONA"));
+    assert.ok(capturedSystem.includes("BANNED AI CLICHÉS & BUZZWORDS"));
+    assert.ok(capturedSystem.includes("RHYTHMIC VARIANCE & BURSTINESS"));
     assert.ok(capturedPrompt.includes("Alex Rivera"));
     assert.ok(capturedPrompt.includes("Vercel"));
     assert.ok(capturedPrompt.includes(STANDARD_APPLICATION_QUESTIONS[0]));
@@ -264,6 +268,7 @@ describe("Grounded Application Question Answering Engine", () => {
 
   it("answers single custom portal question via answerCustomQuestion", async () => {
     let capturedPrompt = "";
+    let capturedSystem = "";
 
     const singleAnswer = {
       id: "ans-single-1",
@@ -278,6 +283,12 @@ describe("Grounded Application Question Answering Engine", () => {
       generateOutput: singleAnswer,
       onCall: (options) => {
         capturedPrompt = JSON.stringify(options.prompt);
+        if (options.prompt && Array.isArray(options.prompt)) {
+          const sysMsg = options.prompt.find((p) => p.role === "system");
+          if (sysMsg && typeof sysMsg.content === "string") {
+            capturedSystem = sysMsg.content;
+          }
+        }
       },
     });
 
@@ -292,6 +303,9 @@ describe("Grounded Application Question Answering Engine", () => {
     assert.strictEqual(result.question, "Describe your experience with Next.js App Router.");
     assert.strictEqual(result.answer, singleAnswer.answer);
     assert.ok(capturedPrompt.includes("Describe your experience with Next.js App Router."));
+    assert.ok(capturedSystem.includes("VOICE, TONE & STYLE GUIDELINES"));
+    assert.ok(capturedSystem.includes("BANNED AI CLICHÉS & BUZZWORDS"));
+    assert.ok(capturedSystem.includes("CRITICAL ANTI-HALLUCINATION INVARIANTS"));
   });
 
   it("fails over to Gemini fallback when primary provider throws error", async () => {

@@ -98,6 +98,29 @@ body {
   outline-offset: 2px;
 }
 
+[cmdk-root],
+[cmdk-root] *,
+[cmdk-input-wrapper],
+[cmdk-input-wrapper] *,
+[cmdk-input],
+[cmdk-item],
+[cmdk-list],
+[cmdk-group],
+[cmdk-input]:focus,
+[cmdk-input]:focus-visible,
+[cmdk-root]:focus,
+[cmdk-root]:focus-visible,
+[cmdk-item]:focus,
+[cmdk-item]:focus-visible,
+[cmdk-list]:focus,
+[cmdk-list]:focus-visible,
+[cmdk-input-wrapper]:focus,
+[cmdk-input-wrapper]:focus-visible,
+[cmdk-input-wrapper]:focus-within {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 @utility focus-ring {
   outline: 2px solid var(--ring);
   outline-offset: 2px;

@@ -12,7 +12,7 @@ const Command = React.forwardRef<
   <CommandPrimitive
     ref={ref}
     className={cn(
-      "flex h-full w-full flex-col overflow-hidden rounded-[3px] bg-[#15171d] text-[#f4f2ec]",
+      "flex h-full w-full flex-col overflow-hidden rounded-[3px] bg-[#15171d] text-[#f4f2ec] focus:outline-none focus-visible:outline-none",
       className
     )}
     {...props}
@@ -25,8 +25,8 @@ type CommandDialogProps = DialogProps;
 const CommandDialog = ({ children, ...props }: CommandDialogProps) => {
   return (
     <Dialog {...props}>
-      <DialogContent className="overflow-hidden p-0 border border-[#2a2e38] bg-[#15171d] shadow-none max-w-2xl rounded-[3px]">
-        <Command className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:font-mono [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-bold [&_[cmdk-group-heading]]:text-[#a6abbd] [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-4 [&_[cmdk-input-wrapper]_svg]:w-4 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-3 [&_[cmdk-item]]:py-2.5 [&_[cmdk-item]]:text-xs">
+      <DialogContent className="overflow-hidden p-0 border border-[#2a2e38] bg-[#15171d] shadow-none max-w-2xl rounded-[3px] focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0">
+        <Command className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:font-mono [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-bold [&_[cmdk-group-heading]]:text-[#a6abbd] [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-4 [&_[cmdk-input-wrapper]_svg]:w-4 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-3 [&_[cmdk-item]]:py-2.5 [&_[cmdk-item]]:text-xs focus:outline-none focus-visible:outline-none">
           {children}
         </Command>
       </DialogContent>
@@ -37,13 +37,18 @@ const CommandDialog = ({ children, ...props }: CommandDialogProps) => {
 const CommandInput = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.Input>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
->(({ className, ...props }, ref) => (
-  <div className="flex items-center border-b border-[#2a2e38] px-4 bg-[#0d0e12]" cmdk-input-wrapper="">
+>(({ className, style, ...props }, ref) => (
+  <div
+    className="flex items-center border-b border-[#2a2e38] px-4 bg-[#0d0e12] focus:outline-none focus-visible:outline-none focus-within:outline-none"
+    style={{ outline: "none", boxShadow: "none" }}
+    cmdk-input-wrapper=""
+  >
     <Search className="mr-2.5 h-4 w-4 shrink-0 text-[#d4a745]" />
     <CommandPrimitive.Input
       ref={ref}
+      style={{ outline: "none", boxShadow: "none", ...style }}
       className={cn(
-        "flex h-11 w-full rounded-[2px] bg-transparent py-3 text-sm font-sans text-[#f4f2ec] outline-none placeholder:text-[#a6abbd]/70 disabled:cursor-not-allowed disabled:opacity-50",
+        "flex h-11 w-full rounded-[2px] bg-transparent py-3 text-sm font-sans text-[#f4f2ec] outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 placeholder:text-[#a6abbd]/70 disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}
       {...props}
@@ -58,7 +63,7 @@ const CommandList = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <CommandPrimitive.List
     ref={ref}
-    className={cn("max-h-[360px] overflow-y-auto overflow-x-hidden p-2 bg-[#15171d]", className)}
+    className={cn("max-h-[360px] overflow-y-auto overflow-x-hidden p-2 bg-[#15171d] focus:outline-none focus-visible:outline-none", className)}
     {...props}
   />
 ));
@@ -67,10 +72,10 @@ CommandList.displayName = CommandPrimitive.List.displayName;
 const CommandEmpty = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.Empty>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Empty>
->((props, ref) => (
+>(({ className, ...props }, ref) => (
   <CommandPrimitive.Empty
     ref={ref}
-    className="py-8 text-center text-xs font-mono text-[#a6abbd]"
+    className={cn("py-8 text-center text-xs font-mono text-[#a6abbd] focus:outline-none focus-visible:outline-none", className)}
     {...props}
   />
 ));
@@ -83,7 +88,7 @@ const CommandGroup = React.forwardRef<
   <CommandPrimitive.Group
     ref={ref}
     className={cn(
-      "overflow-hidden p-1 text-[#f4f2ec] [&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-mono [&_[cmdk-group-heading]]:font-bold [&_[cmdk-group-heading]]:text-[#a6abbd] [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:uppercase",
+      "overflow-hidden p-1 text-[#f4f2ec] [&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-mono [&_[cmdk-group-heading]]:font-bold [&_[cmdk-group-heading]]:text-[#a6abbd] [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:uppercase focus:outline-none focus-visible:outline-none",
       className
     )}
     {...props}
@@ -110,7 +115,7 @@ const CommandItem = React.forwardRef<
   <CommandPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex cursor-pointer select-none items-center rounded-[2px] px-3 py-2 text-xs font-medium text-[#f4f2ec] outline-none transition-colors aria-selected:bg-[#1f222a] aria-selected:text-[#f4f2ec] aria-selected:border-l-2 aria-selected:border-l-[#d4a745] data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
+      "relative flex cursor-pointer select-none items-center rounded-[2px] px-3 py-2 text-xs font-medium text-[#f4f2ec] outline-none focus:outline-none focus-visible:outline-none transition-colors aria-selected:bg-[#1f222a] aria-selected:text-[#f4f2ec] aria-selected:border-l-2 aria-selected:border-l-[#d4a745] data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
       className
     )}
     {...props}

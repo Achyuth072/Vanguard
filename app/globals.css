@@ -121,21 +121,36 @@ body {
   box-shadow: none !important;
 }
 
-/* Hide scrollbars globally across the app while maintaining full scrollability */
-html,
-body,
-*,
-*::before,
-*::after {
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
+/* Vanguard Tactical Scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--hairline) var(--ink-950);
 }
 
-::-webkit-scrollbar,
-*::-webkit-scrollbar {
-  display: none !important;
-  width: 0px !important;
-  height: 0px !important;
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--ink-950);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--hairline);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--hairline-bright);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: var(--brass);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--ink-950);
 }
 
 @utility no-scrollbar {

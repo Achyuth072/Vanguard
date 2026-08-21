@@ -80,4 +80,44 @@ describe("Tactical Application Pipeline Kanban (Issue 04)", () => {
       assert.ok(content.includes("aria-label"));
     });
   });
+
+  describe("Tactical Scrollbars & Mouse Drag-to-Pan Rail", () => {
+    const globalsCssPath = path.join(process.cwd(), "app/globals.css");
+
+    it("defines high-contrast Vanguard tactical scrollbars in globals.css", () => {
+      const css = fs.readFileSync(globalsCssPath, "utf-8");
+
+      assert.ok(css.includes("scrollbar-width: thin;"), "Should declare thin scrollbar for Firefox");
+      assert.ok(css.includes("scrollbar-color: var(--hairline) var(--ink-950);"), "Should map scrollbar colors to Vanguard tokens");
+      assert.ok(css.includes("::-webkit-scrollbar"), "Should style Webkit scrollbars");
+      assert.ok(css.includes("::-webkit-scrollbar-thumb"), "Should style scrollbar thumb with hairline");
+      assert.ok(css.includes("::-webkit-scrollbar-track"), "Should style scrollbar track with ink-950");
+      assert.ok(!css.includes("*::before,\n*::after {\n  scrollbar-width: none !important;"), "Should not hide scrollbars globally on all elements");
+    });
+
+    it("equips ApplicationTracker with mouse hold-and-drag horizontal canvas panning", () => {
+      const content = fs.readFileSync(applicationTrackerPath, "utf-8");
+
+      assert.ok(content.includes("railRef"), "Should attach ref to scrollable rail");
+      assert.ok(content.includes("handleRailMouseDown"), "Should have mouse down handler for panning");
+      assert.ok(content.includes("handleRailMouseMove"), "Should have mouse move handler for panning");
+      assert.ok(content.includes("handleRailMouseUp"), "Should have mouse up handler for panning");
+      assert.ok(content.includes("handleRailWheel"), "Should support mouse wheel horizontal assistance");
+      assert.ok(content.includes("closest('[draggable=\"true\"]')"), "Must isolate panning from HTML5 draggable cards to prevent DnD conflicts");
+      assert.ok(content.includes("cursor-grabbing") && content.includes("cursor-grab"), "Should provide interactive cursor states");
+    });
+  });
+
+  describe("Pipeline Sorting (Default by Score, Date Option)", () => {
+    it("defaults pipeline candidate sorting to Fit Score with Date toggle option", () => {
+      const content = fs.readFileSync(applicationTrackerPath, "utf-8");
+
+      assert.ok(content.includes("compareJobsByScore"), "Should import and use compareJobsByScore");
+      assert.ok(content.includes("compareJobsByRecent"), "Should import and use compareJobsByRecent");
+      assert.match(content, /useState<[^>]*>\("score"\)/, "Should default sortMode to score");
+      assert.ok(content.includes("sortedPipelineJobs"), "Should compute sorted pipeline jobs");
+      assert.ok(content.includes("SORT:"), "Should render tactical SORT toggle button in subheader");
+      assert.ok(content.includes("ArrowUpDown"), "Should render ArrowUpDown icon for sort toggle");
+    });
+  });
 });

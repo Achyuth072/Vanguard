@@ -8,6 +8,7 @@ import DraftButton from "./DraftButton";
 import EditJobModal from "./EditJobModal";
 import { Button } from "@/components/ui/button";
 import { getSourceBadgeStyle } from "@/lib/utils/source";
+import { compareJobsByScore, compareJobsByRecent } from "@/lib/utils/sorting";
 import {
   Ghost,
   Archive,
@@ -18,6 +19,7 @@ import {
   MapPin,
   Building2,
   AlertTriangle,
+  ArrowUpDown,
 } from "lucide-react";
 
 export interface ApplicationTrackerProps {
@@ -64,6 +66,22 @@ export default function ApplicationTracker({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(true);
   const [isAutoGhosting, setIsAutoGhosting] = useState(false);
+  const [sortMode, setSortMode] = useState<"score" | "recent">("score");
+  const [isPanning, setIsPanning] = useState(false);
+  const railRef = React.useRef<HTMLDivElement>(null);
+  const panStartRef = React.useRef<{ startX: number; scrollLeft: number } | null>(null);
+
+  // Global mouse up to clean up panning outside rail
+  React.useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (panStartRef.current) {
+        setIsPanning(false);
+        panStartRef.current = null;
+      }
+    };
+    window.addEventListener("mouseup", handleGlobalMouseUp);
+    return () => window.removeEventListener("mouseup", handleGlobalMouseUp);
+  }, []);
 
   // Normalize status for grouping (handles INTERVIEW / INTERVIEWING, ASSESSMENT / TAKE_HOME)
   const normalizeStatus = (status: string) => {
@@ -91,6 +109,14 @@ export default function ApplicationTracker({
       return PIPELINE_STAGES.some((stage) => stage.id === s) || job.application !== null;
     });
   }, [jobs, showArchived]);
+
+  const sortedPipelineJobs = useMemo(() => {
+    const list = [...pipelineJobs];
+    if (sortMode === "score") {
+      return list.sort(compareJobsByScore);
+    }
+    return list.sort(compareJobsByRecent);
+  }, [pipelineJobs, sortMode]);
 
   const ghostableList = useMemo(() => identifyGhostableJobs(pipelineJobs, 21), [pipelineJobs]);
   const staleList = useMemo(() => identifyGhostableJobs(pipelineJobs, 14), [pipelineJobs]);
@@ -123,6 +149,8 @@ export default function ApplicationTracker({
   }
 
   function handleDragStart(e: React.DragEvent<HTMLDivElement>, jobId: string) {
+    setIsPanning(false);
+    panStartRef.current = null;
     e.dataTransfer.setData("text/plain", jobId);
     e.dataTransfer.effectAllowed = "move";
     setDraggedJobId(jobId);
@@ -159,6 +187,51 @@ export default function ApplicationTracker({
     }
   }
 
+  // Mouse hold-and-drag horizontal canvas panning handlers
+  const handleRailMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+
+    // Do not initiate pan if user clicked an interactive control or a draggable card
+    const isInteractive = target.closest("button, select, input, textarea, a, option, [role='button']");
+    const isDraggableCard = target.closest('[draggable="true"]');
+    if (isInteractive || isDraggableCard) {
+      return;
+    }
+
+    if (railRef.current) {
+      panStartRef.current = {
+        startX: e.pageX - railRef.current.offsetLeft,
+        scrollLeft: railRef.current.scrollLeft,
+      };
+      setIsPanning(true);
+    }
+  };
+
+  const handleRailMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isPanning || !panStartRef.current || !railRef.current || draggedJobId) {
+      return;
+    }
+    e.preventDefault();
+    const x = e.pageX - railRef.current.offsetLeft;
+    const walk = (x - panStartRef.current.startX) * 1.2;
+    railRef.current.scrollLeft = panStartRef.current.scrollLeft - walk;
+  };
+
+  const handleRailMouseUp = () => {
+    setIsPanning(false);
+    panStartRef.current = null;
+  };
+
+  const handleRailWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement | null;
+    const isInsideVerticalScroll = target?.closest(".overflow-y-auto");
+    if (!isInsideVerticalScroll && e.deltaY !== 0 && e.deltaX === 0 && railRef.current) {
+      railRef.current.scrollLeft += e.deltaY;
+    }
+  };
+
   return (
     <div className="space-y-3 flex flex-col h-full min-h-0 select-none">
       {/* Tactical Sub-Header & Bulk Action Strip */}
@@ -191,6 +264,21 @@ export default function ApplicationTracker({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Pipeline Sort Control (Score by default, Date toggle option) */}
+          <button
+            type="button"
+            onClick={() => setSortMode((prev) => (prev === "score" ? "recent" : "score"))}
+            className="h-7 px-2.5 rounded-[2px] text-xs font-mono border border-[#2a2e38] bg-[#15171d] hover:bg-[#1f222a] hover:border-[#3d4352] text-[#f4f2ec] transition-colors cursor-pointer flex items-center gap-1.5"
+            title={`Currently sorted by ${sortMode === "score" ? "Fit Score (Descending)" : "Most Recent Date"}. Click to toggle.`}
+            aria-label={`Sort pipeline by ${sortMode === "score" ? "Date" : "Score"}`}
+          >
+            <ArrowUpDown className="w-3.5 h-3.5 text-[#d4a745]" />
+            <span className="text-[#a6abbd] font-normal">SORT:</span>
+            <span className="font-bold text-[#f4f2ec] uppercase">
+              {sortMode === "score" ? "SCORE" : "DATE"}
+            </span>
+          </button>
+
           {ghostableList.length > 0 && (
             <button
               type="button"
@@ -219,10 +307,19 @@ export default function ApplicationTracker({
         </div>
       </div>
 
-      {/* Horizontally Scrollable Kanban Rail */}
-      <div className="flex gap-3 overflow-x-auto pb-2 pt-1 snap-x flex-1 min-h-0">
+      {/* Horizontally Scrollable Kanban Rail with Tactical Scrollbar & Mouse Drag-to-Pan */}
+      <div
+        ref={railRef}
+        onMouseDown={handleRailMouseDown}
+        onMouseMove={handleRailMouseMove}
+        onMouseUp={handleRailMouseUp}
+        onWheel={handleRailWheel}
+        className={`flex gap-3 overflow-x-auto pb-3 pt-1 flex-1 min-h-0 ${
+          isPanning ? "cursor-grabbing select-none" : "cursor-grab snap-x"
+        }`}
+      >
         {displayedStages.map((stage) => {
-          const stageJobs = pipelineJobs.filter((j) => normalizeStatus(j.status) === stage.id);
+          const stageJobs = sortedPipelineJobs.filter((j) => normalizeStatus(j.status) === stage.id);
           const isTargeted = dragOverStageId === stage.id;
 
           return (

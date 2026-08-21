@@ -211,6 +211,36 @@ describe("Candidate Resume Markdown Parser", () => {
     assert.strictEqual(profile.targetRole, "Systems Engineer");
     assert.strictEqual(profile.skills[0].name, "Rust");
   });
+
+  it("full outage simulation: degrades seamlessly to deterministic regex AST parser with zero thrown runtime errors", async () => {
+    const resumePath = path.join(process.cwd(), ".scratch", "Resume", "Achyuth.md");
+    const markdown = fs.readFileSync(resumePath, "utf-8");
+
+    const failingPrimary = createMockLanguageModel({
+      shouldThrow: true,
+      errorMessage: "HTTP 429 Rate Limit: All Gemini quotas exhausted",
+    });
+
+    const failingFallback = createMockLanguageModel({
+      shouldThrow: true,
+      errorMessage: "HTTP 503 Service Unavailable: All NVIDIA NIM models overloaded",
+    });
+
+    // Both models throw, simulating full AI inference outage
+    const profile = await parseResumeMarkdownWithAI(markdown, "test-full-outage", {
+      primaryModel: failingPrimary,
+      fallbackModel: failingFallback,
+    });
+
+    assert.ok(profile, "Returned valid profile without throwing runtime errors");
+    assert.strictEqual(profile.id, "test-full-outage");
+    assert.strictEqual(profile.name, "Achyuth S");
+    assert.strictEqual(profile.targetRole, "Core Developer");
+    assert.strictEqual(profile.yearsOfExperience, 2);
+    assert.strictEqual(profile.experiences.length, 3);
+    assert.strictEqual(profile.projects.length, 2);
+    assert.ok(profile.skills.length >= 8);
+  });
 });
 
 

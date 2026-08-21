@@ -10,6 +10,7 @@ import {
   generateApplicationAnswers,
   answerCustomQuestion,
   STANDARD_APPLICATION_QUESTIONS,
+  BANNED_AI_CLICHES,
 } from "./answers";
 import {
   type CandidateContext,
@@ -18,6 +19,7 @@ import {
   answerCustomQuestion as answerQuestionFromRouter,
   ApplicationAnswerSchema as ApplicationAnswerSchemaFromRouter,
   STANDARD_APPLICATION_QUESTIONS as STANDARD_QUESTIONS_FROM_ROUTER,
+  BANNED_AI_CLICHES as BANNED_CLICHES_FROM_ROUTER,
 } from "../ai/router";
 
 function createMockModel(params: {
@@ -370,5 +372,50 @@ describe("Grounded Application Question Answering Engine", () => {
 
     assert.strictEqual(result.id, "ans-router-test");
     assert.strictEqual(result.answer, "Test answer from router export");
+  });
+
+  it("verifies negative prompt constraints prohibit blacklisted AI tropes and cliches", async () => {
+    assert.ok(BANNED_AI_CLICHES.length >= 10);
+    assert.deepStrictEqual(BANNED_AI_CLICHES, BANNED_CLICHES_FROM_ROUTER);
+
+    let capturedSystem = "";
+    const mockModel = createMockModel({
+      generateOutput: {
+        id: "ans-clean-1",
+        question: "Why should we hire you?",
+        answer: "I built high-throughput backend services using TypeScript and PostgreSQL that reduced latency by 40%.",
+        keyPointsUsed: ["TypeScript", "PostgreSQL"],
+        createdAt: "2026-08-17T12:00:00.000Z",
+      },
+      onCall: (options) => {
+        if (options.prompt && Array.isArray(options.prompt)) {
+          const sys = options.prompt.find((p) => p.role === "system");
+          if (sys && typeof sys.content === "string") {
+            capturedSystem = sys.content;
+          }
+        }
+      },
+    });
+
+    const result = await answerCustomQuestion(sampleCandidate, sampleJob, "Why should we hire you?", {
+      primaryModel: mockModel,
+    });
+
+    // Check system prompt explicitly bans all tropes
+    for (const cliche of BANNED_AI_CLICHES) {
+      assert.ok(
+        capturedSystem.toLowerCase().includes(cliche.toLowerCase()),
+        `System prompt should explicitly mention banned phrase: "${cliche}"`
+      );
+    }
+
+    // Check generated answer contains none of the blacklisted tropes
+    for (const cliche of BANNED_AI_CLICHES) {
+      assert.strictEqual(
+        result.answer.toLowerCase().includes(cliche.toLowerCase()),
+        false,
+        `Generated answer must not contain blacklisted phrase: "${cliche}"`
+      );
+    }
   });
 });

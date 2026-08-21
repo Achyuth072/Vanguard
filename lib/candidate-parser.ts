@@ -444,7 +444,10 @@ Extract all candidate profile master facts according to the schema.`;
       schema: CandidateResumeExtractionSchema,
       system,
       prompt,
-      options,
+      options: {
+        workload: "RESUME_PARSING",
+        ...options,
+      },
     });
 
     const projects: MasterProject[] = (extracted.projects || []).map((p, idx) => ({

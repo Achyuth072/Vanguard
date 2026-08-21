@@ -50,6 +50,9 @@ Generate a tailored resume adhering strictly to the schema and anti-hallucinatio
     schema: TailoredResumeSchema,
     system,
     prompt,
-    options,
+    options: {
+      workload: "RESUME_TAILORING",
+      ...options,
+    },
   });
 }

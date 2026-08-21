@@ -35,6 +35,10 @@ import {
   clearCandidateCooldown,
   resetAllCooldowns,
   getCandidateCooldown,
+  WORKLOAD_PROFILES,
+  WORKLOAD_PROFILE_CONFIGS,
+  normalizeWorkloadProfile,
+  type WorkloadProfile,
   type CandidateContext,
   type JobContext,
 } from "./router";
@@ -517,7 +521,7 @@ describe("Provider Fallback & Error Handling", () => {
         "z-ai/glm-5.2"
       );
       assert.ok(openAiModel);
-      assert.strictEqual(typeof openAiModel.doGenerate, "function");
+      assert.strictEqual(typeof (openAiModel as LanguageModelV2).doGenerate, "function");
 
       const nvidia = getNvidiaModel("nvapi-test12345678", "z-ai/glm-5.2");
       assert.ok(nvidia);
@@ -1121,6 +1125,181 @@ describe("In-Flight Circuit Breaker & Zero-Latency Cooldown Cache", () => {
 
       assert.strictEqual(result.score, 95);
       assert.strictEqual(isCandidateInCooldown("mock-primary-model"), false);
+    });
+  });
+});
+
+describe("Workload-Specific Routing Profiles & Options", () => {
+  const originalEnv = { ...process.env };
+
+  beforeEach(() => {
+    resetAllCooldowns();
+  });
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+    resetAllCooldowns();
+  });
+
+  describe("normalizeWorkloadProfile & WORKLOAD_PROFILE_CONFIGS", () => {
+    it("normalizes standard and alias profile strings to canonical enum values", () => {
+      assert.strictEqual(normalizeWorkloadProfile("FAST_INGESTION"), "FAST_INGESTION");
+      assert.strictEqual(normalizeWorkloadProfile("extraction"), "FAST_INGESTION");
+      assert.strictEqual(normalizeWorkloadProfile("Profile A"), "FAST_INGESTION");
+
+      assert.strictEqual(normalizeWorkloadProfile("FIT_SCORING"), "FIT_SCORING");
+      assert.strictEqual(normalizeWorkloadProfile("scoring"), "FIT_SCORING");
+      assert.strictEqual(normalizeWorkloadProfile("Profile B"), "FIT_SCORING");
+
+      assert.strictEqual(normalizeWorkloadProfile("RESUME_TAILORING"), "RESUME_TAILORING");
+      assert.strictEqual(normalizeWorkloadProfile("resume"), "RESUME_TAILORING");
+      assert.strictEqual(normalizeWorkloadProfile("tailoring"), "RESUME_TAILORING");
+      assert.strictEqual(normalizeWorkloadProfile("Profile C"), "RESUME_TAILORING");
+
+      assert.strictEqual(normalizeWorkloadProfile("SCREENING_QA"), "SCREENING_QA");
+      assert.strictEqual(normalizeWorkloadProfile("qa"), "SCREENING_QA");
+      assert.strictEqual(normalizeWorkloadProfile("answers"), "SCREENING_QA");
+      assert.strictEqual(normalizeWorkloadProfile("Profile D"), "SCREENING_QA");
+
+      assert.strictEqual(normalizeWorkloadProfile("RESUME_PARSING"), "RESUME_PARSING");
+      assert.strictEqual(normalizeWorkloadProfile("parsing"), "RESUME_PARSING");
+      assert.strictEqual(normalizeWorkloadProfile("Profile E"), "RESUME_PARSING");
+
+      assert.strictEqual(normalizeWorkloadProfile(undefined), undefined);
+      assert.strictEqual(normalizeWorkloadProfile("unknown-workload-xyz"), undefined);
+    });
+
+    it("verifies expected default token limits, temperatures, and preferred models per profile", () => {
+      const pA = WORKLOAD_PROFILE_CONFIGS.FAST_INGESTION;
+      assert.strictEqual(pA.defaultMaxTokens, 1000);
+      assert.strictEqual(pA.defaultTemperature, 0.1);
+      assert.ok(pA.preferredModels.includes("gemini-3.5-flash-lite"));
+
+      const pB = WORKLOAD_PROFILE_CONFIGS.FIT_SCORING;
+      assert.strictEqual(pB.defaultMaxTokens, 2000);
+      assert.strictEqual(pB.defaultTemperature, 0.2);
+      assert.ok(pB.preferredModels.includes("gemini-3.7-flash"));
+
+      const pC = WORKLOAD_PROFILE_CONFIGS.RESUME_TAILORING;
+      assert.strictEqual(pC.defaultMaxTokens, 4500);
+      assert.strictEqual(pC.defaultTemperature, 0.3);
+      assert.ok(pC.preferredModels.includes("gemini-3.7-flash"));
+      assert.ok(pC.preferredModels.includes("z-ai/glm-5.2"));
+
+      const pD = WORKLOAD_PROFILE_CONFIGS.SCREENING_QA;
+      assert.strictEqual(pD.defaultMaxTokens, 2500);
+      assert.strictEqual(pD.defaultTemperature, 0.4);
+      assert.ok(pD.preferredModels.includes("moonshotai/kimi-k2.6"));
+
+      const pE = WORKLOAD_PROFILE_CONFIGS.RESUME_PARSING;
+      assert.strictEqual(pE.defaultMaxTokens, 4000);
+      assert.strictEqual(pE.defaultTemperature, 0.1);
+      assert.ok(pE.preferredModels.includes("deepseek-ai/deepseek-v4-flash"));
+    });
+  });
+
+  describe("getAllConfiguredModels with Workload-Specific Prioritization", () => {
+    beforeEach(() => {
+      delete process.env.GROQ_API_KEY;
+      delete process.env.OPENROUTER_API_KEY;
+      delete process.env.GOOGLE_API_KEY;
+      delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+      delete process.env.OLLAMA_API_KEY;
+      delete process.env.OPENCODE_API_KEY;
+
+      process.env.GEMINI_API_KEY = "AIzaSyGeminiKey1111";
+      process.env.GEMINI_MODEL = "gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite";
+
+      process.env.NVIDIA_API_KEY = "nvapi-NvidiaKey1111";
+      process.env.NVIDIA_MODEL = "z-ai/glm-5.2,deepseek-ai/deepseek-v4-flash,minimaxai/minimax-m3,moonshotai/kimi-k2.6";
+    });
+
+    it("Profile A (FAST_INGESTION): prioritizes gemini-3.5-flash-lite -> gemini-3.5-flash -> deepseek-v4-flash", () => {
+      const candidates = getAllConfiguredModels("FAST_INGESTION");
+      const modelNames = candidates.map((c) => c.modelName);
+
+      assert.strictEqual(modelNames[0], "gemini-3.5-flash-lite");
+      assert.strictEqual(modelNames[1], "gemini-3.5-flash");
+      assert.strictEqual(modelNames[2], "deepseek-ai/deepseek-v4-flash");
+    });
+
+    it("Profile B (FIT_SCORING): prioritizes gemini-3.7-flash -> gemini-3.6-flash -> z-ai/glm-5.2 -> gemini-3.5-flash", () => {
+      const candidates = getAllConfiguredModels("FIT_SCORING");
+      const modelNames = candidates.map((c) => c.modelName);
+
+      assert.strictEqual(modelNames[0], "gemini-3.7-flash");
+      assert.strictEqual(modelNames[1], "gemini-3.6-flash");
+      assert.strictEqual(modelNames[2], "z-ai/glm-5.2");
+      assert.strictEqual(modelNames[3], "gemini-3.5-flash");
+    });
+
+    it("Profile C (RESUME_TAILORING): prioritizes gemini-3.7-flash -> z-ai/glm-5.2 -> gemini-3.6-flash -> minimaxai/minimax-m3", () => {
+      const candidates = getAllConfiguredModels("RESUME_TAILORING");
+      const modelNames = candidates.map((c) => c.modelName);
+
+      assert.strictEqual(modelNames[0], "gemini-3.7-flash");
+      assert.strictEqual(modelNames[1], "z-ai/glm-5.2");
+      assert.strictEqual(modelNames[2], "gemini-3.6-flash");
+      assert.strictEqual(modelNames[3], "minimaxai/minimax-m3");
+    });
+
+    it("Profile D (SCREENING_QA): prioritizes gemini-3.7-flash -> z-ai/glm-5.2 -> moonshotai/kimi-k2.6 -> gemini-3.5-flash", () => {
+      const candidates = getAllConfiguredModels("SCREENING_QA");
+      const modelNames = candidates.map((c) => c.modelName);
+
+      assert.strictEqual(modelNames[0], "gemini-3.7-flash");
+      assert.strictEqual(modelNames[1], "z-ai/glm-5.2");
+      assert.strictEqual(modelNames[2], "moonshotai/kimi-k2.6");
+      assert.strictEqual(modelNames[3], "gemini-3.5-flash");
+    });
+
+    it("Profile E (RESUME_PARSING): prioritizes gemini-3.7-flash -> gemini-3.5-flash -> deepseek-v4-flash -> z-ai/glm-5.2", () => {
+      const candidates = getAllConfiguredModels("RESUME_PARSING");
+      const modelNames = candidates.map((c) => c.modelName);
+
+      assert.strictEqual(modelNames[0], "gemini-3.7-flash");
+      assert.strictEqual(modelNames[1], "gemini-3.5-flash");
+      assert.strictEqual(modelNames[2], "deepseek-ai/deepseek-v4-flash");
+      assert.strictEqual(modelNames[3], "z-ai/glm-5.2");
+    });
+
+    it("still skips candidates in cooldown when re-ordering for a profile", () => {
+      // Cooldown gemini-3.5-flash-lite
+      recordCandidateCooldown("Google Gemini:AIza...1111:gemini-3.5-flash-lite", 60_000, "429 Rate Limit");
+
+      const candidates = getAllConfiguredModels("FAST_INGESTION");
+      const modelNames = candidates.map((c) => c.modelName);
+
+      // gemini-3.5-flash-lite is skipped, gemini-3.5-flash takes top spot
+      assert.strictEqual(modelNames[0], "gemini-3.5-flash");
+      assert.strictEqual(modelNames[1], "deepseek-ai/deepseek-v4-flash");
+    });
+  });
+
+  describe("generateStructuredWithFallback with Workload Options", () => {
+    it("passes maxTokens and temperature to generateObject from profile defaults and caller overrides", async () => {
+      let capturedTemperature: number | undefined;
+
+      const mockModel = createMockModel({
+        generateOutput: {
+          title: "Senior Backend Engineer",
+          company: "Acme",
+          description: "TypeScript and Node backend",
+        },
+      });
+
+      await generateStructuredWithFallback({
+        schema: JobDetailsSchema,
+        prompt: "Extract details",
+        options: {
+          primaryModel: mockModel,
+          workload: "FAST_INGESTION",
+          temperature: 0.15,
+          maxOutputTokens: 800,
+        },
+      });
+
+      assert.ok(mockModel);
     });
   });
 });

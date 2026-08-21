@@ -85,6 +85,159 @@ export interface JobContext {
   requiredExperienceYears?: number | null;
 }
 
+export type WorkloadProfile =
+  | "FAST_INGESTION"
+  | "FIT_SCORING"
+  | "RESUME_TAILORING"
+  | "SCREENING_QA"
+  | "RESUME_PARSING";
+
+export const WORKLOAD_PROFILES = {
+  FAST_INGESTION: "FAST_INGESTION",
+  FIT_SCORING: "FIT_SCORING",
+  RESUME_TAILORING: "RESUME_TAILORING",
+  SCREENING_QA: "SCREENING_QA",
+  RESUME_PARSING: "RESUME_PARSING",
+} as const;
+
+export interface WorkloadProfileConfig {
+  profile: WorkloadProfile;
+  name: string;
+  preferredModels: string[];
+  defaultMaxTokens: number;
+  defaultTemperature: number;
+}
+
+export const WORKLOAD_PROFILE_CONFIGS: Record<WorkloadProfile, WorkloadProfileConfig> = {
+  FAST_INGESTION: {
+    profile: "FAST_INGESTION",
+    name: "Profile A: Fast Ingestion & Schema Extraction",
+    preferredModels: [
+      "gemini-3.5-flash-lite",
+      "gemini-3.5-flash",
+      "deepseek-ai/deepseek-v4-flash",
+      "deepseek-v4-flash",
+    ],
+    defaultMaxTokens: 1000,
+    defaultTemperature: 0.1,
+  },
+  FIT_SCORING: {
+    profile: "FIT_SCORING",
+    name: "Profile B: 4-Dimensional Fit Scoring",
+    preferredModels: [
+      "gemini-3.7-flash",
+      "gemini-3.6-flash",
+      "z-ai/glm-5.2",
+      "glm-5.2",
+      "gemini-3.5-flash",
+    ],
+    defaultMaxTokens: 2000,
+    defaultTemperature: 0.2,
+  },
+  RESUME_TAILORING: {
+    profile: "RESUME_TAILORING",
+    name: "Profile C: Tailored Resume Preparation",
+    preferredModels: [
+      "gemini-3.7-flash",
+      "z-ai/glm-5.2",
+      "glm-5.2",
+      "gemini-3.6-flash",
+      "minimaxai/minimax-m3",
+      "minimax-m3",
+    ],
+    defaultMaxTokens: 4500,
+    defaultTemperature: 0.3,
+  },
+  SCREENING_QA: {
+    profile: "SCREENING_QA",
+    name: "Profile D: Humanized Screening Q&A",
+    preferredModels: [
+      "gemini-3.7-flash",
+      "z-ai/glm-5.2",
+      "glm-5.2",
+      "moonshotai/kimi-k2.6",
+      "kimi-k2.6",
+      "gemini-3.5-flash",
+    ],
+    defaultMaxTokens: 2500,
+    defaultTemperature: 0.4,
+  },
+  RESUME_PARSING: {
+    profile: "RESUME_PARSING",
+    name: "Profile E: Resume Parsing & Fact Sheet Extraction",
+    preferredModels: [
+      "gemini-3.7-flash",
+      "gemini-3.5-flash",
+      "deepseek-ai/deepseek-v4-flash",
+      "deepseek-v4-flash",
+      "z-ai/glm-5.2",
+      "glm-5.2",
+    ],
+    defaultMaxTokens: 4000,
+    defaultTemperature: 0.1,
+  },
+};
+
+export function normalizeWorkloadProfile(
+  profileOrWorkload?: string | WorkloadProfile
+): WorkloadProfile | undefined {
+  if (!profileOrWorkload) return undefined;
+  const raw = String(profileOrWorkload).trim();
+  if (raw in WORKLOAD_PROFILE_CONFIGS) {
+    return raw as WorkloadProfile;
+  }
+  const lower = raw.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (
+    lower.includes("fastingestion") ||
+    lower.includes("extraction") ||
+    lower.includes("ingestion") ||
+    lower === "profilea" ||
+    lower === "a"
+  ) {
+    return "FAST_INGESTION";
+  }
+  if (
+    lower.includes("fitscoring") ||
+    lower.includes("scoring") ||
+    lower.includes("fit") ||
+    lower === "profileb" ||
+    lower === "b"
+  ) {
+    return "FIT_SCORING";
+  }
+  if (
+    lower.includes("resumetailoring") ||
+    lower.includes("tailoring") ||
+    lower.includes("tailor") ||
+    lower.includes("resume") ||
+    lower === "profilec" ||
+    lower === "c"
+  ) {
+    return "RESUME_TAILORING";
+  }
+  if (
+    lower.includes("screeningqa") ||
+    lower.includes("qa") ||
+    lower.includes("screening") ||
+    lower.includes("answers") ||
+    lower.includes("question") ||
+    lower === "profiled" ||
+    lower === "d"
+  ) {
+    return "SCREENING_QA";
+  }
+  if (
+    lower.includes("resumeparsing") ||
+    lower.includes("parsing") ||
+    lower.includes("parser") ||
+    lower === "profilee" ||
+    lower === "e"
+  ) {
+    return "RESUME_PARSING";
+  }
+  return undefined;
+}
+
 export interface AIRouterOptions {
   primaryModel?: LanguageModel;
   fallbackModel?: LanguageModel;
@@ -92,6 +245,11 @@ export interface AIRouterOptions {
   weights?: FitScoreWeights;
   conversionInsights?: string;
   temperature?: number;
+  maxOutputTokens?: number;
+  maxTokens?: number;
+  workload?: WorkloadProfile | "extraction" | "scoring" | "resume" | "qa" | "parsing" | string;
+  workloadIdentifier?: string;
+  profile?: WorkloadProfile | "extraction" | "scoring" | "resume" | "qa" | "parsing" | string;
 }
 
 export interface ConfiguredModelCandidate {
@@ -338,7 +496,9 @@ export function resetRotationCursor(): void {
   rotationCursor = 0;
 }
 
-export function getAllConfiguredModels(): ConfiguredModelCandidate[] {
+export function getAllConfiguredModels(
+  profile?: WorkloadProfile | string
+): ConfiguredModelCandidate[] {
   const candidates: ConfiguredModelCandidate[] = [];
 
   // Prioritized Provider Order:
@@ -460,6 +620,7 @@ export function getAllConfiguredModels(): ConfiguredModelCandidate[] {
     }
   }
 
+  let candidatePool = candidates;
   if (candidates.length === 0) {
     const defaults: ConfiguredModelCandidate[] = [
       {
@@ -477,10 +638,47 @@ export function getAllConfiguredModels(): ConfiguredModelCandidate[] {
         keyMask: "***",
       },
     ];
-    return defaults.filter((c) => !isCandidateInCooldown(c.id));
+    candidatePool = defaults;
   }
 
-  return candidates.filter((c) => !isCandidateInCooldown(c.id));
+  const normalizedProfile = normalizeWorkloadProfile(profile);
+  if (normalizedProfile) {
+    const profileConfig = WORKLOAD_PROFILE_CONFIGS[normalizedProfile];
+    if (profileConfig && profileConfig.preferredModels.length > 0) {
+      const preferred = profileConfig.preferredModels;
+      const getPreferredRank = (modelName: string): number => {
+        for (let i = 0; i < preferred.length; i++) {
+          const pref = preferred[i].toLowerCase();
+          const target = modelName.toLowerCase();
+          if (target === pref || target.endsWith(`/${pref}`) || pref.endsWith(`/${target}`)) {
+            return i;
+          }
+        }
+        return Infinity;
+      };
+
+      const rankedCandidates: Array<{
+        candidate: ConfiguredModelCandidate;
+        rank: number;
+        originalIndex: number;
+      }> = candidatePool.map((c, originalIndex) => ({
+        candidate: c,
+        rank: getPreferredRank(c.modelName),
+        originalIndex,
+      }));
+
+      rankedCandidates.sort((a, b) => {
+        if (a.rank !== b.rank) {
+          return a.rank - b.rank;
+        }
+        return a.originalIndex - b.originalIndex;
+      });
+
+      candidatePool = rankedCandidates.map((r) => r.candidate);
+    }
+  }
+
+  return candidatePool.filter((c) => !isCandidateInCooldown(c.id));
 }
 
 let anonModelCounter = 0;
@@ -511,6 +709,15 @@ export async function generateStructuredWithFallback<T>({
   system?: string;
   options?: AIRouterOptions;
 }): Promise<T> {
+  const resolvedProfile =
+    options?.profile || options?.workload || options?.workloadIdentifier;
+  const normalizedProfile = normalizeWorkloadProfile(resolvedProfile);
+  const profileConfig = normalizedProfile ? WORKLOAD_PROFILE_CONFIGS[normalizedProfile] : undefined;
+
+  const effectiveTemperature = options?.temperature ?? profileConfig?.defaultTemperature;
+  const effectiveMaxTokens =
+    options?.maxOutputTokens ?? options?.maxTokens ?? profileConfig?.defaultMaxTokens;
+
   let modelCandidates: Array<{ id: string; name: string; model: LanguageModel }>;
 
   if (options?.models && options.models.length > 0) {
@@ -541,7 +748,7 @@ export async function generateStructuredWithFallback<T>({
       });
     }
   } else {
-    modelCandidates = getAllConfiguredModels().map((c) => ({
+    modelCandidates = getAllConfiguredModels(normalizedProfile).map((c) => ({
       id: c.id,
       name: `${c.providerName} (${c.modelName} [${c.keyMask}])`,
       model: c.model,
@@ -569,7 +776,8 @@ export async function generateStructuredWithFallback<T>({
         schema,
         system,
         prompt,
-        ...(options?.temperature !== undefined ? { temperature: options.temperature } : {}),
+        ...(effectiveTemperature !== undefined ? { temperature: effectiveTemperature } : {}),
+        ...(effectiveMaxTokens !== undefined ? { maxTokens: effectiveMaxTokens } : {}),
       });
       clearCandidateCooldown(candidate.id);
       return result.object;
@@ -680,7 +888,10 @@ Evaluate the candidate's fit across all four sub-dimensions (skillsFit, experien
     schema: FitScoreSchema,
     system,
     prompt,
-    options,
+    options: {
+      workload: "FIT_SCORING",
+      ...options,
+    },
   });
 
   const weights = options?.weights || DEFAULT_FIT_SCORE_WEIGHTS;
@@ -765,7 +976,10 @@ Extract structured job details adhering to the schema.`;
     schema: JobDetailsSchema,
     system,
     prompt,
-    options,
+    options: {
+      workload: "FAST_INGESTION",
+      ...options,
+    },
   });
 }
 
@@ -793,7 +1007,10 @@ Generate a concise tailored summary, key matching points, and relevant projects.
     schema: TailoredSummarySchema,
     system,
     prompt,
-    options,
+    options: {
+      workload: "RESUME_TAILORING",
+      ...options,
+    },
   });
 }
 
@@ -816,6 +1033,7 @@ export {
   answerCustomQuestion,
   answerCustomQuestion as answerQuestion,
   STANDARD_APPLICATION_QUESTIONS,
+  BANNED_AI_CLICHES,
 } from "../tailoring/answers";
 
 export const scoreJob = scoreJobFit;

@@ -17,6 +17,22 @@ export const STANDARD_APPLICATION_QUESTIONS = [
   "What are your salary expectations, notice period, and work authorization status?",
 ] as const;
 
+export const BANNED_AI_CLICHES = [
+  "delve",
+  "spearhead",
+  "testament to",
+  "pivotal role",
+  "beacon",
+  "tapestry",
+  "seamlessly",
+  "synergy",
+  "foster",
+  "holistic",
+  "multifaceted",
+  "passionate about leveraging",
+  "thrilled to apply",
+] as const;
+
 export async function generateApplicationAnswers(
   candidate: CandidateContext,
   job: JobContext,
@@ -64,7 +80,10 @@ Generate grounded, authentic application answers adhering strictly to the schema
     schema: ApplicationAnswersBatchSchema,
     system,
     prompt,
-    options,
+    options: {
+      workload: "SCREENING_QA",
+      ...options,
+    },
   });
 
   return result.answers;
@@ -111,6 +130,9 @@ Generate a grounded, authentic answer adhering strictly to the schema, voice gui
     schema: ApplicationAnswerSchema,
     system,
     prompt,
-    options,
+    options: {
+      workload: "SCREENING_QA",
+      ...options,
+    },
   });
 }

@@ -1,4 +1,4 @@
-import { describe, it } from "node:test";
+import { describe, it, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import type { LanguageModel } from "ai";
 import type { LanguageModelV2 } from "@ai-sdk/provider";
@@ -12,6 +12,8 @@ import {
   extractJobDetails,
   tailorApplicationSummary,
   parseApiKeys,
+  parseCommaSeparatedList,
+  getAllConfiguredModels,
   maskKey,
   type CandidateContext,
   type JobContext,
@@ -384,6 +386,126 @@ describe("Provider Fallback & Error Handling", () => {
     assert.strictEqual(maskKey(""), "***");
     assert.strictEqual(maskKey("short"), "***");
     assert.strictEqual(maskKey("gsk_1234567890abcdef"), "gsk_...cdef");
+  });
+
+  describe("parseCommaSeparatedList", () => {
+    it("handles undefined, empty, and whitespace-only strings with defaultList fallback", () => {
+      assert.deepStrictEqual(parseCommaSeparatedList(undefined), []);
+      assert.deepStrictEqual(parseCommaSeparatedList(undefined, ["default-1", "default-2"]), [
+        "default-1",
+        "default-2",
+      ]);
+      assert.deepStrictEqual(parseCommaSeparatedList(""), []);
+      assert.deepStrictEqual(parseCommaSeparatedList("", ["default-1"]), ["default-1"]);
+      assert.deepStrictEqual(parseCommaSeparatedList("   , ,   "), []);
+      assert.deepStrictEqual(parseCommaSeparatedList("   , ,   ", ["default-1"]), ["default-1"]);
+    });
+
+    it("parses and trims single and multiple comma-separated items", () => {
+      assert.deepStrictEqual(parseCommaSeparatedList("single-item"), ["single-item"]);
+      assert.deepStrictEqual(
+        parseCommaSeparatedList("  item-1 , item-2  ,  item-3 "),
+        ["item-1", "item-2", "item-3"]
+      );
+      assert.deepStrictEqual(
+        parseCommaSeparatedList("gemini-3.7-flash, gemini-3.5-flash", ["fallback"]),
+        ["gemini-3.7-flash", "gemini-3.5-flash"]
+      );
+    });
+  });
+
+  describe("getAllConfiguredModels Matrix Expansion", () => {
+    const originalEnv = { ...process.env };
+
+    afterEach?.(() => {
+      process.env = { ...originalEnv };
+    });
+
+    it("generates (Keys) × (Models) candidate matrix in intra-key order for Google Gemini", () => {
+      // Clean env for isolated test
+      delete process.env.GROQ_API_KEY;
+      delete process.env.OPENROUTER_API_KEY;
+      delete process.env.GOOGLE_API_KEY;
+      delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+
+      process.env.GEMINI_API_KEY = "AIzaSyKey11111111,AIzaSyKey22222222";
+      process.env.GEMINI_MODEL = "gemini-3.7-flash,gemini-3.5-flash";
+
+      const candidates = getAllConfiguredModels();
+
+      assert.strictEqual(candidates.length, 4);
+
+      // Intra-key order: key1:model1, key1:model2, key2:model1, key2:model2
+      assert.strictEqual(candidates[0].providerName, "Google Gemini");
+      assert.strictEqual(candidates[0].modelName, "gemini-3.7-flash");
+      assert.strictEqual(candidates[0].keyMask, "AIza...1111");
+
+      assert.strictEqual(candidates[1].providerName, "Google Gemini");
+      assert.strictEqual(candidates[1].modelName, "gemini-3.5-flash");
+      assert.strictEqual(candidates[1].keyMask, "AIza...1111");
+
+      assert.strictEqual(candidates[2].providerName, "Google Gemini");
+      assert.strictEqual(candidates[2].modelName, "gemini-3.7-flash");
+      assert.strictEqual(candidates[2].keyMask, "AIza...2222");
+
+      assert.strictEqual(candidates[3].providerName, "Google Gemini");
+      assert.strictEqual(candidates[3].modelName, "gemini-3.5-flash");
+      assert.strictEqual(candidates[3].keyMask, "AIza...2222");
+
+      // Restore env
+      process.env = { ...originalEnv };
+    });
+
+    it("uses default 5-model cascade for Gemini when GEMINI_MODEL is not set", () => {
+      delete process.env.GROQ_API_KEY;
+      delete process.env.OPENROUTER_API_KEY;
+      delete process.env.GOOGLE_API_KEY;
+      delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+      delete process.env.GEMINI_MODEL;
+
+      process.env.GEMINI_API_KEY = "AIzaSySingleKey1234";
+
+      const candidates = getAllConfiguredModels();
+
+      assert.strictEqual(candidates.length, 5);
+      const modelNames = candidates.map((c) => c.modelName);
+      assert.deepStrictEqual(modelNames, [
+        "gemini-3.7-flash",
+        "gemini-3.6-flash",
+        "gemini-3.5-flash",
+        "gemini-3.5-flash-lite",
+        "gemini-3.1-flash-lite",
+      ]);
+
+      // Restore env
+      process.env = { ...originalEnv };
+    });
+
+    it("expands multi-provider matrix and deduplicates keys cleanly", () => {
+      delete process.env.OPENROUTER_API_KEY;
+      delete process.env.GOOGLE_API_KEY;
+      delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+
+      process.env.GEMINI_API_KEY = "AIzaSyKey11111111, AIzaSyKey11111111 ";
+      process.env.GEMINI_MODEL = "gemini-3.7-flash";
+      process.env.GROQ_API_KEY = "gsk_GroqKey12345678";
+      process.env.GROQ_MODEL = "llama-3.3-70b-versatile, llama-3.1-8b-instant";
+
+      const candidates = getAllConfiguredModels();
+
+      // Gemini: 1 unique key * 1 model = 1 candidate
+      // Groq: 1 unique key * 2 models = 2 candidates
+      assert.strictEqual(candidates.length, 3);
+      assert.strictEqual(candidates[0].providerName, "Google Gemini");
+      assert.strictEqual(candidates[0].modelName, "gemini-3.7-flash");
+      assert.strictEqual(candidates[1].providerName, "Groq");
+      assert.strictEqual(candidates[1].modelName, "llama-3.3-70b-versatile");
+      assert.strictEqual(candidates[2].providerName, "Groq");
+      assert.strictEqual(candidates[2].modelName, "llama-3.1-8b-instant");
+
+      // Restore env
+      process.env = { ...originalEnv };
+    });
   });
 });
 

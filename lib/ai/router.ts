@@ -101,12 +101,25 @@ export interface ConfiguredModelCandidate {
   keyMask: string;
 }
 
-export function parseApiKeys(envValue?: string): string[] {
-  if (!envValue) return [];
-  return envValue
+export const DEFAULT_GEMINI_MODELS = [
+  "gemini-3.7-flash",
+  "gemini-3.6-flash",
+  "gemini-3.5-flash",
+  "gemini-3.5-flash-lite",
+  "gemini-3.1-flash-lite",
+];
+
+export function parseCommaSeparatedList(value?: string, defaultList: string[] = []): string[] {
+  if (!value) return defaultList;
+  const parsed = value
     .split(",")
-    .map((k) => k.trim())
-    .filter((k) => k.length > 0);
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+  return parsed.length > 0 ? parsed : defaultList;
+}
+
+export function parseApiKeys(envValue?: string): string[] {
+  return parseCommaSeparatedList(envValue, []);
 }
 
 export function maskKey(key: string): string {
@@ -116,7 +129,7 @@ export function maskKey(key: string): string {
 }
 
 export function getGroqModel(apiKey?: string, modelName?: string): LanguageModel {
-  const resolvedKey = apiKey || parseApiKeys(process.env.GROQ_API_KEY)[0] || "";
+  const resolvedKey = apiKey || parseCommaSeparatedList(process.env.GROQ_API_KEY)[0] || "";
   const resolvedModel = modelName || process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
   const baseURL = process.env.GROQ_BASE_URL || "https://api.groq.com/openai/v1";
 
@@ -131,7 +144,7 @@ export function getGroqModel(apiKey?: string, modelName?: string): LanguageModel
 export function getOpenRouterModel(apiKey?: string, modelName?: string): LanguageModel {
   const resolvedKey =
     apiKey ||
-    parseApiKeys(process.env.OPENROUTER_API_KEY)[0] ||
+    parseCommaSeparatedList(process.env.OPENROUTER_API_KEY)[0] ||
     "";
   const baseURL = process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1";
   const resolvedModel =
@@ -148,11 +161,12 @@ export function getOpenRouterModel(apiKey?: string, modelName?: string): Languag
 export function getGeminiModel(apiKey?: string, modelName?: string): LanguageModel {
   const resolvedKey =
     apiKey ||
-    parseApiKeys(process.env.GEMINI_API_KEY)[0] ||
-    parseApiKeys(process.env.GOOGLE_API_KEY)[0] ||
-    parseApiKeys(process.env.GOOGLE_GENERATIVE_AI_API_KEY)[0] ||
+    parseCommaSeparatedList(process.env.GEMINI_API_KEY)[0] ||
+    parseCommaSeparatedList(process.env.GOOGLE_API_KEY)[0] ||
+    parseCommaSeparatedList(process.env.GOOGLE_GENERATIVE_AI_API_KEY)[0] ||
     "";
-  const resolvedModel = modelName || process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const resolvedModel =
+    modelName || parseCommaSeparatedList(process.env.GEMINI_MODEL, DEFAULT_GEMINI_MODELS)[0];
 
   const client = createGoogleGenerativeAI({
     apiKey: resolvedKey,
@@ -173,59 +187,66 @@ export function getAllConfiguredModels(): ConfiguredModelCandidate[] {
   // Prioritized Provider Order:
   // 1. Google Gemini (primary: fast, generous free tier, highly consistent structured output)
   const geminiKeys = [
-    ...parseApiKeys(process.env.GEMINI_API_KEY),
-    ...parseApiKeys(process.env.GOOGLE_API_KEY),
-    ...parseApiKeys(process.env.GOOGLE_GENERATIVE_AI_API_KEY),
+    ...parseCommaSeparatedList(process.env.GEMINI_API_KEY),
+    ...parseCommaSeparatedList(process.env.GOOGLE_API_KEY),
+    ...parseCommaSeparatedList(process.env.GOOGLE_GENERATIVE_AI_API_KEY),
   ];
   const uniqueGeminiKeys = Array.from(new Set(geminiKeys));
-  const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const geminiModels = parseCommaSeparatedList(process.env.GEMINI_MODEL, DEFAULT_GEMINI_MODELS);
   for (const key of uniqueGeminiKeys) {
-    candidates.push({
-      providerName: "Google Gemini",
-      modelName: geminiModel,
-      model: getGeminiModel(key, geminiModel),
-      keyMask: maskKey(key),
-    });
+    for (const model of geminiModels) {
+      candidates.push({
+        providerName: "Google Gemini",
+        modelName: model,
+        model: getGeminiModel(key, model),
+        keyMask: maskKey(key),
+      });
+    }
   }
 
   // 2. Groq (fast fallback)
-  const groqKeys = parseApiKeys(process.env.GROQ_API_KEY);
-  const groqModel = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+  const groqKeys = Array.from(new Set(parseCommaSeparatedList(process.env.GROQ_API_KEY)));
+  const groqModels = parseCommaSeparatedList(process.env.GROQ_MODEL, ["llama-3.3-70b-versatile"]);
   for (const key of groqKeys) {
-    candidates.push({
-      providerName: "Groq",
-      modelName: groqModel,
-      model: getGroqModel(key, groqModel),
-      keyMask: maskKey(key),
-    });
+    for (const model of groqModels) {
+      candidates.push({
+        providerName: "Groq",
+        modelName: model,
+        model: getGroqModel(key, model),
+        keyMask: maskKey(key),
+      });
+    }
   }
 
   // 3. OpenRouter (general fallback pool)
-  const openRouterKeys = parseApiKeys(process.env.OPENROUTER_API_KEY);
-  const uniqueOpenRouterKeys = Array.from(new Set(openRouterKeys));
-  const openRouterModel =
-    process.env.OPENROUTER_MODEL || "openrouter/free";
-  for (const key of uniqueOpenRouterKeys) {
-    candidates.push({
-      providerName: "OpenRouter",
-      modelName: openRouterModel,
-      model: getOpenRouterModel(key, openRouterModel),
-      keyMask: maskKey(key),
-    });
+  const openRouterKeys = Array.from(new Set(parseCommaSeparatedList(process.env.OPENROUTER_API_KEY)));
+  const openRouterModels = parseCommaSeparatedList(
+    process.env.OPENROUTER_MODEL,
+    ["openrouter/free"]
+  );
+  for (const key of openRouterKeys) {
+    for (const model of openRouterModels) {
+      candidates.push({
+        providerName: "OpenRouter",
+        modelName: model,
+        model: getOpenRouterModel(key, model),
+        keyMask: maskKey(key),
+      });
+    }
   }
 
   if (candidates.length === 0) {
     return [
       {
         providerName: "Google Gemini",
-        modelName: geminiModel,
-        model: getGeminiModel(),
+        modelName: geminiModels[0],
+        model: getGeminiModel(undefined, geminiModels[0]),
         keyMask: "***",
       },
       {
         providerName: "OpenRouter",
-        modelName: openRouterModel,
-        model: getOpenRouterModel(),
+        modelName: openRouterModels[0],
+        model: getOpenRouterModel(undefined, openRouterModels[0]),
         keyMask: "***",
       },
     ];

@@ -1,5 +1,10 @@
 # ADR 0003: Provider-Agnostic AI Router with Fallback
 
+> [!NOTE]
+> **Status**: Superseded by [ADR 0012: Multi-Tier Cascading AI Inference Engine & In-Flight Circuit Breaker](0012-multi-tier-cascading-ai-inference-engine-and-circuit-breaker.md).
+>
+> This ADR documented the initial Phase 1 two-provider fallback design (OpenRouter → Google Gemini). The architecture has since evolved into a 6-tier cascading matrix with in-flight circuit breakers and workload profiles.
+
 ## Context
 
 Running personal job search workflows requires structured AI evaluation (fit scoring, strengths, gaps, risks, reasoning) without incurring monthly subscription fees. Relying on a single free-tier provider creates availability risks when quotas or limits fluctuate.

@@ -3,6 +3,7 @@ import assert from "node:assert";
 import {
   formatSalary,
   formatSalaryCompact,
+  formatSalaryRange,
   convertCurrency,
   getCurrencySymbol,
   normalizeCurrencyCode,
@@ -116,6 +117,23 @@ describe("Currency Utilities", () => {
       assert.strictEqual(normalizeCurrencyCode("R$"), "BRL");
       assert.strictEqual(normalizeCurrencyCode("zł"), "PLN");
       assert.strictEqual(normalizeCurrencyCode("Rand"), "ZAR");
+    });
+  });
+
+  describe("formatSalaryRange", () => {
+    it("formats both min and max correctly", () => {
+      assert.strictEqual(formatSalaryRange(80000, 110000, "USD"), "$80k–$110k");
+      assert.strictEqual(formatSalaryRange(1500000, 2500000, "INR"), "₹15L–₹25L");
+    });
+
+    it("formats single min or max cleanly", () => {
+      assert.strictEqual(formatSalaryRange(80000, null, "USD"), "$80k+");
+      assert.strictEqual(formatSalaryRange(null, 110000, "USD"), "Up to $110k");
+      assert.strictEqual(formatSalaryRange(null, null, "USD"), null);
+    });
+
+    it("handles identical min and max", () => {
+      assert.strictEqual(formatSalaryRange(100000, 100000, "USD"), "$100k");
     });
   });
 });

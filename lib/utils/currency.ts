@@ -175,7 +175,7 @@ export function formatSalary(amount: number, currency: string = "INR"): string {
  * Formats a compact salary string for badges and cards (e.g. ₹15L, $120k).
  */
 export function formatSalaryCompact(amount: number, currency: string = "INR"): string {
-  const curr = (currency || "INR").toUpperCase();
+  const curr = (typeof currency === "string" && currency ? currency : "INR").toUpperCase();
   const symbol = getCurrencySymbol(curr);
 
   if (curr === "INR") {
@@ -207,4 +207,27 @@ export function formatSalaryCompact(amount: number, currency: string = "INR"): s
     return `${symbol}${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}k`;
   }
   return `${symbol}${amount}`;
+}
+
+/**
+ * Formats a salary range compactly (e.g. ₹15L–₹25L, $80k–$110k).
+ */
+export function formatSalaryRange(
+  min?: number | null,
+  max?: number | null,
+  currency: string = "INR"
+): string | null {
+  if ((min === null || min === undefined) && (max === null || max === undefined)) {
+    return null;
+  }
+
+  const curr = typeof currency === "string" && currency ? currency : "INR";
+
+  if (min && max) {
+    if (min === max) return formatSalaryCompact(min, curr);
+    return `${formatSalaryCompact(min, curr)}–${formatSalaryCompact(max, curr)}`;
+  }
+  if (min) return `${formatSalaryCompact(min, curr)}+`;
+  if (max) return `Up to ${formatSalaryCompact(max, curr)}`;
+  return null;
 }

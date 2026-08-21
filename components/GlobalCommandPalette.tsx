@@ -9,6 +9,14 @@ import {
   Download,
   Layers,
   Sparkles,
+  Link2,
+  FileText,
+  Filter,
+  Kanban,
+  Ghost,
+  Target,
+  Flame,
+  CheckCircle2,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -45,21 +53,34 @@ export default function GlobalCommandPalette() {
   return (
     <>
       <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Type a command or search actions..." />
+        <CommandInput placeholder="Search commands, pipeline stages, or triage actions (⌘K)..." />
         <CommandList>
-          <CommandEmpty>No matching commands found.</CommandEmpty>
-          
-          <CommandGroup heading="Navigation">
+          <CommandEmpty>No matching command or action found.</CommandEmpty>
+
+          {/* Quick Ingest & Actions */}
+          <CommandGroup heading="Ingestion & Operations">
             <CommandItem
               onSelect={() =>
                 runCommand(() => {
-                  router.push("/");
+                  window.dispatchEvent(new CustomEvent("open-ingest-modal", { detail: { mode: "paste" } }));
                 })
               }
             >
-              <Layers className="mr-2 h-4 w-4 text-zinc-400" />
-              <span>Vanguard Dashboard</span>
-              <CommandShortcut>G D</CommandShortcut>
+              <Sparkles className="mr-2 h-4 w-4 text-[#d4a745]" />
+              <span>Quick Ingest (Paste JD Text)</span>
+              <CommandShortcut>⇧ I</CommandShortcut>
+            </CommandItem>
+
+            <CommandItem
+              onSelect={() =>
+                runCommand(() => {
+                  window.dispatchEvent(new CustomEvent("open-ingest-modal", { detail: { mode: "url" } }));
+                })
+              }
+            >
+              <Link2 className="mr-2 h-4 w-4 text-[#d4a745]" />
+              <span>Direct URL Job Scrape</span>
+              <CommandShortcut>⇧ U</CommandShortcut>
             </CommandItem>
 
             <CommandItem
@@ -69,27 +90,11 @@ export default function GlobalCommandPalette() {
                 })
               }
             >
-              <PlusCircle className="mr-2 h-4 w-4 text-zinc-400" />
-              <span>Manual Job Entry</span>
-              <CommandShortcut>G N</CommandShortcut>
+              <PlusCircle className="mr-2 h-4 w-4 text-[#d4a745]" />
+              <span>Manual Job Opportunity Entry</span>
+              <CommandShortcut>⇧ M</CommandShortcut>
             </CommandItem>
 
-            <CommandItem
-              onSelect={() =>
-                runCommand(() => {
-                  router.push("/settings");
-                })
-              }
-            >
-              <Settings className="mr-2 h-4 w-4 text-zinc-400" />
-              <span>Scoring Settings & Calibration</span>
-              <CommandShortcut>G S</CommandShortcut>
-            </CommandItem>
-          </CommandGroup>
-
-          <CommandSeparator />
-
-          <CommandGroup heading="Candidate & Operations">
             <CommandItem
               onSelect={() =>
                 runCommand(() => {
@@ -107,21 +112,103 @@ export default function GlobalCommandPalette() {
                 })
               }
             >
-              <User className="mr-2 h-4 w-4 text-zinc-400" />
-              <span>Open Candidate Profile</span>
+              <User className="mr-2 h-4 w-4 text-[#d4a745]" />
+              <span>Open Candidate Profile Drawer</span>
               <CommandShortcut>⇧ P</CommandShortcut>
+            </CommandItem>
+          </CommandGroup>
+
+          <CommandSeparator />
+
+          {/* Pipeline Stage Filters */}
+          <CommandGroup heading="Pipeline & Stage Filters">
+            <CommandItem
+              onSelect={() =>
+                runCommand(() => {
+                  window.dispatchEvent(new CustomEvent("set-cockpit-filter", { detail: { tab: "priority" } }));
+                })
+              }
+            >
+              <Flame className="mr-2 h-4 w-4 text-[#d4a745]" />
+              <span>Filter: Priority Queue (Fit ≥80)</span>
+              <CommandShortcut>G P</CommandShortcut>
             </CommandItem>
 
             <CommandItem
               onSelect={() =>
                 runCommand(() => {
-                  window.dispatchEvent(new CustomEvent("open-ingest-modal", { detail: { mode: "paste" } }));
+                  window.dispatchEvent(new CustomEvent("set-cockpit-filter", { detail: { tab: "shortlisted" } }));
                 })
               }
             >
-              <Sparkles className="mr-2 h-4 w-4 text-zinc-400" />
-              <span>Quick Ingest Job</span>
-              <CommandShortcut>⇧ I</CommandShortcut>
+              <Target className="mr-2 h-4 w-4 text-[#a6abbd]" />
+              <span>Filter: Shortlisted Opportunities</span>
+              <CommandShortcut>G 1</CommandShortcut>
+            </CommandItem>
+
+            <CommandItem
+              onSelect={() =>
+                runCommand(() => {
+                  window.dispatchEvent(new CustomEvent("set-cockpit-filter", { detail: { tab: "prepared" } }));
+                })
+              }
+            >
+              <FileText className="mr-2 h-4 w-4 text-[#a6abbd]" />
+              <span>Filter: Prepared Applications</span>
+              <CommandShortcut>G 2</CommandShortcut>
+            </CommandItem>
+
+            <CommandItem
+              onSelect={() =>
+                runCommand(() => {
+                  window.dispatchEvent(new CustomEvent("set-cockpit-filter", { detail: { tab: "applied" } }));
+                })
+              }
+            >
+              <CheckCircle2 className="mr-2 h-4 w-4 text-[#8ab384]" />
+              <span>Filter: Active In-Flight Pipeline</span>
+              <CommandShortcut>G 3</CommandShortcut>
+            </CommandItem>
+
+            <CommandItem
+              onSelect={() =>
+                runCommand(() => {
+                  window.dispatchEvent(new CustomEvent("set-cockpit-filter", { detail: { tab: "pipeline" } }));
+                })
+              }
+            >
+              <Kanban className="mr-2 h-4 w-4 text-[#a6abbd]" />
+              <span>Open Interactive Kanban Pipeline Board</span>
+              <CommandShortcut>G K</CommandShortcut>
+            </CommandItem>
+          </CommandGroup>
+
+          <CommandSeparator />
+
+          {/* Navigation & Telemetry */}
+          <CommandGroup heading="Navigation & System Telemetry">
+            <CommandItem
+              onSelect={() =>
+                runCommand(() => {
+                  router.push("/");
+                })
+              }
+            >
+              <Layers className="mr-2 h-4 w-4 text-[#a6abbd]" />
+              <span>Vanguard Intelligence Dashboard</span>
+              <CommandShortcut>G D</CommandShortcut>
+            </CommandItem>
+
+            <CommandItem
+              onSelect={() =>
+                runCommand(() => {
+                  router.push("/settings");
+                })
+              }
+            >
+              <Settings className="mr-2 h-4 w-4 text-[#a6abbd]" />
+              <span>Scoring Settings &amp; Calibration</span>
+              <CommandShortcut>G S</CommandShortcut>
             </CommandItem>
 
             <CommandItem
@@ -141,8 +228,8 @@ export default function GlobalCommandPalette() {
                 })
               }
             >
-              <Download className="mr-2 h-4 w-4 text-zinc-400" />
-              <span>Export Applications Data</span>
+              <Download className="mr-2 h-4 w-4 text-[#a6abbd]" />
+              <span>Export Applications Data (CSV/JSON)</span>
               <CommandShortcut>⇧ E</CommandShortcut>
             </CommandItem>
           </CommandGroup>

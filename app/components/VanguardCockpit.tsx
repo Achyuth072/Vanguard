@@ -27,7 +27,7 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
   const [selectedPrepJob, setSelectedPrepJob] = useState<EnrichedJob | null>(null);
   const [isPrepDrawerOpen, setIsPrepDrawerOpen] = useState(false);
 
-  // Listen for global command palette trigger
+  // Listen for global command palette triggers
   useEffect(() => {
     const handleOpenIngest = (e: Event) => {
       const customEvent = e as CustomEvent<{ mode?: "paste" | "url" | "manual" }>;
@@ -39,8 +39,26 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
       setIsIngestOpen(true);
     };
 
+    const handleSetFilter = (e: Event) => {
+      const customEvent = e as CustomEvent<{ tab?: string }>;
+      const tab = customEvent.detail?.tab;
+      if (tab === "priority" || tab === "inbox") {
+        setActiveTab("inbox");
+      } else if (tab === "review" || tab === "shortlisted") {
+        setActiveTab("review");
+      } else if (tab === "pipeline" || tab === "applied" || tab === "prepared") {
+        setActiveTab("pipeline");
+      } else if (tab === "all") {
+        setActiveTab("all");
+      }
+    };
+
     window.addEventListener("open-ingest-modal", handleOpenIngest);
-    return () => window.removeEventListener("open-ingest-modal", handleOpenIngest);
+    window.addEventListener("set-cockpit-filter", handleSetFilter);
+    return () => {
+      window.removeEventListener("open-ingest-modal", handleOpenIngest);
+      window.removeEventListener("set-cockpit-filter", handleSetFilter);
+    };
   }, []);
 
   // Categorize jobs for the active view tab
@@ -145,7 +163,7 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
               setIngestMode("paste");
               setIsIngestOpen(true);
             }}
-            className="px-3.5 py-2 bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] text-xs font-bold font-sans uppercase tracking-wider rounded-[2px] transition-colors flex items-center gap-2 cursor-pointer shadow-sm"
+            className="px-3.5 py-2 bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] text-xs font-bold font-sans uppercase tracking-wider rounded-[2px] transition-colors flex items-center gap-2 cursor-pointer shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4a745]"
           >
             <PlusCircle className="w-4 h-4 stroke-[2]" />
             <span>Ingest Target</span>
@@ -160,7 +178,7 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
           <div className="col-span-12 h-full min-h-0 bg-[#15171d] border border-[#2a2e38] rounded-[3px] p-3.5 overflow-hidden flex flex-col">
             <div className="px-2 py-2 border-b border-[#2a2e38] text-xs font-mono uppercase tracking-wider text-[#a6abbd] flex items-center justify-between shrink-0 mb-3 font-semibold">
               <span>Active Application Pipeline · Interactive Kanban</span>
-              <span className="text-[#d4a745]">DRAG & DROP READY</span>
+              <span className="text-[#d4a745]">DRAG &amp; DROP READY</span>
             </div>
             <div className="flex-1 min-h-0 overflow-x-auto">
               <ApplicationTracker

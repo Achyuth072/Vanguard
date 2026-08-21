@@ -464,10 +464,10 @@ export default function ProfileDrawer({
               type="button"
               onClick={() => setActiveTab("preferences")}
               className={cn(
-                "flex-1 min-w-[120px] py-1.5 px-2.5 rounded-[2px] flex items-center justify-center gap-1.5 transition-all text-xs focus-visible:outline-2 focus-visible:outline-[#d4a745]",
+                "flex-1 min-w-[120px] py-1.5 px-2.5 rounded-[2px] flex items-center justify-center gap-1.5 border transition-colors text-xs focus-visible:outline-2 focus-visible:outline-[#d4a745]",
                 activeTab === "preferences"
-                  ? "bg-[#1f222a] text-[#f4f2ec] border border-[#3d4352]"
-                  : "text-[#a6abbd] hover:text-[#f4f2ec]"
+                  ? "bg-[#1f222a] text-[#f4f2ec] border-[#3d4352]"
+                  : "border-transparent text-[#a6abbd] hover:text-[#f4f2ec] hover:bg-[#15171d]"
               )}
             >
               <Sliders className="w-3.5 h-3.5 text-[#d4a745]" />
@@ -478,10 +478,10 @@ export default function ProfileDrawer({
               type="button"
               onClick={() => setActiveTab("skills")}
               className={cn(
-                "flex-1 min-w-[120px] py-1.5 px-2.5 rounded-[2px] flex items-center justify-center gap-1.5 transition-all text-xs focus-visible:outline-2 focus-visible:outline-[#d4a745]",
+                "flex-1 min-w-[120px] py-1.5 px-2.5 rounded-[2px] flex items-center justify-center gap-1.5 border transition-colors text-xs focus-visible:outline-2 focus-visible:outline-[#d4a745]",
                 activeTab === "skills"
-                  ? "bg-[#1f222a] text-[#f4f2ec] border border-[#3d4352]"
-                  : "text-[#a6abbd] hover:text-[#f4f2ec]"
+                  ? "bg-[#1f222a] text-[#f4f2ec] border-[#3d4352]"
+                  : "border-transparent text-[#a6abbd] hover:text-[#f4f2ec] hover:bg-[#15171d]"
               )}
             >
               <Wrench className="w-3.5 h-3.5 text-[#d4a745]" />
@@ -495,10 +495,10 @@ export default function ProfileDrawer({
               type="button"
               onClick={() => setActiveTab("experiences")}
               className={cn(
-                "flex-1 min-w-[120px] py-1.5 px-2.5 rounded-[2px] flex items-center justify-center gap-1.5 transition-all text-xs focus-visible:outline-2 focus-visible:outline-[#d4a745]",
+                "flex-1 min-w-[120px] py-1.5 px-2.5 rounded-[2px] flex items-center justify-center gap-1.5 border transition-colors text-xs focus-visible:outline-2 focus-visible:outline-[#d4a745]",
                 activeTab === "experiences"
-                  ? "bg-[#1f222a] text-[#f4f2ec] border border-[#3d4352]"
-                  : "text-[#a6abbd] hover:text-[#f4f2ec]"
+                  ? "bg-[#1f222a] text-[#f4f2ec] border-[#3d4352]"
+                  : "border-transparent text-[#a6abbd] hover:text-[#f4f2ec] hover:bg-[#15171d]"
               )}
             >
               <Briefcase className="w-3.5 h-3.5 text-[#d4a745]" />
@@ -512,10 +512,10 @@ export default function ProfileDrawer({
               type="button"
               onClick={() => setActiveTab("projects")}
               className={cn(
-                "flex-1 min-w-[120px] py-1.5 px-2.5 rounded-[2px] flex items-center justify-center gap-1.5 transition-all text-xs focus-visible:outline-2 focus-visible:outline-[#d4a745]",
+                "flex-1 min-w-[120px] py-1.5 px-2.5 rounded-[2px] flex items-center justify-center gap-1.5 border transition-colors text-xs focus-visible:outline-2 focus-visible:outline-[#d4a745]",
                 activeTab === "projects"
-                  ? "bg-[#1f222a] text-[#f4f2ec] border border-[#3d4352]"
-                  : "text-[#a6abbd] hover:text-[#f4f2ec]"
+                  ? "bg-[#1f222a] text-[#f4f2ec] border-[#3d4352]"
+                  : "border-transparent text-[#a6abbd] hover:text-[#f4f2ec] hover:bg-[#15171d]"
               )}
             >
               <FolderGit2 className="w-3.5 h-3.5 text-[#d4a745]" />
@@ -529,10 +529,10 @@ export default function ProfileDrawer({
               type="button"
               onClick={() => setActiveTab("resume")}
               className={cn(
-                "flex-1 min-w-[120px] py-1.5 px-2.5 rounded-[2px] flex items-center justify-center gap-1.5 transition-all text-xs focus-visible:outline-2 focus-visible:outline-[#d4a745]",
+                "flex-1 min-w-[120px] py-1.5 px-2.5 rounded-[2px] flex items-center justify-center gap-1.5 border transition-colors text-xs focus-visible:outline-2 focus-visible:outline-[#d4a745]",
                 activeTab === "resume"
-                  ? "bg-[#1f222a] text-[#f4f2ec] border border-[#3d4352]"
-                  : "text-[#a6abbd] hover:text-[#f4f2ec]"
+                  ? "bg-[#1f222a] text-[#f4f2ec] border-[#3d4352]"
+                  : "border-transparent text-[#a6abbd] hover:text-[#f4f2ec] hover:bg-[#15171d]"
               )}
             >
               <FileText className="w-3.5 h-3.5 text-[#d4a745]" />
@@ -833,41 +833,37 @@ export default function ProfileDrawer({
 
                   {/* Category Filter Chips */}
                   <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                    <Button
+                    <button
                       type="button"
-                      variant={selectedSkillCategory === "ALL" ? "default" : "outline"}
-                      size="sm"
                       onClick={() => setSelectedSkillCategory("ALL")}
                       className={cn(
-                        "rounded-[2px] h-7 text-xs font-mono px-3 transition-colors",
+                        "rounded-[2px] h-7 text-xs font-mono px-3 transition-colors border flex items-center justify-center",
                         selectedSkillCategory === "ALL"
-                          ? "bg-[#1f222a] text-[#f4f2ec] border border-[#3d4352]"
-                          : "border-[#2a2e38] bg-[#0d0e12] text-[#a6abbd] hover:text-[#f4f2ec]"
+                          ? "bg-[#1f222a] text-[#f4f2ec] border-[#3d4352]"
+                          : "border-[#2a2e38] bg-[#0d0e12] text-[#a6abbd] hover:text-[#f4f2ec] hover:bg-[#15171d]"
                       )}
                     >
                       All ({profile.skills.length})
-                    </Button>
+                    </button>
 
                     {SKILL_CATEGORIES.map((cat) => {
                       const count = profile.skills.filter(
                         (s) => s.category === cat
                       ).length;
                       return (
-                        <Button
+                        <button
                           key={cat}
                           type="button"
-                          variant={selectedSkillCategory === cat ? "default" : "outline"}
-                          size="sm"
                           onClick={() => setSelectedSkillCategory(cat)}
                           className={cn(
-                            "rounded-[2px] h-7 text-xs font-mono px-3 transition-colors",
+                            "rounded-[2px] h-7 text-xs font-mono px-3 transition-colors border flex items-center justify-center",
                             selectedSkillCategory === cat
-                              ? "bg-[#1f222a] text-[#f4f2ec] border border-[#3d4352]"
-                              : "border-[#2a2e38] bg-[#0d0e12] text-[#a6abbd] hover:text-[#f4f2ec]"
+                              ? "bg-[#1f222a] text-[#f4f2ec] border-[#3d4352]"
+                              : "border-[#2a2e38] bg-[#0d0e12] text-[#a6abbd] hover:text-[#f4f2ec] hover:bg-[#15171d]"
                           )}
                         >
                           {cat} ({count})
-                        </Button>
+                        </button>
                       );
                     })}
                   </div>

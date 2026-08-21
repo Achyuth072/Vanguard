@@ -499,7 +499,7 @@ export default function ApplicationPreparationDrawer({
               <TabsList className="w-full flex h-auto p-1 bg-[#0d0e12] border border-[#2a2e38] rounded-[2px]">
                 <TabsTrigger
                   value="resume"
-                  className="flex-1 py-1.5 text-xs font-mono font-semibold gap-1.5 rounded-[2px] text-[#a6abbd] data-[state=active]:bg-[#1f222a] data-[state=active]:text-[#f4f2ec] data-[state=active]:border data-[state=active]:border-[#3d4352] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                  className="flex-1 py-1.5 text-xs font-mono font-semibold gap-1.5 rounded-[2px] border border-transparent text-[#a6abbd] transition-colors data-[state=active]:bg-[#1f222a] data-[state=active]:text-[#f4f2ec] data-[state=active]:border-[#3d4352] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
                 >
                   <FileText className="w-3.5 h-3.5 text-[#d4a745]" />
                   <span>01 · TAILORED RESUME</span>
@@ -508,7 +508,7 @@ export default function ApplicationPreparationDrawer({
 
                 <TabsTrigger
                   value="answers"
-                  className="flex-1 py-1.5 text-xs font-mono font-semibold gap-1.5 rounded-[2px] text-[#a6abbd] data-[state=active]:bg-[#1f222a] data-[state=active]:text-[#f4f2ec] data-[state=active]:border data-[state=active]:border-[#3d4352] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                  className="flex-1 py-1.5 text-xs font-mono font-semibold gap-1.5 rounded-[2px] border border-transparent text-[#a6abbd] transition-colors data-[state=active]:bg-[#1f222a] data-[state=active]:text-[#f4f2ec] data-[state=active]:border-[#3d4352] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
                 >
                   <MessageSquare className="w-3.5 h-3.5 text-[#d4a745]" />
                   <span>02 · CITED Q&amp;A</span>
@@ -519,7 +519,7 @@ export default function ApplicationPreparationDrawer({
 
                 <TabsTrigger
                   value="automate"
-                  className="flex-1 py-1.5 text-xs font-mono font-semibold gap-1.5 rounded-[2px] text-[#a6abbd] data-[state=active]:bg-[#1f222a] data-[state=active]:text-[#f4f2ec] data-[state=active]:border data-[state=active]:border-[#3d4352] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                  className="flex-1 py-1.5 text-xs font-mono font-semibold gap-1.5 rounded-[2px] border border-transparent text-[#a6abbd] transition-colors data-[state=active]:bg-[#1f222a] data-[state=active]:text-[#f4f2ec] data-[state=active]:border-[#3d4352] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
                 >
                   <Workflow className="w-3.5 h-3.5 text-[#d4a745]" />
                   <span>03 · AUTOMATION</span>
@@ -531,7 +531,7 @@ export default function ApplicationPreparationDrawer({
 
                 <TabsTrigger
                   value="status"
-                  className="flex-1 py-1.5 text-xs font-mono font-semibold gap-1.5 rounded-[2px] text-[#a6abbd] data-[state=active]:bg-[#1f222a] data-[state=active]:text-[#f4f2ec] data-[state=active]:border data-[state=active]:border-[#3d4352] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                  className="flex-1 py-1.5 text-xs font-mono font-semibold gap-1.5 rounded-[2px] border border-transparent text-[#a6abbd] transition-colors data-[state=active]:bg-[#1f222a] data-[state=active]:text-[#f4f2ec] data-[state=active]:border-[#3d4352] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#d4a745]" />
                   <span>04 · AUDIT &amp; STAGE</span>

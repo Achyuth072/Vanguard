@@ -25,7 +25,7 @@ export default async function Home() {
             </div>
             <p className="text-[#a6abbd] text-xs flex items-center gap-2 font-mono">
               <span className="w-2 h-2 rounded-full bg-[#8ab384] animate-pulse" />
-              Tactical Intelligence & Autonomous Application Cockpit
+              At the Forefront of Your Job Search
             </p>
           </div>
 

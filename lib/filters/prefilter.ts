@@ -1,5 +1,6 @@
 import { convertCurrency, formatSalary } from "../utils/currency";
-import { extractRequiredExperience } from "./deterministic";
+import { extractRequiredExperience, extractExperienceBounds, isSeniorityExcluded } from "./deterministic";
+import { evaluateLocationPolicy } from "./location-policy";
 import type { MasterSkill } from "../../types/candidate";
 
 export interface PreFilterCandidateCriteria {
@@ -12,6 +13,7 @@ export interface PreFilterCandidateCriteria {
   yearsOfExperience?: number;
   remotePreference?: "REMOTE_ONLY" | "HYBRID" | "ONSITE" | "ANY" | "ONSITE_ONLY" | string;
   preferredLocations?: string[] | string;
+  candidateLocation?: string;
   companyStageBlacklist?: string[] | string;
   blacklistedCompanies?: string[] | string;
   blacklistedKeywords?: string[] | string;
@@ -58,6 +60,9 @@ export interface PreFilterResult {
     detectedBlacklistMatches: string[];
   };
 }
+
+const NON_TARGET_DOMAIN_REGEX =
+  /\b(?:devops|site\s+reliability|sre|ios|android|data\s+scienc(?:e|ist)|machine\s+learning|salesforce|qa\b|qa\s+automation)\b/i;
 
 /**
  * Escapes characters with special meaning in RegExp.
@@ -294,7 +299,7 @@ const COMMON_STAFFING_PATTERNS: RegExp[] = [
 ];
 
 /**
- * Evaluates unstructured raw job text across 6 zero-AI dimensions.
+ * Evaluates unstructured raw job text across zero-AI dimensions.
  * Executes on pure CPU with 0 AI API tokens.
  */
 export function preFilterRawText(
@@ -312,6 +317,16 @@ export function preFilterRawText(
     companyStage: true,
   };
 
+  const trimmedText = text.trim();
+  const titleHeader = trimmedText.split("\n").find((l) => l.trim().length > 0) || trimmedText.slice(0, 150);
+
+  // Check Non-Target Domain Exclusions in Title
+  const nonTargetMatch = titleHeader.match(NON_TARGET_DOMAIN_REGEX);
+  if (nonTargetMatch) {
+    matchedDimensions.roleKeywords = false;
+    reasons.push(`Non-target domain keyword '${nonTargetMatch[0]}' found in job title`);
+  }
+
   // Dimension 1: Target Role Keywords
   const targetRoleKeywords = normalizeStringList(candidate.targetRoleKeywords);
   if (targetRoleKeywords.length === 0 && candidate.targetRole) {
@@ -327,7 +342,7 @@ export function preFilterRawText(
       }
     }
 
-    if (detectedRoles.length === 0) {
+    if (detectedRoles.length === 0 && matchedDimensions.roleKeywords) {
       matchedDimensions.roleKeywords = false;
       reasons.push("No matching target role keywords found in raw text");
     }
@@ -350,10 +365,18 @@ export function preFilterRawText(
       }
     }
 
-    const minMatches = options?.minTechStackMatches ?? 1;
+    const hasExactTitleMatch = candidate.targetRole
+      ? new RegExp(`\\b${escapeRegExp(candidate.targetRole)}\\b`, "i").test(titleHeader)
+      : false;
+
+    const minMatches = options?.minTechStackMatches ?? (hasExactTitleMatch ? 1 : 2);
     if (detectedSkills.length < minMatches) {
       matchedDimensions.techStack = false;
-      reasons.push("No matching tech stack or skills found in raw text");
+      if (detectedSkills.length === 0) {
+        reasons.push("No matching tech stack or skills found in raw text");
+      } else {
+        reasons.push(`Insufficient tech stack matches: found ${detectedSkills.length}, required ${minMatches}`);
+      }
     }
   }
 
@@ -400,7 +423,7 @@ export function preFilterRawText(
     }
   }
 
-  // Dimension 4: Remote vs Location Classification
+  // Dimension 4: Remote & Location Policy Engine
   const { remoteStatus, detectedLocations } = classifyRemoteAndLocation(text);
   const candidateRemote = (candidate.remotePreference || "ANY").toUpperCase().trim();
 
@@ -416,12 +439,30 @@ export function preFilterRawText(
     reasons.push("Job is REMOTE but candidate preference is ONSITE_ONLY");
   }
 
-  // Dimension 5: Experience Requirement Parser
-  const detectedExperienceYears = extractRequiredExperience(text);
-  const candidateExperience = candidate.yearsOfExperience ?? 0;
+  const locPolicy = evaluateLocationPolicy({
+    candidateLocation: candidate.candidateLocation,
+    preferredLocations: candidate.preferredLocations,
+    jobRemoteStatus: remoteStatus,
+    jobText: text,
+  });
+  if (!locPolicy.passed && locPolicy.reason) {
+    matchedDimensions.location = false;
+    reasons.push(locPolicy.reason);
+  }
+
+  // Dimension 5: Experience Requirement Parser & Seniority Guard
+  const candidateExperience = candidate.yearsOfExperience;
+  if (isSeniorityExcluded(titleHeader, candidateExperience)) {
+    matchedDimensions.experience = false;
+    reasons.push(`Seniority title in '${titleHeader.trim()}' is excluded for candidate with <= 3 YOE`);
+  }
+
+  const bounds = extractExperienceBounds(text);
+  const detectedExperienceYears = bounds.minYears;
   const tolerance = options?.experienceDeltaTolerance ?? 2;
 
   if (
+    typeof candidateExperience === "number" &&
     typeof detectedExperienceYears === "number" &&
     detectedExperienceYears > candidateExperience + tolerance
   ) {
@@ -501,3 +542,4 @@ export function preFilterRawText(
     },
   };
 }
+

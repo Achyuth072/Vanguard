@@ -15,21 +15,27 @@
 
 ### Pipeline Stages
 
-1. **Ingestion & Parsing**: Adding raw job descriptions via manual paste or URL scraping (with AI metadata extraction and LPA/symbol currency normalization), or importing candidate resumes via dual-mode parsing (Deterministic Markdown AST parser with AI fallback).
-2. **Deduplication**: Computing a deterministic `dedupeKey` from normalized company, title, and URL tokens to eliminate duplicate listings before expensive processing.
-3. **Deterministic Filtering**: Fast, zero-AI evaluation of hard constraints (minimum salary with cross-currency conversion normalization, remote eligibility, minimum experience) rejecting non-viable jobs instantly.
-4. **Multi-Dimensional AI Fit Scoring**: 4-dimensional semantic evaluation (`skills`, `experience`, `domain`, `trajectory`) via task-specific workload routing, producing composite scores and gap analysis.
-5. **Priority Inbox & Kanban Pipeline**: The primary decision interface presenting high-value jobs requiring human attention, with native Drag-and-Drop stage progression and audit event logging.
-6. **Application Preparation**: Generating role-specific tailored resumes, project recommendations, and grounded question answers from verified candidate facts.
-7. **Assisted Browser Automation**: Headed Playwright automation with persistent user context, two-tier heuristic ATS form mapping (Greenhouse, Lever, Ashby, Workday), direct PDF resume attachment, and visual takeover inspection badges.
-8. **Human Approval & Assisted Submission**: The human-controlled step where the user reviews filled fields, solves any CAPTCHA, and completes the submission.
-9. **Lifecycle Tracking & Auto-Ghosting**: Recording submission timestamps, calculating response latencies, and automatically transitioning silent applications to `GHOSTED` after 21 days of inactivity.
-10. **Outcome Feedback Loop**: Calibrating scoring weights across lifecycle outcomes with phased Bayesian guardrails (Phase 0 static, Phase 1 suggestions, Phase 2 clamped drift).
+1. **Ingestion & Parsing**: Adding raw job descriptions via manual paste, direct URL import, or structured multi-source feeds (Ashby, Greenhouse, Lever, HiringCafe, Wellfound, Himalayas, RemoteOK, Jobicy, We Work Remotely, Indeed RSS, and top-level Hacker News "Who is hiring?" posts).
+2. **Deduplication**: Computing a deterministic `dedupeKey` from normalized company, title, and URL tokens, plus a cross-aggregator `clusterKey` from normalized company and title to group identical postings cross-posted across boards.
+3. **Deterministic Filtering**: Fast, zero-AI evaluation of hard constraints rejecting non-viable jobs at 0 AI token cost:
+   - **Salary Floor**: Cross-currency normalized compensation ceiling check against candidate minimum.
+   - **Location & Remote Policy**: Domestic jobs (in candidate's home country/region) allow `REMOTE`, `HYBRID`, and `ONSITE`; international jobs strictly reject onsite/hybrid and accept only worldwide/unrestricted `REMOTE`.
+   - **YOE & Seniority Bounds**: Evaluates candidate experience ($C$) against job bounds ($[min, max]$) with tolerance ($T$), rejecting roles requiring $min > C + T$ and auto-rejecting Senior/Staff/Lead titles for junior/mid candidates ($C \le 3$).
+   - **Skills & Role Precision ("To a T")**: Enforces target role keyword matching, domain blacklist rejection, and minimum tech stack keyword density ($\ge 2$ matching skills) before staging.
+4. **Discovery Staging Buffer**: Filter-passing discovered jobs are staged in a fast-access buffer. AI Fit Scoring is never triggered automatically on feed batches; scoring runs on-demand when the user chooses to ingest into the Priority Inbox.
+5. **Multi-Dimensional AI Fit Scoring**: 4-dimensional semantic evaluation (`skills`, `experience`, `domain`, `trajectory`) via task-specific workload routing, producing composite scores and gap analysis.
+6. **Priority Inbox & Kanban Pipeline**: The primary decision interface presenting high-value jobs requiring human attention, with native Drag-and-Drop stage progression and audit event logging.
+7. **Application Preparation**: Generating role-specific tailored resumes, project recommendations, and grounded question answers from verified candidate facts.
+8. **Assisted Browser Automation**: Headed Playwright automation with persistent user context, two-tier heuristic ATS form mapping (Greenhouse, Lever, Ashby, Workday), direct PDF resume attachment, and visual takeover inspection badges.
+9. **Human Approval & Assisted Submission**: The human-controlled step where the user reviews filled fields, solves any CAPTCHA, and completes the submission.
+10. **Lifecycle Tracking & Auto-Ghosting**: Recording submission timestamps, calculating response latencies, and automatically transitioning silent applications to `GHOSTED` after 21 days of inactivity.
+11. **Outcome Feedback Loop**: Calibrating scoring weights across lifecycle outcomes with phased Bayesian guardrails (Phase 0 static, Phase 1 suggestions, Phase 2 clamped drift).
 
 ### System Principles & Invariants
 
 - **Local-First Persistence**: SQLite (`pulse.db`) via Prisma is the sole source of truth. No hosted remote database or cloud backend is required.
-- **Zero-Cost Cascading Inference**: AI operates at ₹0/month via a 6-tier cascading architecture (Google Gemini free pool `3.7-flash` → `3.6-flash` → `3.5-flash` → `3.5-flash-lite` → `3.1-flash-lite` → NVIDIA NIM → Ollama Cloud → OpenRouter → OpenCode Zen → Groq) with in-memory zero-latency circuit breakers and task-specific Workload Profiles.
+- **Zero-Cost Cascading Inference**: AI operates at ₹0/month via a 6-tier cascading architecture with in-memory circuit breakers and task-specific Workload Profiles.
+- **Zero-Token Raw Discovery**: Ingestion, deduplication, and multi-dimensional pre-filtering consume 0 AI tokens.
 - **No Hallucinated Credentials**: AI tailoring and portal answers must never invent skills, metrics, experiences, or credentials not present in the candidate profile.
 - **Human-in-the-Loop Execution**: The agent automates administrative ingestion, filtering, scoring, drafting, and form mapping; final submission remains strictly human-initiated.
 - **Interactive Kanban Pipeline**: Active tracking stages are rendered as fixed-width, horizontally scrollable columns with native HTML5 Drag-and-Drop stage transitions and audit event logging.
@@ -41,3 +47,4 @@
 - Use **Fit Score**, never *Match Percentage* or *AI Rating*.
 - Use **Priority Inbox**, never *Job Feed* or *Search Results*.
 - Avoid **Auto-apply** or **Mass Submission**: Vanguard is a personal filtering, preparation, and assisted application cockpit, not an unattended mass-submission bot.
+

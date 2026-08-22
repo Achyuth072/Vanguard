@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {
   evaluateDeterministicFilters,
   extractRequiredExperience,
+  extractExperienceBounds,
+  isSeniorityExcluded,
   type CandidateFilterCriteria,
   type JobFilterInput,
 } from "./deterministic";
@@ -282,4 +284,47 @@ describe("Deterministic Filter Engine", () => {
       assert.strictEqual(extractRequiredExperience("No experience mentioned"), null);
     });
   });
+
+  describe("extractExperienceBounds helper", () => {
+    it("extracts min and max bounds correctly", () => {
+      assert.deepStrictEqual(extractExperienceBounds("3-5 years"), { minYears: 3, maxYears: 5 });
+      assert.deepStrictEqual(extractExperienceBounds("1 to 7 yrs"), { minYears: 1, maxYears: 7 });
+      assert.deepStrictEqual(extractExperienceBounds("5+ years"), { minYears: 5, maxYears: null });
+      assert.deepStrictEqual(extractExperienceBounds("minimum 4 years"), { minYears: 4, maxYears: null });
+      assert.deepStrictEqual(extractExperienceBounds("2 years of experience"), { minYears: 2, maxYears: 2 });
+    });
+  });
+
+  describe("isSeniorityExcluded helper", () => {
+    it("rejects senior titles when candidate has <= 3 YOE", () => {
+      assert.strictEqual(isSeniorityExcluded("Senior Software Engineer", 2), true);
+      assert.strictEqual(isSeniorityExcluded("Sr. Frontend Engineer", 3), true);
+      assert.strictEqual(isSeniorityExcluded("Staff Engineer", 2), true);
+      assert.strictEqual(isSeniorityExcluded("Principal Architect", 1), true);
+      assert.strictEqual(isSeniorityExcluded("Engineering Lead", 3), true);
+      assert.strictEqual(isSeniorityExcluded("Director of Engineering", 2), true);
+    });
+
+    it("allows senior titles when candidate has > 3 YOE", () => {
+      assert.strictEqual(isSeniorityExcluded("Senior Software Engineer", 4), false);
+      assert.strictEqual(isSeniorityExcluded("Staff Engineer", 5), false);
+    });
+
+    it("allows non-senior titles for <= 3 YOE candidates", () => {
+      assert.strictEqual(isSeniorityExcluded("Software Engineer", 2), false);
+      assert.strictEqual(isSeniorityExcluded("Fullstack Developer", 1), false);
+      assert.strictEqual(isSeniorityExcluded("Junior Developer", 0), false);
+    });
+  });
+
+  describe("Seniority Title Exclusion in Filters", () => {
+    it("rejects senior roles for candidate with 2 YOE", () => {
+      const candidate: CandidateFilterCriteria = { ...baseCandidate, yearsOfExperience: 2 };
+      const job: JobFilterInput = { ...baseJob, title: "Senior Software Engineer" };
+      const result = evaluateDeterministicFilters(candidate, job);
+      assert.strictEqual(result.passed, false);
+      assert.match(result.reasons[0], /Seniority title in 'Senior Software Engineer' is excluded for candidate with <= 3 YOE/i);
+    });
+  });
 });
+

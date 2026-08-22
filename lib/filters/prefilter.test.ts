@@ -363,4 +363,83 @@ describe("Zero-Token 6-Dimension Regex Pre-Filter", () => {
       assert.ok(elapsed < 50, `Expected 100 iterations to take < 50ms, took ${elapsed.toFixed(2)}ms`);
     });
   });
+
+  describe("Skill Overlap Density & Title Exclusions", () => {
+    it("rejects non-target domain keywords in job title (DevOps, iOS, Android, Data Science, Machine Learning, Salesforce)", () => {
+      const devopsText = "DevOps Engineer | Remote | Tech: Docker, Kubernetes, AWS";
+      const devopsRes = preFilterRawText(devopsText, { targetRole: "Software Engineer", techStack: ["Docker"] });
+      assert.strictEqual(devopsRes.passed, false);
+      assert.ok(devopsRes.reasons.some((r) => r.includes("Non-target domain keyword 'DevOps'")));
+
+      const iosText = "iOS Developer | SF | Tech: Swift, iOS, Xcode";
+      const iosRes = preFilterRawText(iosText, { targetRole: "Software Engineer", techStack: ["Swift"] });
+      assert.strictEqual(iosRes.passed, false);
+      assert.ok(iosRes.reasons.some((r) => r.includes("Non-target domain keyword 'iOS'")));
+    });
+
+    it("requires >= 2 matching tech stack skills when title is not an exact match", () => {
+      const text = "Company | Engineering Lead | Remote | Tech: React";
+      const res = preFilterRawText(text, {
+        targetRole: "Software Engineer",
+        techStack: ["React", "TypeScript", "Node.js"],
+      });
+      assert.strictEqual(res.passed, false);
+      assert.ok(res.reasons.some((r) => r.includes("Insufficient tech stack matches")));
+    });
+
+    it("requires >= 1 matching tech stack skill when job title is an exact match for candidate target role", () => {
+      const text = "Software Engineer | Remote (Worldwide) | Tech: React";
+      const res = preFilterRawText(text, {
+        targetRole: "Software Engineer",
+        techStack: ["React", "TypeScript", "Node.js"],
+        candidateLocation: "India",
+      });
+      assert.strictEqual(res.matchedDimensions.techStack, true);
+    });
+  });
+
+  describe("Location Policy Engine Integration", () => {
+    it("accepts domestic REMOTE, HYBRID, and ONSITE jobs", () => {
+      const domesticText = "Acme Corp | Software Engineer | Bengaluru, India | Onsite / Hybrid / Remote | Tech: React, Node.js";
+      const res = preFilterRawText(domesticText, {
+        targetRole: "Software Engineer",
+        techStack: ["React", "Node.js"],
+        candidateLocation: "India",
+      });
+      assert.strictEqual(res.matchedDimensions.location, true);
+    });
+
+    it("rejects foreign ONSITE and HYBRID jobs", () => {
+      const foreignOnsiteText = "Acme Corp | Software Engineer | San Francisco, CA | Strictly Onsite | Tech: React, Node.js";
+      const res = preFilterRawText(foreignOnsiteText, {
+        targetRole: "Software Engineer",
+        techStack: ["React", "Node.js"],
+        candidateLocation: "India",
+      });
+      assert.strictEqual(res.passed, false);
+      assert.ok(res.reasons.some((r) => r.includes("foreign location")));
+    });
+
+    it("rejects foreign geo-restricted remote jobs ('US Only', 'EMEA only')", () => {
+      const geoRestrictedText = "Acme Corp | Software Engineer | Remote (US Only) | Tech: React, Node.js";
+      const res = preFilterRawText(geoRestrictedText, {
+        targetRole: "Software Engineer",
+        techStack: ["React", "Node.js"],
+        candidateLocation: "India",
+      });
+      assert.strictEqual(res.passed, false);
+      assert.ok(res.reasons.some((r) => r.includes("geo-restricted")));
+    });
+
+    it("accepts foreign remote jobs open Worldwide / Anywhere", () => {
+      const worldwideText = "Acme Corp | Software Engineer | Remote (Worldwide) | Work from anywhere | Tech: React, Node.js";
+      const res = preFilterRawText(worldwideText, {
+        targetRole: "Software Engineer",
+        techStack: ["React", "Node.js"],
+        candidateLocation: "India",
+      });
+      assert.strictEqual(res.matchedDimensions.location, true);
+    });
+  });
 });
+

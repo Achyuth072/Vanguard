@@ -465,6 +465,64 @@ describe("Deterministic Feed Adapters", () => {
 
       const result = await adapter.poll(source, undefined, { fetchFn: mockFetch });
       assert.equal(result.jobs.length, 3);
+      const ids = result.jobs.map((j) => j.sourceExternalId);
+      assert.deepEqual(ids, ["41250101", "41250102", "41250103"]);
+    });
+
+    it("filters out nested comments, conversational noise, and unstructured non-delimiter comments", async () => {
+      const mockFetch = createMockFetch({
+        "search_by_date?tags=comment": {
+          hits: [
+            {
+              objectID: "1001",
+              created_at_i: 1755691200,
+              parent_id: 41250000,
+              comment_text: "<p>Acme Corp | Senior Backend Engineer | Remote | $150k - $180k</p><p>We build great software.</p>",
+            },
+            {
+              objectID: "1002",
+              created_at_i: 1755691300,
+              parent_id: 1001, // Nested reply!
+              comment_text: "<p>Is visa sponsorship available?</p>",
+            },
+            {
+              objectID: "1003",
+              created_at_i: 1755691400,
+              parent_id: 41250000,
+              comment_text: "<p>Thanks for sharing! I just applied via email sent.</p>", // Conversational noise!
+            },
+            {
+              objectID: "1004",
+              created_at_i: 1755691500,
+              parent_id: 41250000,
+              comment_text: "<p>We are a stealth startup looking for hackers in NYC.</p>", // Missing delimiters!
+            },
+          ],
+        },
+      });
+
+      const source: FeedSource = {
+        id: "fs-hn-filter-test",
+        name: "HN Hiring",
+        type: "HN",
+        url: "https://hn.algolia.com/api/v1",
+        config: JSON.stringify({ searchStoryId: 41250000 }),
+        enabled: true,
+        autoPoll: false,
+        lastCursor: "",
+        pollIntervalMs: 86400000,
+        consecutiveEmpty: 0,
+        jobsDiscovered: 0,
+        jobsPassed: 0,
+        errorCount: 0,
+        lastError: "",
+      };
+
+      const result = await adapter.poll(source, undefined, { fetchFn: mockFetch });
+      assert.equal(result.jobs.length, 1);
+      assert.equal(result.jobs[0].sourceExternalId, "1001");
+      assert.equal(result.jobs[0].company, "Acme Corp");
+      assert.equal(result.jobs[0].title, "Senior Backend Engineer");
     });
   });
 });

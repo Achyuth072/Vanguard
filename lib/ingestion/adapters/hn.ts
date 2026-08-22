@@ -24,6 +24,7 @@ interface AlgoliaHit {
   story_id?: number;
   story_title?: string;
   story_url?: string;
+  parent_id?: number | string;
 }
 
 interface AlgoliaSearchResponse {
@@ -44,47 +45,93 @@ interface StorySearchResponse {
   hits?: StoryHit[];
 }
 
+const APPLICANT_NOISE_PATTERNS = [
+  "is visa sponsorship available",
+  "i just applied",
+  "email sent",
+  "thanks for sharing",
+  "sent an email",
+  "sent email",
+  "pm sent",
+  "dm sent",
+  "just applied",
+  "applied via",
+  "is this role still open",
+  "can you share",
+  "are you open to",
+  "what is the salary",
+  "interested in this",
+  "reach out to me",
+  "thanks for posting",
+  "great post",
+];
+
+/**
+ * Checks if raw comment text contains applicant conversational noise / dialogue.
+ */
+function isConversationalNoise(text: string): boolean {
+  const lower = text.toLowerCase();
+  return APPLICANT_NOISE_PATTERNS.some((pattern) => lower.includes(pattern));
+}
+
 /**
  * Parses header line (e.g. "Company | Title | Location | Remote | Salary") into structured components.
+ * Strictly requires standard delimiter tokens (`|`, `/`, `–`, `—`, ` - `) separating at least Company and Title.
  */
 function parseHnHeaderLine(headerLine: string): {
   company: string;
   title: string;
   location?: string;
-} {
-  // Normalize pipe and dash separators
-  const parts = headerLine
-    .split(/\s*\|\s*|\s+–\s+|\s+—\s+/)
-    .map((p) => p.trim().replace(/^[-–—]\s*/, ""))
-    .filter(Boolean);
-
-  if (parts.length >= 2) {
-    // Clean company (strip URLs e.g. "Supabase (https://supabase.com)")
-    const company = parts[0].replace(/\s*\([^)]*https?:\/\/[^)]*\)/gi, "").trim();
-    const title = parts[1].trim();
-    const location = parts.slice(2).join(" | ");
-
-    return {
-      company: company || "HN Poster",
-      title: title || "Software Engineer",
-      location: location || undefined,
-    };
+} | null {
+  // Check pipe delimiter
+  if (headerLine.includes("|")) {
+    const parts = headerLine
+      .split(/\s*\|\s*/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+    if (parts.length >= 2) {
+      const company = parts[0].replace(/\s*\([^)]*https?:\/\/[^)]*\)/gi, "").trim();
+      const title = parts[1].trim();
+      const location = parts.slice(2).join(" | ");
+      if (company && title) {
+        return { company, title, location: location || undefined };
+      }
+    }
   }
 
-  // Fallback: Check slash delimiter "Company / Title / Location"
-  const slashParts = headerLine.split(/\s+\/\s+/).map((p) => p.trim()).filter(Boolean);
-  if (slashParts.length >= 2) {
-    return {
-      company: slashParts[0].replace(/\s*\([^)]*https?:\/\/[^)]*\)/gi, "").trim() || "HN Poster",
-      title: slashParts[1].trim() || "Software Engineer",
-      location: slashParts.slice(2).join(" / ") || undefined,
-    };
+  // Check dash delimiters (en-dash, em-dash, or space-hyphen-space)
+  if (/\s+–\s+|\s+—\s+|\s+-\s+/.test(headerLine)) {
+    const parts = headerLine
+      .split(/\s+–\s+|\s+—\s+|\s+-\s+/)
+      .map((p) => p.trim().replace(/^[-–—]\s*/, ""))
+      .filter(Boolean);
+    if (parts.length >= 2) {
+      const company = parts[0].replace(/\s*\([^)]*https?:\/\/[^)]*\)/gi, "").trim();
+      const title = parts[1].trim();
+      const location = parts.slice(2).join(" | ");
+      if (company && title) {
+        return { company, title, location: location || undefined };
+      }
+    }
   }
 
-  return {
-    company: "HN Poster",
-    title: headerLine.slice(0, 80).trim(),
-  };
+  // Check slash delimiter
+  if (/\s*\/\s*/.test(headerLine)) {
+    const parts = headerLine
+      .split(/\s*\/\s*/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+    if (parts.length >= 2) {
+      const company = parts[0].replace(/\s*\([^)]*https?:\/\/[^)]*\)/gi, "").trim();
+      const title = parts[1].trim();
+      const location = parts.slice(2).join(" / ");
+      if (company && title) {
+        return { company, title, location: location || undefined };
+      }
+    }
+  }
+
+  return null;
 }
 
 export class HackerNewsAdapter implements FeedAdapter {
@@ -173,8 +220,28 @@ export class HackerNewsAdapter implements FeedAdapter {
         continue;
       }
 
+      // Filter non-root comments (must be direct children of storyId)
+      if (hit.parent_id !== undefined && hit.parent_id !== null) {
+        if (Number(hit.parent_id) !== Number(storyId)) {
+          continue;
+        }
+      }
+
       const rawText = extractTextFromHtml(hit.comment_text);
       if (!rawText || rawText.trim().length < 20) continue;
+
+      // Reject applicant dialogue / conversational noise
+      if (isConversationalNoise(rawText)) {
+        continue;
+      }
+
+      // Parse Header Line and strictly enforce standard delimiter tokens
+      const lines = rawText.split("\n").map((l) => l.trim()).filter(Boolean);
+      const firstLine = lines[0] || rawText.slice(0, 100);
+      const headerParsed = parseHnHeaderLine(firstLine);
+      if (!headerParsed) {
+        continue;
+      }
 
       // Execute zero-AI 6-dimension pre-filter if candidate criteria provided
       let filterPassed = true;
@@ -192,11 +259,6 @@ export class HackerNewsAdapter implements FeedAdapter {
           continue;
         }
       }
-
-      // Parse Header Line
-      const lines = rawText.split("\n").map((l) => l.trim()).filter(Boolean);
-      const firstLine = lines[0] || rawText.slice(0, 100);
-      const headerParsed = parseHnHeaderLine(firstLine);
 
       // Determine Title
       let title = headerParsed.title;

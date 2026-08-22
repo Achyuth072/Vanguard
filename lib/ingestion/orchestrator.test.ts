@@ -549,8 +549,10 @@ describe("IngestionOrchestrator Integration & Deduplication Suite", () => {
 
   it("provides functional helper wrappers syncFeedSource and syncAllFeedSources", async () => {
     const hnFixture = loadFixture("hn-algolia-response.json");
+    const hnStoryFixture = loadFixture("hn-story-response.json");
     const mockFetch = createMockFetch({
-      "hn.algolia.com": hnFixture,
+      "search?query=Ask": hnStoryFixture,
+      "search_by_date?tags=comment": hnFixture,
     });
 
     const sourceId = `${TEST_PREFIX}wrapper-hn`;

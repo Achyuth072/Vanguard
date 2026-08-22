@@ -88,6 +88,13 @@ describe("Feed Sources Management & Discovery Inbox UI (Issue 06)", () => {
       assert.ok(content.includes("errorCount") || content.includes("hasError"));
       assert.ok(content.includes("lastError") || content.includes("Diagnostic"));
     });
+
+    it("implements in-memory feedSourcesCache to eliminate redundant /api/feeds fetches on tab switches", () => {
+      const content = fs.readFileSync(feedSourcesManagerPath, "utf-8");
+
+      assert.ok(content.includes("feedSourcesCache"));
+      assert.ok(content.includes("clearFeedSourcesCache"));
+    });
   });
 
   describe("DiscoveryInbox Component Specification", () => {
@@ -110,6 +117,14 @@ describe("Feed Sources Management & Discovery Inbox UI (Issue 06)", () => {
       assert.ok(content.includes("remoteStatus") || content.includes("REMOTE"));
       assert.ok(content.includes("salaryMin") || content.includes("salaryMax"));
       assert.ok(content.includes("location"));
+    });
+
+    it("implements discoveryCache and non-destructive isFetching state to prevent UI content flash on source switch", () => {
+      const content = fs.readFileSync(discoveryInboxPath, "utf-8");
+
+      assert.ok(content.includes("discoveryCache"));
+      assert.ok(content.includes("isFetching"));
+      assert.ok(content.includes("querySeqRef"));
     });
 
     it("implements 'Score with AI' action button to trigger AI scoring and transfer to Priority Inbox", () => {

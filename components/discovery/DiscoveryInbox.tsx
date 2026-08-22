@@ -33,6 +33,20 @@ export interface DiscoveryInboxProps {
 // Estimated tokens consumed per AI fit scoring evaluation
 const TOKENS_PER_JOB_ESTIMATE = 800;
 
+interface DiscoveryCacheEntry {
+  jobs: DiscoveryJobItem[];
+  totalCount: number;
+  totalPages: number;
+  timestamp: number;
+}
+
+// In-memory query cache for discovery filter combinations
+const discoveryCache = new Map<string, DiscoveryCacheEntry>();
+
+export function clearDiscoveryCache() {
+  discoveryCache.clear();
+}
+
 export function DiscoveryInbox({
   className = "",
   onJobIngested,
@@ -43,6 +57,7 @@ export function DiscoveryInbox({
   const [page, setPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(true);
+  const [isFetching, setIsFetching] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   // Filters & Search
@@ -65,13 +80,38 @@ export function DiscoveryInbox({
 
   // Expanded card view for inspecting job description
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
+  const querySeqRef = React.useRef<number>(0);
 
   const fetchDiscoveryJobs = useCallback(
-    async (currentPage = page) => {
-      try {
-        setLoading(true);
-        setError(null);
+    async (currentPage = page, force = false) => {
+      const cacheKey = `${selectedSource}:${searchQuery.trim()}:${sortBy}:${currentPage}`;
+      const cached = !force ? discoveryCache.get(cacheKey) : undefined;
+      const isFresh = cached && Date.now() - cached.timestamp < 60_000;
 
+      if (isFresh) {
+        setJobs(cached.jobs);
+        setTotalCount(cached.totalCount);
+        setTotalPages(cached.totalPages);
+        setLoading(false);
+        setError(null);
+        return;
+      }
+
+      // If cached entry exists, render immediately without clearing
+      if (cached) {
+        setJobs(cached.jobs);
+        setTotalCount(cached.totalCount);
+        setTotalPages(cached.totalPages);
+        setLoading(false);
+      } else if (jobs.length === 0) {
+        setLoading(true);
+      }
+
+      setIsFetching(true);
+      setError(null);
+      const currentSeq = ++querySeqRef.current;
+
+      try {
         const params = new URLSearchParams();
         params.set("page", currentPage.toString());
         params.set("limit", "20");
@@ -82,28 +122,46 @@ export function DiscoveryInbox({
         const res = await fetch(`/api/discovery?${params.toString()}`);
         const json = await res.json();
 
+        if (currentSeq !== querySeqRef.current) return;
+
         if (json.success && json.data) {
-          setJobs(json.data.jobs || []);
-          setTotalCount(json.data.pagination?.total || 0);
-          setTotalPages(json.data.pagination?.totalPages || 1);
+          const newJobs = json.data.jobs || [];
+          const newTotal = json.data.pagination?.total || 0;
+          const newPages = json.data.pagination?.totalPages || 1;
+
+          discoveryCache.set(cacheKey, {
+            jobs: newJobs,
+            totalCount: newTotal,
+            totalPages: newPages,
+            timestamp: Date.now(),
+          });
+
+          setJobs(newJobs);
+          setTotalCount(newTotal);
+          setTotalPages(newPages);
         } else {
           throw new Error(json.error || "Failed to load discovery jobs");
         }
       } catch (err) {
-        console.error("Error loading discovery jobs:", err);
-        setError(err instanceof Error ? err.message : "Error fetching discovery jobs");
+        if (currentSeq === querySeqRef.current) {
+          console.error("Error loading discovery jobs:", err);
+          setError(err instanceof Error ? err.message : "Error fetching discovery jobs");
+        }
       } finally {
-        setLoading(false);
+        if (currentSeq === querySeqRef.current) {
+          setLoading(false);
+          setIsFetching(false);
+        }
       }
     },
-    [page, selectedSource, searchQuery, sortBy]
+    [page, selectedSource, searchQuery, sortBy, jobs.length]
   );
 
   useEffect(() => {
     fetchDiscoveryJobs(1);
     setPage(1);
     setSelectedJobIds(new Set());
-  }, [selectedSource, searchQuery, sortBy, fetchDiscoveryJobs]);
+  }, [selectedSource, searchQuery, sortBy]);
 
   const showToast = (message: string, type: "success" | "error" | "info" = "success") => {
     setStatusNotification({ message, type });
@@ -148,6 +206,7 @@ export function DiscoveryInbox({
       const json = await res.json();
 
       if (json.success) {
+        discoveryCache.clear();
         const ingestedItem = json.data?.ingestedJobs?.[0];
         const scoreVal = ingestedItem?.score ?? 80;
         showToast(
@@ -196,6 +255,7 @@ export function DiscoveryInbox({
       const json = await res.json();
 
       if (json.success) {
+        discoveryCache.clear();
         showToast(`Dismissed ${job.company} posting`, "info");
         setJobs((prev) => prev.filter((j) => j.id !== job.id));
         setTotalCount((prev) => Math.max(0, prev - 1));
@@ -237,13 +297,14 @@ export function DiscoveryInbox({
       const json = await res.json();
 
       if (json.success) {
+        discoveryCache.clear();
         const count = json.data?.ingestedCount ?? idsToScore.length;
         showToast(
           `Batch AI Scoring Complete: ${count} postings scored and promoted to Priority Inbox!`,
           "success"
         );
         setSelectedJobIds(new Set());
-        fetchDiscoveryJobs();
+        fetchDiscoveryJobs(page, true);
         if (onJobIngested) onJobIngested();
       } else {
         throw new Error(json.error || "Batch ingestion failed");
@@ -274,10 +335,11 @@ export function DiscoveryInbox({
       const json = await res.json();
 
       if (json.success) {
+        discoveryCache.clear();
         const count = json.data?.dismissedCount ?? idsToDismiss.length;
         showToast(`Dismissed ${count} postings from buffer`, "info");
         setSelectedJobIds(new Set());
-        fetchDiscoveryJobs();
+        fetchDiscoveryJobs(page, true);
       } else {
         throw new Error(json.error || "Batch dismissal failed");
       }
@@ -342,11 +404,11 @@ export function DiscoveryInbox({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => fetchDiscoveryJobs(page)}
-              disabled={loading}
+              onClick={() => fetchDiscoveryJobs(page, true)}
+              disabled={loading || isFetching}
               className="px-3 py-1.5 rounded-[2px] border border-[#2a2e38] bg-[#1f222a] hover:bg-[#2a2e38] text-[#f4f2ec] text-xs font-mono transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
-              <RefreshCw className={`w-3.5 h-3.5 text-[#d4a745] ${loading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`w-3.5 h-3.5 text-[#d4a745] ${(loading || isFetching) ? "animate-spin" : ""}`} />
               <span>Refresh</span>
             </button>
 
@@ -486,14 +548,21 @@ export function DiscoveryInbox({
         </div>
       )}
 
+      {/* Top Background Ingest/Fetch Bar */}
+      {isFetching && (
+        <div className="h-0.5 w-full bg-[#1f222a] overflow-hidden shrink-0">
+          <div className="h-full bg-[#d4a745] animate-pulse w-full" />
+        </div>
+      )}
+
       {/* Main Staged Job Card Feed */}
-      <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-3">
-        {loading ? (
+      <div className={`flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-3 transition-opacity ${isFetching ? "opacity-80" : "opacity-100"}`}>
+        {loading && jobs.length === 0 ? (
           <div className="h-64 flex flex-col items-center justify-center text-xs font-mono text-[#a6abbd] gap-2">
             <RefreshCw className="w-5 h-5 animate-spin text-[#d4a745]" />
             <span>Scanning discovery buffer &amp; evaluating match criteria...</span>
           </div>
-        ) : error ? (
+        ) : error && jobs.length === 0 ? (
           <div className="p-4 bg-[#c4634e]/10 border border-[#c4634e]/40 rounded-[3px] text-xs font-mono text-[#c4634e] flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
@@ -514,8 +583,8 @@ export function DiscoveryInbox({
             </div>
             <button
               type="button"
-              onClick={() => fetchDiscoveryJobs(1)}
-              className="mt-2 px-3.5 py-1.5 bg-[#1f222a] hover:bg-[#2a2e38] border border-[#2a2e38] text-[#f4f2ec] text-xs font-mono rounded-[2px] transition-colors flex items-center gap-1.5"
+              onClick={() => fetchDiscoveryJobs(1, true)}
+              className="mt-2 px-3.5 py-1.5 bg-[#1f222a] hover:bg-[#2a2e38] border border-[#2a2e38] text-[#f4f2ec] text-xs font-mono rounded-[2px] transition-colors flex items-center gap-1.5 cursor-pointer"
             >
               <RefreshCw className="w-3.5 h-3.5 text-[#d4a745]" />
               <span>Check for New Feed Jobs</span>

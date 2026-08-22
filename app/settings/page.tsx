@@ -247,160 +247,153 @@ export default function SettingsPage() {
           {/* RIGHT WORKSPACE: Full-Width Active Configuration Panel with smooth internal scroll */}
           <section className="w-full min-w-0 flex-1 min-h-0 overflow-y-auto pr-1">
             {/* Tab 1: Feed Sources & Ingestion Management */}
-            {activeTab === "feeds" && (
-              <div
-                role="tabpanel"
-                id="panel-feeds"
-                aria-labelledby="tab-feeds"
-                className="animate-in fade-in space-y-4 w-full min-w-0"
-              >
-                <FeedSourcesManager />
-              </div>
-            )}
+            <div
+              role="tabpanel"
+              id="panel-feeds"
+              aria-labelledby="tab-feeds"
+              className={`space-y-4 w-full min-w-0 ${activeTab === "feeds" ? "animate-in fade-in" : "hidden"}`}
+            >
+              <FeedSourcesManager />
+            </div>
 
             {/* Tab 2: Candidate Master Profile & Resume Context */}
-            {activeTab === "profile" && (
-              <div
-                role="tabpanel"
-                id="panel-profile"
-                aria-labelledby="tab-profile"
-                className="animate-in fade-in space-y-4 w-full min-w-0"
-              >
-                <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-start w-full min-w-0">
-                  {/* Master Facts Summary (Left on XL) */}
-                  {profile && (
-                    <div className="xl:col-span-5 bg-[#15171d] p-5 sm:p-6 rounded-[3px] border border-[#2a2e38] space-y-4 min-w-0">
-                      <div className="flex items-center justify-between pb-3 border-b border-[#2a2e38]">
-                        <div className="flex items-center gap-2">
-                          <Layers className="w-4 h-4 text-[#8ab384]" />
-                          <h2 className="text-sm sm:text-base font-bold text-[#f4f2ec] tracking-tight">
-                            Master Facts Repository
-                          </h2>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setIsDrawerOpen(true)}
-                          className="text-xs text-[#d4a745] hover:underline font-mono font-semibold cursor-pointer"
-                        >
-                          Manage Drawer &rarr;
-                        </button>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3 font-mono">
-                        <div className="bg-[#0d0e12] p-3 rounded-[2px] border border-[#2a2e38]">
-                          <div className="text-xs text-[#c5c9d6] uppercase font-semibold">Target Role</div>
-                          <div className="text-xs sm:text-sm font-bold text-[#f4f2ec] truncate mt-0.5">
-                            {profile.targetRole || "Not configured"}
-                          </div>
-                        </div>
-
-                        <div className="bg-[#0d0e12] p-3 rounded-[2px] border border-[#2a2e38]">
-                          <div className="text-xs text-[#c5c9d6] uppercase font-semibold">Master Projects</div>
-                          <div className="text-xs sm:text-sm font-bold text-[#f4f2ec] mt-0.5">{profile.projects.length} verified</div>
-                        </div>
-
-                        <div className="bg-[#0d0e12] p-3 rounded-[2px] border border-[#2a2e38]">
-                          <div className="text-xs text-[#c5c9d6] uppercase font-semibold">Skills Catalog</div>
-                          <div className="text-xs sm:text-sm font-bold text-[#f4f2ec] mt-0.5">{profile.skills.length} skills</div>
-                        </div>
-
-                        <div className="bg-[#0d0e12] p-3 rounded-[2px] border border-[#2a2e38]">
-                          <div className="text-xs text-[#c5c9d6] uppercase font-semibold">Experience</div>
-                          <div className="text-xs sm:text-sm font-bold text-[#f4f2ec] mt-0.5">{profile.experiences.length} roles</div>
-                        </div>
-                      </div>
-
-                      <div className="pt-2">
-                        <button
-                          type="button"
-                          onClick={() => setIsDrawerOpen(true)}
-                          className="w-full py-2.5 bg-[#1f222a] hover:bg-[#2a2e38] border border-[#2a2e38] hover:border-[#3d4352] text-[#f4f2ec] text-xs font-mono rounded-[2px] transition-colors flex items-center justify-center gap-1.5 cursor-pointer font-bold focus-visible:outline-2 focus-visible:outline-[#d4a745]"
-                        >
-                          <span>Open Full Master Profile Drawer</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Raw Resume Text Editor (Right on XL) */}
-                  <div className={`${profile ? "xl:col-span-7" : "xl:col-span-12"} bg-[#15171d] p-5 sm:p-6 rounded-[3px] border border-[#2a2e38] space-y-4 min-w-0`}>
+            <div
+              role="tabpanel"
+              id="panel-profile"
+              aria-labelledby="tab-profile"
+              className={`space-y-4 w-full min-w-0 ${activeTab === "profile" ? "animate-in fade-in" : "hidden"}`}
+            >
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-start w-full min-w-0">
+                {/* Master Facts Summary (Left on XL) */}
+                {profile && (
+                  <div className="xl:col-span-5 bg-[#15171d] p-5 sm:p-6 rounded-[3px] border border-[#2a2e38] space-y-4 min-w-0">
                     <div className="flex items-center justify-between pb-3 border-b border-[#2a2e38]">
-                      <div>
-                        <h2 className="text-sm sm:text-base font-bold text-[#f4f2ec] tracking-tight">Raw Resume / Bio Text</h2>
-                        <p className="text-xs text-[#c5c9d6] mt-0.5 font-mono">
-                          Paste your Markdown bio or raw resume. Grounding engines use this for holistic synthesis.
-                        </p>
+                      <div className="flex items-center gap-2">
+                        <Layers className="w-4 h-4 text-[#8ab384]" />
+                        <h2 className="text-sm sm:text-base font-bold text-[#f4f2ec] tracking-tight">
+                          Master Facts Repository
+                        </h2>
                       </div>
-                      <span className="text-xs font-mono text-[#c5c9d6]">
-                        {resumeText.length.toLocaleString()} chars
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setIsDrawerOpen(true)}
+                        className="text-xs text-[#d4a745] hover:underline font-mono font-semibold cursor-pointer"
+                      >
+                        Manage Drawer &rarr;
+                      </button>
                     </div>
 
-                    <form onSubmit={handleSaveResume} className="space-y-4">
-                      <div>
-                        <label htmlFor="settings-raw-resume" className="sr-only">
-                          Raw Resume and Bio Markdown
-                        </label>
-                        <textarea
-                          id="settings-raw-resume"
-                          value={resumeText}
-                          onChange={(e) => setResumeText(e.target.value)}
-                          rows={14}
-                          className="w-full bg-[#0d0e12] border border-[#2a2e38] focus:border-[#d4a745] rounded-[2px] p-4 text-xs sm:text-sm text-[#f4f2ec] placeholder-[#797f94] outline-none resize-none font-mono leading-relaxed"
-                          placeholder="Paste your full bio, resume, or master bullet points here..."
-                        />
+                    <div className="grid grid-cols-2 gap-3 font-mono">
+                      <div className="bg-[#0d0e12] p-3 rounded-[2px] border border-[#2a2e38]">
+                        <div className="text-xs text-[#c5c9d6] uppercase font-semibold">Target Role</div>
+                        <div className="text-xs sm:text-sm font-bold text-[#f4f2ec] truncate mt-0.5">
+                          {profile.targetRole || "Not configured"}
+                        </div>
                       </div>
 
-                      <div className="flex items-center justify-end gap-3 font-mono">
-                        <button
-                          type="submit"
-                          disabled={status === "Saving..."}
-                          className="bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] px-5 py-2.5 rounded-[2px] font-bold text-xs transition-colors cursor-pointer disabled:opacity-50 uppercase tracking-wider focus-visible:outline-2 focus-visible:outline-[#d4a745]"
-                        >
-                          {status === "Idle" ? "Save Resume Context" : status}
-                        </button>
+                      <div className="bg-[#0d0e12] p-3 rounded-[2px] border border-[#2a2e38]">
+                        <div className="text-xs text-[#c5c9d6] uppercase font-semibold">Master Projects</div>
+                        <div className="text-xs sm:text-sm font-bold text-[#f4f2ec] mt-0.5">{profile.projects.length} verified</div>
                       </div>
-                    </form>
+
+                      <div className="bg-[#0d0e12] p-3 rounded-[2px] border border-[#2a2e38]">
+                        <div className="text-xs text-[#c5c9d6] uppercase font-semibold">Skills Catalog</div>
+                        <div className="text-xs sm:text-sm font-bold text-[#f4f2ec] mt-0.5">{profile.skills.length} skills</div>
+                      </div>
+
+                      <div className="bg-[#0d0e12] p-3 rounded-[2px] border border-[#2a2e38]">
+                        <div className="text-xs text-[#c5c9d6] uppercase font-semibold">Experience</div>
+                        <div className="text-xs sm:text-sm font-bold text-[#f4f2ec] mt-0.5">{profile.experiences.length} roles</div>
+                      </div>
+                    </div>
+
+                    <div className="pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsDrawerOpen(true)}
+                        className="w-full py-2.5 bg-[#1f222a] hover:bg-[#2a2e38] border border-[#2a2e38] hover:border-[#3d4352] text-[#f4f2ec] text-xs font-mono rounded-[2px] transition-colors flex items-center justify-center gap-1.5 cursor-pointer font-bold focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                      >
+                        <span>Open Full Master Profile Drawer</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </div>
-            )}
+                )}
 
-            {/* Tab 3: Adaptive Scoring Settings */}
-            {activeTab === "scoring" && (
-              <div
-                role="tabpanel"
-                id="panel-scoring"
-                aria-labelledby="tab-scoring"
-                className="animate-in fade-in space-y-4 w-full min-w-0"
-              >
-                <ScoringFeedbackLoopSettings />
-              </div>
-            )}
-
-            {/* Tab 4: Data Sovereignty & Backups */}
-            {activeTab === "export" && (
-              <div
-                role="tabpanel"
-                id="panel-export"
-                aria-labelledby="tab-export"
-                className="animate-in fade-in space-y-4 w-full min-w-0"
-              >
-                <div className="bg-[#15171d] border border-[#2a2e38] rounded-[3px] p-5 sm:p-6 space-y-5 w-full min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-[#2a2e38]">
+                {/* Raw Resume Text Editor (Right on XL) */}
+                <div className={`${profile ? "xl:col-span-7" : "xl:col-span-12"} bg-[#15171d] p-5 sm:p-6 rounded-[3px] border border-[#2a2e38] space-y-4 min-w-0`}>
+                  <div className="flex items-center justify-between pb-3 border-b border-[#2a2e38]">
                     <div>
-                      <h2 className="text-base sm:text-lg font-bold tracking-tight text-[#f4f2ec] flex items-center gap-2">
-                        <Database className="w-4 h-4 text-[#d4a745]" />
-                        <span>Data Sovereignty &amp; Local Backups</span>
-                      </h2>
-                      <p className="text-xs text-[#c5c9d6] mt-1 font-mono">
-                        Export your local SQLite database for offline backups, archiving, and spreadsheet interoperability.
+                      <h2 className="text-sm sm:text-base font-bold text-[#f4f2ec] tracking-tight">Raw Resume / Bio Text</h2>
+                      <p className="text-xs text-[#c5c9d6] mt-0.5 font-mono">
+                        Paste your Markdown bio or raw resume. Grounding engines use this for holistic synthesis.
                       </p>
                     </div>
-                    <span className="text-[11px] font-mono px-2 py-0.5 rounded-[2px] bg-[#1f222a] border border-[#2a2e38] text-[#c5c9d6] font-semibold">
-                      LOCAL-FIRST SQLITE
+                    <span className="text-xs font-mono text-[#c5c9d6]">
+                      {resumeText.length.toLocaleString()} chars
                     </span>
                   </div>
+
+                  <form onSubmit={handleSaveResume} className="space-y-4">
+                    <div>
+                      <label htmlFor="settings-raw-resume" className="sr-only">
+                        Raw Resume and Bio Markdown
+                      </label>
+                      <textarea
+                        id="settings-raw-resume"
+                        value={resumeText}
+                        onChange={(e) => setResumeText(e.target.value)}
+                        rows={14}
+                        className="w-full bg-[#0d0e12] border border-[#2a2e38] focus:border-[#d4a745] rounded-[2px] p-4 text-xs sm:text-sm text-[#f4f2ec] placeholder-[#797f94] outline-none resize-none font-mono leading-relaxed"
+                        placeholder="Paste your full bio, resume, or master bullet points here..."
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-end gap-3 font-mono">
+                      <button
+                        type="submit"
+                        disabled={status === "Saving..."}
+                        className="bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] px-5 py-2.5 rounded-[2px] font-bold text-xs transition-colors cursor-pointer disabled:opacity-50 uppercase tracking-wider focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                      >
+                        {status === "Idle" ? "Save Resume Context" : status}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+
+            {/* Tab 3: Adaptive Scoring Settings */}
+            <div
+              role="tabpanel"
+              id="panel-scoring"
+              aria-labelledby="tab-scoring"
+              className={`space-y-4 w-full min-w-0 ${activeTab === "scoring" ? "animate-in fade-in" : "hidden"}`}
+            >
+              <ScoringFeedbackLoopSettings />
+            </div>
+
+            {/* Tab 4: Data Sovereignty & Backups */}
+            <div
+              role="tabpanel"
+              id="panel-export"
+              aria-labelledby="tab-export"
+              className={`space-y-4 w-full min-w-0 ${activeTab === "export" ? "animate-in fade-in" : "hidden"}`}
+            >
+              <div className="bg-[#15171d] border border-[#2a2e38] rounded-[3px] p-5 sm:p-6 space-y-5 w-full min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-[#2a2e38]">
+                  <div>
+                    <h2 className="text-base sm:text-lg font-bold tracking-tight text-[#f4f2ec] flex items-center gap-2">
+                      <Database className="w-4 h-4 text-[#d4a745]" />
+                      <span>Data Sovereignty &amp; Local Backups</span>
+                    </h2>
+                    <p className="text-xs text-[#c5c9d6] mt-1 font-mono">
+                      Export your local SQLite database for offline backups, archiving, and spreadsheet interoperability.
+                    </p>
+                  </div>
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded-[2px] bg-[#1f222a] border border-[#2a2e38] text-[#c5c9d6] font-semibold">
+                    LOCAL-FIRST SQLITE
+                  </span>
+                </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono">
                     <a
@@ -465,7 +458,6 @@ export default function SettingsPage() {
                   </div>
                 </div>
               </div>
-            )}
           </section>
         </div>
 

@@ -10,20 +10,17 @@ import {
   Building2,
   X,
 } from "lucide-react";
-import type { FeedSource, FeedSourceType } from "@/types/feed-source";
+import type { FeedSource, FeedSourceType, FeedSourceConfig } from "@/types/feed-source";
 
-interface ParsedSource extends Omit<FeedSource, "config"> {
-  config: string;
-  parsedConfig: {
-    boardSlugs?: string[];
-    categories?: string[];
-    tags?: string[];
-    industry?: string;
-    count?: number;
-    searchStoryPrefix?: string;
-    searchStoryId?: number;
-    filters?: Record<string, unknown>;
-  };
+interface ParsedSource extends FeedSource {
+  parsedConfig: FeedSourceConfig;
+}
+
+// In-memory module cache for feed sources to avoid redundant fetches on tab switching
+let feedSourcesCache: { data: ParsedSource[]; timestamp: number } | null = null;
+
+export function clearFeedSourcesCache() {
+  feedSourcesCache = null;
 }
 
 export interface FeedSourcesManagerProps {
@@ -35,8 +32,15 @@ export function FeedSourcesManager({
   className = "",
   onSyncComplete,
 }: FeedSourcesManagerProps) {
-  const [sources, setSources] = useState<ParsedSource[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [sources, setSources] = useState<ParsedSource[]>(() => {
+    if (feedSourcesCache && Array.isArray(feedSourcesCache.data)) {
+      return feedSourcesCache.data;
+    }
+    return [];
+  });
+  const [loading, setLoading] = useState<boolean>(() => {
+    return !feedSourcesCache;
+  });
   const [error, setError] = useState<string | null>(null);
   const [syncingAll, setSyncingAll] = useState(false);
   const [syncingId, setSyncingId] = useState<string | null>(null);
@@ -57,13 +61,31 @@ export function FeedSourcesManager({
   const [newSourceSlugs, setNewSourceSlugs] = useState<string[]>([]);
   const [customSlugDraft, setCustomSlugDraft] = useState("");
 
-  const fetchSources = useCallback(async () => {
+  const updateSourcesWithCache = useCallback((updater: (prev: ParsedSource[]) => ParsedSource[]) => {
+    setSources((prev) => {
+      const next = updater(prev);
+      feedSourcesCache = { data: next, timestamp: Date.now() };
+      return next;
+    });
+  }, []);
+
+  const fetchSources = useCallback(async (force = false) => {
+    // If not forced and we have cached data less than 2 minutes old, keep using it
+    if (!force && feedSourcesCache && Date.now() - feedSourcesCache.timestamp < 120_000 && feedSourcesCache.data.length > 0) {
+      setSources(feedSourcesCache.data);
+      setLoading(false);
+      return;
+    }
+
     try {
-      setLoading(true);
+      if (!feedSourcesCache) {
+        setLoading(true);
+      }
       setError(null);
       const res = await fetch("/api/feeds");
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
+        feedSourcesCache = { data: json.data, timestamp: Date.now() };
         setSources(json.data);
       } else {
         throw new Error(json.error || "Failed to load feed sources");
@@ -91,7 +113,7 @@ export function FeedSourcesManager({
   const handleToggleEnabled = async (source: ParsedSource) => {
     const nextState = !source.enabled;
     // Optimistic UI update
-    setSources((prev) =>
+    updateSourcesWithCache((prev) =>
       prev.map((s) => (s.id === source.id ? { ...s, enabled: nextState } : s))
     );
 
@@ -111,7 +133,7 @@ export function FeedSourcesManager({
       );
     } catch (err) {
       // Revert optimistic update
-      setSources((prev) =>
+      updateSourcesWithCache((prev) =>
         prev.map((s) => (s.id === source.id ? { ...s, enabled: source.enabled } : s))
       );
       showStatus(
@@ -124,7 +146,7 @@ export function FeedSourcesManager({
   // Toggle Auto-polling
   const handleToggleAutoPoll = async (source: ParsedSource) => {
     const nextState = !source.autoPoll;
-    setSources((prev) =>
+    updateSourcesWithCache((prev) =>
       prev.map((s) => (s.id === source.id ? { ...s, autoPoll: nextState } : s))
     );
 
@@ -143,7 +165,7 @@ export function FeedSourcesManager({
         "info"
       );
     } catch (err) {
-      setSources((prev) =>
+      updateSourcesWithCache((prev) =>
         prev.map((s) => (s.id === source.id ? { ...s, autoPoll: source.autoPoll } : s))
       );
       showStatus(
@@ -172,7 +194,7 @@ export function FeedSourcesManager({
           `Synced ${source.name}: ${discovered} discovered, ${passed} passed`,
           "success"
         );
-        fetchSources();
+        fetchSources(true);
         if (onSyncComplete) onSyncComplete();
       } else {
         throw new Error(json.error || "Feed sync failed");
@@ -182,7 +204,7 @@ export function FeedSourcesManager({
         err instanceof Error ? err.message : "Failed to sync feed source",
         "error"
       );
-      fetchSources();
+      fetchSources(true);
     } finally {
       setSyncingId(null);
     }
@@ -206,7 +228,7 @@ export function FeedSourcesManager({
           `Sync All Complete: ${totalDiscovered} discovered, ${totalPassed} passed into buffer`,
           "success"
         );
-        fetchSources();
+        fetchSources(true);
         if (onSyncComplete) onSyncComplete();
       } else {
         throw new Error(json.error || "Global sync failed");
@@ -241,7 +263,7 @@ export function FeedSourcesManager({
       });
       const json = await res.json();
       if (json.success) {
-        setSources((prev) =>
+        updateSourcesWithCache((prev) =>
           prev.map((s) =>
             s.id === source.id
               ? {
@@ -280,7 +302,7 @@ export function FeedSourcesManager({
       });
       const json = await res.json();
       if (json.success) {
-        setSources((prev) =>
+        updateSourcesWithCache((prev) =>
           prev.map((s) =>
             s.id === source.id
               ? {
@@ -336,7 +358,7 @@ export function FeedSourcesManager({
         setNewSourceName("");
         setNewSourceUrl("");
         setNewSourceSlugs([]);
-        fetchSources();
+        fetchSources(true);
       } else {
         throw new Error(json.error || "Failed to create source");
       }

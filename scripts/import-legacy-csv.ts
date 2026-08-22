@@ -2,8 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { db } from "../lib/db";
 import { generateDedupeKey } from "../lib/ingestion/dedupe";
-import { normalizeSource, detectSourceFromUrl } from "../lib/utils/source";
-import { normalizeCurrencyCode } from "../lib/utils/currency";
+import { normalizeSource } from "../lib/utils/source";
 
 export interface ParsedJobData {
   company: string;
@@ -57,7 +56,7 @@ export function cleanCompany(rawCompany: string): string {
   return cleaned || "Unknown Company";
 }
 
-export function cleanRoleTitle(rawRole: string, company?: string): string {
+export function cleanRoleTitle(rawRole: string, _company?: string): string {
   if (!rawRole) return "Software Engineer";
   let cleaned = rawRole.trim().replace(/^["'\s]+|["'\s]+$/g, "");
 
@@ -301,7 +300,7 @@ export function parseCsvContent(content: string): string[][] {
   const rows: string[][] = [];
   const lines = content.split(/\r?\n/);
 
-  for (let line of lines) {
+  for (const line of lines) {
     if (!line.trim()) continue;
 
     const row: string[] = [];

@@ -491,12 +491,6 @@ export function getGeminiModel(apiKey?: string, modelName?: string): LanguageMod
   return client(resolvedModel);
 }
 
-let rotationCursor = 0;
-
-export function resetRotationCursor(): void {
-  rotationCursor = 0;
-}
-
 export function getAllConfiguredModels(
   profile?: WorkloadProfile | string
 ): ConfiguredModelCandidate[] {

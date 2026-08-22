@@ -1,17 +1,46 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  compareJobsForInbox,
-  compareJobsByRelevance,
-  compareJobsByScore,
-  compareJobsByRecent,
   sortJobsForInbox,
   sortJobsByRelevance,
   sortJobsByScore,
   sortJobsByRecent,
   getStatusSortPriority,
 } from "./sorting";
-import type { EnrichedJob } from "@/lib/data";
+import type { EnrichedJob, EnrichedFitScore, EnrichedApplication } from "@/lib/data";
+
+function createMockFitScore(score: number): EnrichedFitScore {
+  return {
+    id: `fit-${Math.random().toString(36).slice(2, 7)}`,
+    score,
+    recommendation: score >= 80 ? "APPLY" : score >= 60 ? "REVIEW" : "IGNORE",
+    skillsFit: score,
+    experienceFit: score,
+    domainFit: score,
+    trajectoryFit: score,
+    strengths: [],
+    gaps: [],
+    risks: [],
+    reasoning: "Mock reasoning",
+  };
+}
+
+function createMockApplication(appliedAt: Date = new Date("2026-08-01")): EnrichedApplication {
+  return {
+    id: `app-${Math.random().toString(36).slice(2, 7)}`,
+    status: "APPLIED",
+    appliedAt,
+    firstResponseAt: null,
+    responseTimeDays: null,
+    rejectionStage: null,
+    rejectionReason: null,
+    resumeVersion: "v1",
+    tailoredNotes: "",
+    tailoredResume: "{}",
+    questionAnswers: "[]",
+    followUpAt: null,
+  };
+}
 
 function createMockJob(overrides: Partial<EnrichedJob> = {}): EnrichedJob {
   return {
@@ -63,31 +92,31 @@ test("compareJobsForInbox and sortJobsByRelevance", async (t) => {
     const jobDiscovered90 = createMockJob({
       id: "disc-90",
       status: "DISCOVERED",
-      fitScore: { score: 90 } as any,
+      fitScore: createMockFitScore(90),
       discoveredAt: new Date("2026-08-10"),
     });
 
     const jobDiscovered80 = createMockJob({
       id: "disc-80",
       status: "DISCOVERED",
-      fitScore: { score: 80 } as any,
+      fitScore: createMockFitScore(80),
       discoveredAt: new Date("2026-08-15"),
     });
 
     const jobApplied95 = createMockJob({
       id: "app-95",
       status: "APPLIED",
-      fitScore: { score: 95 } as any,
+      fitScore: createMockFitScore(95),
       discoveredAt: new Date("2026-08-05"),
-      application: { appliedAt: new Date("2026-08-12") } as any,
+      application: createMockApplication(new Date("2026-08-12")),
     });
 
     const jobApplied85 = createMockJob({
       id: "app-85",
       status: "APPLIED",
-      fitScore: { score: 85 } as any,
+      fitScore: createMockFitScore(85),
       discoveredAt: new Date("2026-08-02"),
-      application: { appliedAt: new Date("2026-08-11") } as any,
+      application: createMockApplication(new Date("2026-08-11")),
     });
 
     const unsorted = [jobApplied95, jobDiscovered80, jobApplied85, jobDiscovered90];
@@ -103,14 +132,14 @@ test("compareJobsForInbox and sortJobsByRelevance", async (t) => {
     const olderDisc90 = createMockJob({
       id: "older-disc-90",
       status: "DISCOVERED",
-      fitScore: { score: 90 } as any,
+      fitScore: createMockFitScore(90),
       discoveredAt: new Date("2026-08-01"),
     });
 
     const newerDisc90 = createMockJob({
       id: "newer-disc-90",
       status: "DISCOVERED",
-      fitScore: { score: 90 } as any,
+      fitScore: createMockFitScore(90),
       discoveredAt: new Date("2026-08-10"),
     });
 
@@ -125,28 +154,28 @@ test("compareJobsForInbox and sortJobsByRelevance", async (t) => {
     const disc75 = createMockJob({
       id: "disc-75",
       status: "DISCOVERED",
-      fitScore: { score: 75 } as any,
+      fitScore: createMockFitScore(75),
       discoveredAt: new Date("2026-08-10"),
     });
 
     const disc65 = createMockJob({
       id: "disc-65",
       status: "DISCOVERED",
-      fitScore: { score: 65 } as any,
+      fitScore: createMockFitScore(65),
       discoveredAt: new Date("2026-08-12"),
     });
 
     const app78 = createMockJob({
       id: "app-78",
       status: "APPLIED",
-      fitScore: { score: 78 } as any,
+      fitScore: createMockFitScore(78),
       discoveredAt: new Date("2026-08-01"),
     });
 
     const app62 = createMockJob({
       id: "app-62",
       status: "APPLIED",
-      fitScore: { score: 62 } as any,
+      fitScore: createMockFitScore(62),
       discoveredAt: new Date("2026-08-01"),
     });
 
@@ -161,37 +190,37 @@ test("compareJobsForInbox and sortJobsByRelevance", async (t) => {
     const disc95 = createMockJob({
       id: "disc-95",
       status: "DISCOVERED",
-      fitScore: { score: 95 } as any,
+      fitScore: createMockFitScore(95),
       discoveredAt: new Date("2026-08-10"),
     });
     const disc65 = createMockJob({
       id: "disc-65",
       status: "DISCOVERED",
-      fitScore: { score: 65 } as any,
+      fitScore: createMockFitScore(65),
       discoveredAt: new Date("2026-08-12"),
     });
     const short88 = createMockJob({
       id: "short-88",
       status: "SHORTLISTED",
-      fitScore: { score: 88 } as any,
+      fitScore: createMockFitScore(88),
       discoveredAt: new Date("2026-08-08"),
     });
     const app90 = createMockJob({
       id: "app-90",
       status: "APPLIED",
-      fitScore: { score: 90 } as any,
+      fitScore: createMockFitScore(90),
       discoveredAt: new Date("2026-08-05"),
     });
     const app70 = createMockJob({
       id: "app-70",
       status: "APPLIED",
-      fitScore: { score: 70 } as any,
+      fitScore: createMockFitScore(70),
       discoveredAt: new Date("2026-08-03"),
     });
     const rej99 = createMockJob({
       id: "rej-99",
       status: "REJECTED",
-      fitScore: { score: 99 } as any,
+      fitScore: createMockFitScore(99),
       discoveredAt: new Date("2026-08-01"),
     });
 
@@ -208,7 +237,7 @@ test("compareJobsForInbox and sortJobsByRelevance", async (t) => {
     const withScore = createMockJob({
       id: "with-score",
       status: "DISCOVERED",
-      fitScore: { score: 85 } as any,
+      fitScore: createMockFitScore(85),
     });
     const withoutScore = createMockJob({
       id: "without-score",
@@ -229,17 +258,17 @@ test("sortJobsByScore", async (t) => {
     const disc80 = createMockJob({
       id: "disc-80",
       status: "DISCOVERED",
-      fitScore: { score: 80 } as any,
+      fitScore: createMockFitScore(80),
     });
     const app95 = createMockJob({
       id: "app-95",
       status: "APPLIED",
-      fitScore: { score: 95 } as any,
+      fitScore: createMockFitScore(95),
     });
     const rej90 = createMockJob({
       id: "rej-90",
       status: "REJECTED",
-      fitScore: { score: 90 } as any,
+      fitScore: createMockFitScore(90),
     });
 
     const sorted = sortJobsByScore([disc80, app95, rej90]);
@@ -263,7 +292,7 @@ test("sortJobsByRecent", async (t) => {
     const appliedRecent = createMockJob({
       id: "applied-recent",
       discoveredAt: new Date("2026-08-01"),
-      application: { appliedAt: new Date("2026-08-20") } as any,
+      application: createMockApplication(new Date("2026-08-20")),
     });
 
     const sorted = sortJobsByRecent([olderJob, appliedRecent, newerJob]);
@@ -273,4 +302,3 @@ test("sortJobsByRecent", async (t) => {
     );
   });
 });
-

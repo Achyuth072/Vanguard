@@ -179,6 +179,7 @@ describe("Feeds API Integration Tests", () => {
     const req = new NextRequest("http://localhost:3000/api/feeds/sync", {
       method: "POST",
       body: JSON.stringify({
+        sourceIds: [createdSourceId],
         onlyEnabled: true,
       }),
     });

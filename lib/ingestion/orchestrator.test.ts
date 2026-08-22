@@ -5,9 +5,7 @@ import path from "node:path";
 import { db } from "../db";
 import {
   IngestionOrchestrator,
-  ingestionOrchestrator,
   syncFeedSource,
-  syncAllFeedSources,
 } from "./orchestrator";
 import { generateClusterKey, generateDedupeKey } from "./dedupe";
 
@@ -237,7 +235,7 @@ describe("IngestionOrchestrator Integration & Deduplication Suite", () => {
       url: existingUrl,
     });
 
-    const preInsertedJob = await db.job.create({
+    await db.job.create({
       data: {
         id: `${TEST_PREFIX}existing-job-c-${runId}`,
         dedupeKey: existingDedupeKey,
@@ -580,12 +578,13 @@ describe("IngestionOrchestrator Integration & Deduplication Suite", () => {
   });
 
   it("handles cross-source clusterKey consistency when the same job is discovered from different adapters", async () => {
-    // Both jobs share company "Acme Corporation" and title "Senior Frontend Engineer"
+    // Both jobs share company "Acme Corporation" and title "Senior Frontend Engineer" across formatting differences
     const keyAshby = generateClusterKey("Acme Corporation", "Senior Frontend Engineer");
-    const keyGreenhouse = generateClusterKey("Acme Corporation, LLC", "Senior Frontend Engineer (Remote)");
+    const keyGreenhouse = generateClusterKey("Acme - Corporation", "Senior Frontend-Engineer");
     const keyDirect = generateClusterKey("acme corporation", "senior frontend engineer");
 
     assert.strictEqual(keyAshby, keyDirect);
+    assert.strictEqual(keyGreenhouse, keyDirect);
     assert.strictEqual(typeof keyAshby, "string");
     assert.strictEqual(keyAshby.length, 64);
   });

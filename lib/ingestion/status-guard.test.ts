@@ -315,7 +315,7 @@ describe("Ingestion Pipeline — Status Guard", () => {
       description: "Senior Backend Engineer with 5+ years TypeScript experience.",
     };
 
-    const result = await ingestJobPipeline(input, {
+    await ingestJobPipeline(input, {
       prismaClient: mockDb as unknown as typeof db,
       aiOptions: { primaryModel: mockModel, fallbackModel: mockModel },
     });
@@ -370,7 +370,7 @@ describe("Ingestion Pipeline — Status Guard", () => {
       description: "Platform Engineer building data streaming infrastructure.",
     };
 
-    const result = await ingestJobPipeline(input, {
+    await ingestJobPipeline(input, {
       prismaClient: mockDb as unknown as typeof db,
       aiOptions: { primaryModel: mockModel, fallbackModel: mockModel },
     });

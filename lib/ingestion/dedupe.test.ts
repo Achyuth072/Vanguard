@@ -120,7 +120,6 @@ describe("Deduplication Engine", () => {
     it("generates identical cluster keys for cross-posted jobs from different sources and URLs", () => {
       const ashbyKey = generateClusterKey("Anthropic, PBC", "Prompt Engineer");
       const greenhouseKey = generateClusterKey("anthropic pbc", "Prompt Engineer");
-      const hnKey = generateClusterKey("Anthropic", "Prompt Engineer"); // notice Anthropic vs Anthropic PBC produces different if company tokens differ, but exact token matches match
 
       const keyA = generateClusterKey("Stripe, Inc.", "Backend Engineer - Payments");
       const keyB = generateClusterKey("stripe inc", "Backend Engineer (Payments)");

@@ -9,6 +9,8 @@ const SyncFeedRequestSchema = z.object({
   candidateId: z.string().optional(),
   limit: z.number().int().positive().optional(),
   onlyEnabled: z.boolean().optional(),
+  sourceTypes: z.array(z.string()).optional(),
+  sourceIds: z.array(z.string()).optional(),
 });
 
 export async function POST(request: Request) {
@@ -33,7 +35,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { id, sourceId, forceSync, candidateId, limit, onlyEnabled } =
+    const { id, sourceId, forceSync, candidateId, limit, onlyEnabled, sourceTypes, sourceIds } =
       parseResult.data;
 
     const targetId = id || sourceId;
@@ -59,6 +61,8 @@ export async function POST(request: Request) {
       // Sync all active feeds
       const result = await ingestionOrchestrator.syncAllSources({
         onlyEnabled: onlyEnabled ?? (forceSync ? false : true),
+        sourceTypes,
+        sourceIds,
         forceSync,
         candidateId,
         limit,

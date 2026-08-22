@@ -5,7 +5,6 @@ import {
   extractSalaryFromRawText,
   classifyRemoteAndLocation,
   type PreFilterCandidateCriteria,
-  type PreFilterResult,
 } from "./prefilter";
 
 describe("Zero-Token 6-Dimension Regex Pre-Filter", () => {

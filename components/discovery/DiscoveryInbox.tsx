@@ -5,7 +5,6 @@ import {
   Sparkles,
   Trash2,
   Search,
-  SlidersHorizontal,
   RefreshCw,
   CheckCircle2,
   AlertTriangle,
@@ -16,18 +15,14 @@ import {
   Building2,
   DollarSign,
   Globe,
-  Clock,
   Layers,
-  Cpu,
   Coins,
   CheckSquare,
   Square,
   X,
   Check,
-  Eye,
-  Filter,
 } from "lucide-react";
-import type { DiscoveryJobItem, MatchBadge } from "@/lib/discovery";
+import type { DiscoveryJobItem } from "@/lib/discovery";
 
 export interface DiscoveryInboxProps {
   className?: string;

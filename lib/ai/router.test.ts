@@ -35,10 +35,8 @@ import {
   clearCandidateCooldown,
   resetAllCooldowns,
   getCandidateCooldown,
-  WORKLOAD_PROFILES,
   WORKLOAD_PROFILE_CONFIGS,
   normalizeWorkloadProfile,
-  type WorkloadProfile,
   type CandidateContext,
   type JobContext,
 } from "./router";
@@ -1361,8 +1359,6 @@ describe("Workload-Specific Routing Profiles & Options", () => {
 
   describe("generateStructuredWithFallback with Workload Options", () => {
     it("passes maxTokens and temperature to generateObject from profile defaults and caller overrides", async () => {
-      let capturedTemperature: number | undefined;
-
       const mockModel = createMockModel({
         generateOutput: {
           title: "Senior Backend Engineer",

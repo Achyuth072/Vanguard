@@ -4,21 +4,10 @@ import React, { useState, useEffect, useCallback } from "react";
 import {
   RefreshCw,
   Plus,
-  Trash2,
   AlertTriangle,
   CheckCircle2,
-  XCircle,
   Radio,
-  Clock,
   Building2,
-  ExternalLink,
-  ChevronDown,
-  ChevronUp,
-  Cpu,
-  Layers,
-  Sparkles,
-  Sliders,
-  Check,
   X,
 } from "lucide-react";
 import type { FeedSource, FeedSourceType } from "@/types/feed-source";
@@ -177,8 +166,10 @@ export function FeedSourcesManager({
       const json = await res.json();
       if (json.success) {
         const stats = json.data;
+        const discovered = stats?.jobsDiscovered ?? stats?.discoveredCount ?? 0;
+        const passed = stats?.jobsPassed ?? stats?.jobsStaged ?? stats?.passedCount ?? 0;
         showStatus(
-          `Synced ${source.name}: ${stats.discoveredCount ?? 0} discovered, ${stats.passedCount ?? 0} passed`,
+          `Synced ${source.name}: ${discovered} discovered, ${passed} passed`,
           "success"
         );
         fetchSources();

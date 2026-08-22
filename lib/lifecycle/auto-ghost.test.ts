@@ -6,8 +6,6 @@ import {
   isApplicationGhostable,
   identifyGhostableJobs,
   autoGhostStaleApplications,
-  DEFAULT_GHOST_THRESHOLD_DAYS,
-  STALE_THRESHOLD_DAYS,
 } from "./auto-ghost";
 import { db } from "../db";
 import type { EnrichedJob } from "../data";
@@ -167,7 +165,7 @@ test("isApplicationStale and isApplicationGhostable", async (t) => {
   });
 });
 
-test("identifyGhostableJobs filters list accurately", async (t) => {
+test("identifyGhostableJobs filters list accurately", async () => {
   const relativeTo = new Date("2026-08-10T00:00:00Z");
   const jobRecent = createMockJob({
     id: "job-recent",

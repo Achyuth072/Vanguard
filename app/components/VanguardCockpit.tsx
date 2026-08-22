@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { EnrichedJob } from "@/lib/data";
 import { TelemetryStrip, type TelemetryTab } from "@/components/ui/TelemetryStrip";
@@ -25,7 +25,7 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
   const [discoveryCount, setDiscoveryCount] = useState<number>(0);
 
   // Fetch staged discovery count
-  const fetchDiscoveryCount = async () => {
+  const fetchDiscoveryCount = useCallback(async () => {
     try {
       const res = await fetch("/api/discovery?limit=1");
       const json = await res.json();
@@ -35,11 +35,20 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
     } catch {
       // Graceful fallback
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchDiscoveryCount();
-  }, [initialJobs]);
+    let ignore = false;
+    async function load() {
+      if (!ignore) {
+        await fetchDiscoveryCount();
+      }
+    }
+    load();
+    return () => {
+      ignore = true;
+    };
+  }, [initialJobs, fetchDiscoveryCount]);
 
   // Modals & drawers
   const [isIngestOpen, setIsIngestOpen] = useState(false);

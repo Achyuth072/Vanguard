@@ -305,6 +305,12 @@ export function DiscoveryInbox({
     { value: "REMOTEOK", label: "RemoteOK" },
     { value: "JOBICY", label: "Jobicy" },
     { value: "HN", label: "Hacker News" },
+    { value: "HIRINGCAFE", label: "HiringCafe" },
+    { value: "WWR", label: "We Work Remotely" },
+    { value: "WELLFOUND", label: "Wellfound" },
+    { value: "INDEED", label: "Indeed RSS" },
+    { value: "YC", label: "YC" },
+    { value: "MANUAL", label: "Manual / Paste" },
   ];
 
   return (

@@ -7,6 +7,7 @@ import {
 } from "../types/candidate";
 
 import { parseResumeMarkdownToProfile } from "../lib/candidate-parser";
+import { seedDefaultFeedSources } from "../lib/feed-sources";
 
 function loadResumeMarkdown(): string {
   const primaryPath = path.join(process.cwd(), ".scratch", "Resume", "Achyuth.md");
@@ -45,6 +46,9 @@ export async function seed() {
       `${profileData.skills.length} skills, ${profileData.projects.length} projects, and ` +
       `${profileData.experiences.length} experiences.`
   );
+
+  const seededSources = await seedDefaultFeedSources(db);
+  console.log(`Seeded ${seededSources.length} baseline feed sources into database.`);
 }
 
 seed()

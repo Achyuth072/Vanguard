@@ -85,6 +85,9 @@ describe("Assisted Application UX, SSE Progress Stream & Hybrid Submission Detec
           },
         ],
         resumeText: "# Alex Builder\nalex.builder@example.com\n+1 (555) 234-5678",
+        targetRoleKeywords: [],
+        techStack: [],
+        companyStageBlacklist: [],
       },
       {
         questionAnswers: JSON.stringify([

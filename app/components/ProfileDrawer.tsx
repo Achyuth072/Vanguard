@@ -103,6 +103,9 @@ export default function ProfileDrawer({
     projects: [],
     experiences: [],
     resumeText: "",
+    targetRoleKeywords: [],
+    techStack: [],
+    companyStageBlacklist: [],
   });
 
   // Location input helper

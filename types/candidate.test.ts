@@ -96,6 +96,9 @@ describe("Candidate Master Types and Serializers", () => {
       yearsOfExperience: 5,
       remotePreference: "REMOTE_ONLY",
       preferredLocations: ["Remote", "Bengaluru", "San Francisco"],
+      targetRoleKeywords: ["fullstack", "backend lead", "product engineer"],
+      techStack: ["TypeScript", "React", "Node.js", "PostgreSQL"],
+      companyStageBlacklist: ["consulting", "staffing", "agency"],
       skills: [
         { name: "TypeScript", category: "LANGUAGE", yearsOfExperience: 5 },
         { name: "React", category: "FRAMEWORK", yearsOfExperience: 4 },
@@ -141,10 +144,16 @@ describe("Candidate Master Types and Serializers", () => {
       assert.strictEqual(typeof serialized.projects, "string");
       assert.strictEqual(typeof serialized.experiences, "string");
       assert.strictEqual(typeof serialized.preferredLocations, "string");
+      assert.strictEqual(typeof serialized.targetRoleKeywords, "string");
+      assert.strictEqual(typeof serialized.techStack, "string");
+      assert.strictEqual(typeof serialized.companyStageBlacklist, "string");
 
       const skillsJson = JSON.parse(serialized.skills);
       assert.strictEqual(skillsJson.length, 3);
       assert.strictEqual(skillsJson[0].name, "TypeScript");
+
+      const keywordsJson = JSON.parse(serialized.targetRoleKeywords);
+      assert.deepStrictEqual(keywordsJson, ["fullstack", "backend lead", "product engineer"]);
     });
 
     it("deserializes raw DB records back into typed CandidateProfile", () => {
@@ -172,6 +181,22 @@ describe("Candidate Master Types and Serializers", () => {
         "Bengaluru",
         "San Francisco",
       ]);
+      assert.deepStrictEqual(deserialized.targetRoleKeywords, [
+        "fullstack",
+        "backend lead",
+        "product engineer",
+      ]);
+      assert.deepStrictEqual(deserialized.techStack, [
+        "TypeScript",
+        "React",
+        "Node.js",
+        "PostgreSQL",
+      ]);
+      assert.deepStrictEqual(deserialized.companyStageBlacklist, [
+        "consulting",
+        "staffing",
+        "agency",
+      ]);
     });
 
     it("handles legacy string arrays in parseMasterSkills", () => {
@@ -187,6 +212,27 @@ describe("Candidate Master Types and Serializers", () => {
       assert.deepStrictEqual(parseMasterProjects("null"), []);
       assert.deepStrictEqual(parseMasterExperiences(123), []);
       assert.deepStrictEqual(parsePreferredLocations(undefined), []);
+
+      const corruptedRecord: RawCandidateDbRecord = {
+        id: "cand-corrupt",
+        name: "Corrupt Test",
+        targetRole: "Engineer",
+        minSalary: 0,
+        yearsOfExperience: 0,
+        remotePreference: "ANY",
+        preferredLocations: "{bad json}",
+        skills: "{bad json}",
+        projects: "{bad json}",
+        experiences: "{bad json}",
+        resumeText: "",
+        targetRoleKeywords: "{bad json}",
+        techStack: "{bad json}",
+        companyStageBlacklist: "{bad json}",
+      };
+      const deserialized = deserializeCandidateProfile(corruptedRecord);
+      assert.deepStrictEqual(deserialized.targetRoleKeywords, []);
+      assert.deepStrictEqual(deserialized.techStack, []);
+      assert.deepStrictEqual(deserialized.companyStageBlacklist, []);
     });
   });
 });

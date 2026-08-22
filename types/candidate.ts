@@ -65,6 +65,9 @@ export const CandidateProfileSchema = z.object({
   projects: z.array(MasterProjectSchema).default([]),
   experiences: z.array(MasterExperienceSchema).default([]),
   resumeText: z.string().default(""),
+  targetRoleKeywords: z.array(z.string()).default([]),
+  techStack: z.array(z.string()).default([]),
+  companyStageBlacklist: z.array(z.string()).default([]),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
@@ -86,6 +89,9 @@ export interface RawCandidateDbRecord {
   projects: string;
   experiences: string;
   resumeText: string;
+  targetRoleKeywords?: string;
+  techStack?: string;
+  companyStageBlacklist?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -95,6 +101,28 @@ export interface SerializedCandidateFields {
   skills: string;
   projects: string;
   experiences: string;
+  targetRoleKeywords: string;
+  techStack: string;
+  companyStageBlacklist: string;
+}
+
+export interface SerializedCandidateRecord {
+  id: string;
+  name: string;
+  location: string;
+  targetRole: string;
+  minSalary: number;
+  currency: string;
+  yearsOfExperience: number;
+  remotePreference: string;
+  preferredLocations: string;
+  skills: string;
+  projects: string;
+  experiences: string;
+  resumeText: string;
+  targetRoleKeywords: string;
+  techStack: string;
+  companyStageBlacklist: string;
 }
 
 export function parseJsonSafe<T>(val: unknown, fallback: T): T {
@@ -104,6 +132,12 @@ export function parseJsonSafe<T>(val: unknown, fallback: T): T {
   } catch {
     return fallback;
   }
+}
+
+export function parseStringArraySafe(val: unknown, fallback: string[] = []): string[] {
+  const parsed = typeof val === "string" ? parseJsonSafe(val, fallback) : val;
+  if (!Array.isArray(parsed)) return fallback;
+  return parsed.filter((item): item is string => typeof item === "string");
 }
 
 export function parseMasterSkills(val: unknown): MasterSkill[] {
@@ -146,14 +180,12 @@ export function parseMasterExperiences(val: unknown): MasterExperience[] {
 }
 
 export function parsePreferredLocations(val: unknown): string[] {
-  const parsed = typeof val === "string" ? parseJsonSafe(val, []) : val;
-  if (!Array.isArray(parsed)) return [];
-  return parsed.filter((loc): loc is string => typeof loc === "string");
+  return parseStringArraySafe(val, []);
 }
 
 export function serializeCandidateProfile(
   profile: CandidateProfileInput
-): Omit<RawCandidateDbRecord, "createdAt" | "updatedAt"> {
+): SerializedCandidateRecord {
   const validated = CandidateProfileSchema.parse(profile);
 
   return {
@@ -170,6 +202,9 @@ export function serializeCandidateProfile(
     projects: JSON.stringify(validated.projects),
     experiences: JSON.stringify(validated.experiences),
     resumeText: validated.resumeText,
+    targetRoleKeywords: JSON.stringify(validated.targetRoleKeywords),
+    techStack: JSON.stringify(validated.techStack),
+    companyStageBlacklist: JSON.stringify(validated.companyStageBlacklist),
   };
 }
 
@@ -190,6 +225,9 @@ export function deserializeCandidateProfile(
     projects: parseMasterProjects(record.projects),
     experiences: parseMasterExperiences(record.experiences),
     resumeText: record.resumeText || "",
+    targetRoleKeywords: parseStringArraySafe(record.targetRoleKeywords, []),
+    techStack: parseStringArraySafe(record.techStack, []),
+    companyStageBlacklist: parseStringArraySafe(record.companyStageBlacklist, []),
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   });

@@ -47,6 +47,9 @@ export function buildCandidateProfilePayload(
       projects: [],
       experiences: [],
       resumeText: "",
+      targetRoleKeywords: [],
+      techStack: [],
+      companyStageBlacklist: [],
     };
   } else if ("skills" in candidateRecord && typeof candidateRecord.skills === "string") {
     profile = deserializeCandidateProfile(candidateRecord as RawCandidateDbRecord);

@@ -28,6 +28,9 @@ export const CandidateResumeExtractionSchema = z.object({
   skills: z.array(MasterSkillSchema).default([]),
   projects: z.array(MasterProjectSchema).default([]),
   experiences: z.array(MasterExperienceSchema).default([]),
+  targetRoleKeywords: z.array(z.string()).default([]),
+  techStack: z.array(z.string()).default([]),
+  companyStageBlacklist: z.array(z.string()).default([]),
 });
 
 export type CandidateResumeExtraction = z.infer<typeof CandidateResumeExtractionSchema>;
@@ -403,6 +406,9 @@ export function parseResumeMarkdownToProfile(
     projects,
     experiences,
     resumeText: markdown,
+    targetRoleKeywords: [targetRole.toLowerCase()],
+    techStack: skills.map((s) => s.name),
+    companyStageBlacklist: ["consulting", "staffing", "agency"],
   });
 }
 
@@ -490,11 +496,27 @@ Extract all candidate profile master facts according to the schema.`;
         ? extracted.preferredLocations
         : ["Remote"];
 
+    const targetRole = extracted.targetRole || "Software Engineer";
+    const targetRoleKeywords =
+      extracted.targetRoleKeywords && extracted.targetRoleKeywords.length > 0
+        ? extracted.targetRoleKeywords
+        : [targetRole.toLowerCase()];
+
+    const techStack =
+      extracted.techStack && extracted.techStack.length > 0
+        ? extracted.techStack
+        : skills.map((s) => s.name);
+
+    const companyStageBlacklist =
+      extracted.companyStageBlacklist && extracted.companyStageBlacklist.length > 0
+        ? extracted.companyStageBlacklist
+        : ["consulting", "staffing", "agency"];
+
     return CandidateProfileSchema.parse({
       id: candidateId,
       name: extracted.name || "Default Candidate",
       location: extracted.location || "",
-      targetRole: extracted.targetRole || "Software Engineer",
+      targetRole,
       minSalary: extracted.minSalary || 0,
       currency: extracted.currency || "INR",
       yearsOfExperience: extracted.yearsOfExperience || 0,
@@ -504,6 +526,9 @@ Extract all candidate profile master facts according to the schema.`;
       projects,
       experiences,
       resumeText: markdown,
+      targetRoleKeywords,
+      techStack,
+      companyStageBlacklist,
     });
   } catch (err) {
     console.warn("AI resume parsing encountered error or fallback, invoking deterministic parser:", err);

@@ -8,42 +8,72 @@ datasource db {
 }
 
 model Candidate {
-  id                 String   @id @default(uuid())
-  name               String   @default("Default Candidate")
-  location           String   @default("")
-  targetRole         String   @default("Software Engineer")
-  minSalary          Int      @default(0)
-  currency           String   @default("INR")
-  yearsOfExperience  Int      @default(0)
-  remotePreference   String   @default("ANY")
-  preferredLocations String   @default("[]")
-  skills             String   @default("[]")
-  projects           String   @default("[]")
-  experiences        String   @default("[]")
-  resumeText         String   @default("")
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                    String   @id @default(uuid())
+  name                  String   @default("Default Candidate")
+  location              String   @default("")
+  targetRole            String   @default("Software Engineer")
+  minSalary             Int      @default(0)
+  currency              String   @default("INR")
+  yearsOfExperience     Int      @default(0)
+  remotePreference      String   @default("ANY")
+  preferredLocations    String   @default("[]")
+  skills                String   @default("[]")
+  projects              String   @default("[]")
+  experiences           String   @default("[]")
+  resumeText            String   @default("")
+  targetRoleKeywords    String   @default("[]")
+  techStack             String   @default("[]")
+  companyStageBlacklist String   @default("[]")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model FeedSource {
+  id               String    @id @default(uuid())
+  name             String
+  type             String    // "ASHBY" | "GREENHOUSE" | "LEVER" | "HN" | "HIMALAYAS" | "REMOTEOK" | "JOBICY" | "WELLFOUND" | "YC" | "MANUAL"
+  url              String    @default("")
+  config           String    @default("{}") // JSON: board slugs, search keywords, filters
+  enabled          Boolean   @default(true)
+  autoPoll         Boolean   @default(false) // Default false (manual fetch)
+  lastPolledAt     DateTime?
+  lastCursor       String    @default("")   // Incremental pagination cursor/timestamp
+  nextPollAt       DateTime?
+  pollIntervalMs   Int       @default(14400000) // 4 hours baseline
+  consecutiveEmpty Int       @default(0)    // For adaptive polling cadence
+  jobsDiscovered   Int       @default(0)
+  jobsPassed       Int       @default(0)
+  errorCount       Int       @default(0)
+  lastError        String    @default("")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  jobs             Job[]
 }
 
 model Job {
-  id             String       @id @default(uuid())
-  dedupeKey      String       @unique
-  title          String
-  company        String
-  location       String       @default("")
-  remoteStatus   String       @default("UNKNOWN")
-  salaryMin      Int?
-  salaryMax      Int?
-  currency       String       @default("INR")
-  employmentType String       @default("FULL_TIME")
-  description    String
-  url            String       @default("")
-  source         String       @default("MANUAL")
-  status         String       @default("DISCOVERED")
-  postedAt       DateTime?
-  discoveredAt   DateTime     @default(now())
-  fitScore       FitScore?
-  application    Application?
+  id               String       @id @default(uuid())
+  dedupeKey        String       @unique
+  clusterKey       String       @default("") // SHA-256 of normalizedCompany + normalizedTitle
+  sourceExternalId String       @default("") // Source-native ID (Greenhouse ID, HN ID, etc.)
+  title            String
+  company          String
+  location         String       @default("")
+  remoteStatus     String       @default("UNKNOWN")
+  salaryMin        Int?
+  salaryMax        Int?
+  currency         String       @default("INR")
+  employmentType   String       @default("FULL_TIME")
+  description      String
+  url              String       @default("")
+  source           String       @default("MANUAL")
+  feedSourceId     String?
+  feedSource       FeedSource?  @relation(fields: [feedSourceId], references: [id])
+  isStaged         Boolean      @default(false) // True if in discovery buffer awaiting AI scoring
+  status           String       @default("DISCOVERED")
+  postedAt         DateTime?
+  discoveredAt     DateTime     @default(now())
+  fitScore         FitScore?
+  application      Application?
 }
 
 model FitScore {

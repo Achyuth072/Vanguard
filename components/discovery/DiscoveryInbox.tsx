@@ -52,10 +52,7 @@ export function DiscoveryInbox({
   onJobIngested,
   onClose,
 }: DiscoveryInboxProps) {
-  const [jobs, setJobs] = useState<DiscoveryJobItem[]>([]);
-  const [totalCount, setTotalCount] = useState<number>(0);
-  const [page, setPage] = useState<number>(1);
-  const [totalPages, setTotalPages] = useState<number>(1);
+  const [rawJobs, setRawJobs] = useState<DiscoveryJobItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [isFetching, setIsFetching] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -82,63 +79,75 @@ export function DiscoveryInbox({
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const querySeqRef = React.useRef<number>(0);
 
-  const fetchDiscoveryJobs = useCallback(
-    async (currentPage = page, force = false) => {
-      const cacheKey = `${selectedSource}:${searchQuery.trim()}:${sortBy}:${currentPage}`;
-      const cached = !force ? discoveryCache.get(cacheKey) : undefined;
-      const isFresh = cached && Date.now() - cached.timestamp < 60_000;
+  // Synchronously compute filtered and sorted jobs in 0ms (Zero network delay, zero UI flash)
+  const jobs = useMemo(() => {
+    let list = [...rawJobs];
 
-      if (isFresh) {
-        setJobs(cached.jobs);
-        setTotalCount(cached.totalCount);
-        setTotalPages(cached.totalPages);
-        setLoading(false);
-        setError(null);
+    if (selectedSource !== "ALL") {
+      const srcUpper = selectedSource.toUpperCase();
+      list = list.filter((j) => {
+        const js = (j.source || "").toUpperCase();
+        return js === srcUpper || js.includes(srcUpper);
+      });
+    }
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      list = list.filter(
+        (j) =>
+          j.title.toLowerCase().includes(q) ||
+          j.company.toLowerCase().includes(q) ||
+          (j.location && j.location.toLowerCase().includes(q)) ||
+          (j.description && j.description.toLowerCase().includes(q))
+      );
+    }
+
+    if (sortBy === "discoveredAt:desc") {
+      list.sort((a, b) => new Date(b.discoveredAt).getTime() - new Date(a.discoveredAt).getTime());
+    } else if (sortBy === "postedAt:desc") {
+      list.sort((a, b) => new Date(b.postedAt || b.discoveredAt).getTime() - new Date(a.postedAt || a.discoveredAt).getTime());
+    } else if (sortBy === "company:asc") {
+      list.sort((a, b) => a.company.localeCompare(b.company));
+    } else if (sortBy === "title:asc") {
+      list.sort((a, b) => a.title.localeCompare(b.title));
+    }
+
+    return list;
+  }, [rawJobs, selectedSource, searchQuery, sortBy]);
+
+  const [page, setPage] = useState<number>(1);
+  const pageSize = 20;
+  const totalPages = Math.max(1, Math.ceil(jobs.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedJobs = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return jobs.slice(start, start + pageSize);
+  }, [jobs, currentPage, pageSize]);
+
+  const totalCount = jobs.length;
+
+  const fetchDiscoveryJobs = useCallback(
+    async (force = false) => {
+      if (!force && rawJobs.length > 0) {
         return;
       }
 
-      // If cached entry exists, render immediately without clearing
-      if (cached) {
-        setJobs(cached.jobs);
-        setTotalCount(cached.totalCount);
-        setTotalPages(cached.totalPages);
-        setLoading(false);
-      } else if (jobs.length === 0) {
+      if (rawJobs.length === 0) {
         setLoading(true);
       }
-
       setIsFetching(true);
       setError(null);
       const currentSeq = ++querySeqRef.current;
 
       try {
-        const params = new URLSearchParams();
-        params.set("page", currentPage.toString());
-        params.set("limit", "20");
-        if (selectedSource !== "ALL") params.set("source", selectedSource);
-        if (searchQuery.trim()) params.set("search", searchQuery.trim());
-        if (sortBy) params.set("sort", sortBy);
-
-        const res = await fetch(`/api/discovery?${params.toString()}`);
+        const res = await fetch("/api/discovery?limit=100");
         const json = await res.json();
 
         if (currentSeq !== querySeqRef.current) return;
 
         if (json.success && json.data) {
-          const newJobs = json.data.jobs || [];
-          const newTotal = json.data.pagination?.total || 0;
-          const newPages = json.data.pagination?.totalPages || 1;
-
-          discoveryCache.set(cacheKey, {
-            jobs: newJobs,
-            totalCount: newTotal,
-            totalPages: newPages,
-            timestamp: Date.now(),
-          });
-
-          setJobs(newJobs);
-          setTotalCount(newTotal);
-          setTotalPages(newPages);
+          const newJobs: DiscoveryJobItem[] = json.data.jobs || [];
+          setRawJobs(newJobs);
         } else {
           throw new Error(json.error || "Failed to load discovery jobs");
         }
@@ -154,11 +163,14 @@ export function DiscoveryInbox({
         }
       }
     },
-    [page, selectedSource, searchQuery, sortBy, jobs.length]
+    [rawJobs.length]
   );
 
   useEffect(() => {
-    fetchDiscoveryJobs(1);
+    fetchDiscoveryJobs();
+  }, [fetchDiscoveryJobs]);
+
+  useEffect(() => {
     setPage(1);
     setSelectedJobIds(new Set());
   }, [selectedSource, searchQuery, sortBy]);
@@ -215,8 +227,7 @@ export function DiscoveryInbox({
         );
 
         // Remove from local list
-        setJobs((prev) => prev.filter((j) => j.id !== job.id));
-        setTotalCount((prev) => Math.max(0, prev - 1));
+        setRawJobs((prev) => prev.filter((j) => j.id !== job.id));
         setSelectedJobIds((prev) => {
           const next = new Set(prev);
           next.delete(job.id);
@@ -257,8 +268,7 @@ export function DiscoveryInbox({
       if (json.success) {
         discoveryCache.clear();
         showToast(`Dismissed ${job.company} posting`, "info");
-        setJobs((prev) => prev.filter((j) => j.id !== job.id));
-        setTotalCount((prev) => Math.max(0, prev - 1));
+        setRawJobs((prev) => prev.filter((j) => j.id !== job.id));
         setSelectedJobIds((prev) => {
           const next = new Set(prev);
           next.delete(job.id);
@@ -304,7 +314,7 @@ export function DiscoveryInbox({
           "success"
         );
         setSelectedJobIds(new Set());
-        fetchDiscoveryJobs(page, true);
+        fetchDiscoveryJobs(true);
         if (onJobIngested) onJobIngested();
       } else {
         throw new Error(json.error || "Batch ingestion failed");
@@ -339,7 +349,7 @@ export function DiscoveryInbox({
         const count = json.data?.dismissedCount ?? idsToDismiss.length;
         showToast(`Dismissed ${count} postings from buffer`, "info");
         setSelectedJobIds(new Set());
-        fetchDiscoveryJobs(page, true);
+        fetchDiscoveryJobs(true);
       } else {
         throw new Error(json.error || "Batch dismissal failed");
       }
@@ -404,7 +414,7 @@ export function DiscoveryInbox({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => fetchDiscoveryJobs(page, true)}
+              onClick={() => fetchDiscoveryJobs(true)}
               disabled={loading || isFetching}
               className="px-3 py-1.5 rounded-[2px] border border-[#2a2e38] bg-[#1f222a] hover:bg-[#2a2e38] text-[#f4f2ec] text-xs font-mono transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
@@ -583,7 +593,7 @@ export function DiscoveryInbox({
             </div>
             <button
               type="button"
-              onClick={() => fetchDiscoveryJobs(1, true)}
+              onClick={() => fetchDiscoveryJobs(true)}
               className="mt-2 px-3.5 py-1.5 bg-[#1f222a] hover:bg-[#2a2e38] border border-[#2a2e38] text-[#f4f2ec] text-xs font-mono rounded-[2px] transition-colors flex items-center gap-1.5 cursor-pointer"
             >
               <RefreshCw className="w-3.5 h-3.5 text-[#d4a745]" />
@@ -592,7 +602,7 @@ export function DiscoveryInbox({
           </div>
         ) : (
           /* Staged Job Feed Cards */
-          jobs.map((job) => {
+          paginatedJobs.map((job) => {
             const isSelected = selectedJobIds.has(job.id);
             const isScoring = scoringIds.has(job.id) || batchScoring;
             const isDismissing = dismissingIds.has(job.id) || batchDismissing;
@@ -619,171 +629,149 @@ export function DiscoveryInbox({
                     {isSelected ? (
                       <CheckSquare className="w-4 h-4 text-[#d4a745]" />
                     ) : (
-                      <Square className="w-4 h-4 text-[#64697b]" />
+                      <Square className="w-4 h-4" />
                     )}
                   </button>
 
-                  {/* Card Content Main */}
-                  <div className="flex-1 min-w-0 space-y-2">
-                    {/* Header: Title, Company, Source platform badge */}
-                    <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 sm:gap-2">
-                      <div className="flex flex-wrap items-baseline gap-2 min-w-0">
-                        <h3 className="text-sm font-bold text-[#f4f2ec] tracking-tight font-sans truncate">
+                  {/* Main Job Information */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="text-sm font-bold text-[#f4f2ec] tracking-tight">
                           {job.title}
-                        </h3>
-                        <span className="text-xs font-mono text-[#d4a745] font-semibold flex items-center gap-1 truncate">
+                        </h4>
+                        <span className="text-xs text-[#a6abbd] font-semibold flex items-center gap-1 font-mono">
                           <Building2 className="w-3 h-3 text-[#d4a745]" />
-                          {job.company}
+                          <span>{job.company}</span>
                         </span>
                       </div>
 
-                      {/* Source Platform Badge & Date */}
-                      <div className="flex items-center gap-2 shrink-0 font-mono text-[11px]">
-                        <span className="px-1.5 py-0.5 rounded-[2px] bg-[#1f222a] border border-[#2a2e38] text-[#a6abbd] uppercase">
-                          {job.source}
-                        </span>
-                        <span className="text-[#64697b]">
-                          {job.postedAt
-                            ? new Date(job.postedAt).toLocaleDateString([], {
-                                month: "short",
-                                day: "numeric",
-                              })
-                            : new Date(job.discoveredAt).toLocaleDateString([], {
-                                month: "short",
-                                day: "numeric",
-                              })}
-                        </span>
-                      </div>
+                      {/* Discovered timestamp badge */}
+                      <span className="text-[11px] font-mono text-[#a6abbd] shrink-0">
+                        Discovered {new Date(job.discoveredAt).toLocaleDateString()}
+                      </span>
                     </div>
 
-                    {/* Deterministic Match Badges */}
-                    <div className="flex flex-wrap items-center gap-1.5 font-mono text-[11px]">
-                      {/* Location badge */}
-                      {job.location && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[2px] bg-[#0d0e12] border border-[#2a2e38] text-[#a6abbd]">
-                          <MapPin className="w-3 h-3 text-[#64697b]" />
-                          {job.location}
-                        </span>
-                      )}
+                    {/* Metadata Badges Strip */}
+                    <div className="flex flex-wrap items-center gap-2 mt-2 font-mono text-[11px]">
+                      {/* Platform / Adapter source badge */}
+                      <span className="px-1.5 py-0.5 rounded-[2px] bg-[#1f222a] border border-[#2a2e38] text-[#d4a745] font-bold uppercase tracking-wider">
+                        {job.source || "UNKNOWN"}
+                      </span>
 
-                      {/* Remote badge */}
-                      {job.remoteStatus && job.remoteStatus !== "UNKNOWN" && (
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[2px] border ${
-                            job.remoteStatus === "REMOTE"
-                              ? "bg-[#8ab384]/15 border-[#8ab384]/40 text-[#8ab384]"
-                              : "bg-[#0d0e12] border-[#2a2e38] text-[#a6abbd]"
-                          }`}
-                        >
+                      {/* Remote Status Badge */}
+                      {job.remoteStatus && (
+                        <span className="px-1.5 py-0.5 rounded-[2px] bg-[#1f222a] border border-[#2a2e38] text-[#8ab384] flex items-center gap-1">
                           <Globe className="w-3 h-3" />
-                          {job.remoteStatus}
+                          <span>{job.remoteStatus}</span>
                         </span>
                       )}
 
-                      {/* Salary badge */}
-                      {job.salaryMin !== null && job.salaryMin !== undefined && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[2px] bg-[#8ab384]/15 border border-[#8ab384]/40 text-[#8ab384] font-semibold">
+                      {/* Location Badge */}
+                      {job.location && (
+                        <span className="px-1.5 py-0.5 rounded-[2px] bg-[#1f222a] border border-[#2a2e38] text-[#a6abbd] flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          <span className="truncate max-w-[160px]">{job.location}</span>
+                        </span>
+                      )}
+
+                      {/* Salary / Comp Badge */}
+                      {(job.salaryMin || job.salaryMax) && (
+                        <span className="px-1.5 py-0.5 rounded-[2px] bg-[#1f222a] border border-[#2a2e38] text-[#d4a745] flex items-center gap-1">
                           <DollarSign className="w-3 h-3" />
-                          {job.currency} {job.salaryMin.toLocaleString()}
-                          {job.salaryMax ? ` - ${job.salaryMax.toLocaleString()}` : "+"}
+                          <span>
+                            {job.salaryMin && job.salaryMax
+                              ? `${job.currency || "$"} ${job.salaryMin.toLocaleString()} - ${job.salaryMax.toLocaleString()}`
+                              : job.salaryMin
+                              ? `${job.currency || "$"} ${job.salaryMin.toLocaleString()}+`
+                              : `${job.currency || "$"} Up to ${job.salaryMax?.toLocaleString()}`}
+                          </span>
                         </span>
                       )}
 
-                      {/* Filter evaluation Match Badges from backend */}
-                      {job.matchBadges?.map((badge, idx) => {
-                        if (badge.type === "source") return null; // already shown above
-                        return (
+                      {/* Deterministic Pre-filter Badges */}
+                      {job.matchBadges &&
+                        job.matchBadges.map((badge, bIdx) => (
                           <span
-                            key={idx}
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[2px] border text-[10px] ${
+                            key={bIdx}
+                            className={`px-1.5 py-0.5 rounded-[2px] border text-[10px] font-bold flex items-center gap-1 ${
                               badge.matched
-                                ? "bg-[#8ab384]/10 border-[#8ab384]/30 text-[#8ab384]"
-                                : "bg-[#c4634e]/10 border-[#c4634e]/30 text-[#c4634e]"
+                                ? "bg-[#8ab384]/15 border-[#8ab384]/30 text-[#8ab384]"
+                                : "bg-[#c4634e]/15 border-[#c4634e]/30 text-[#c4634e]"
                             }`}
                           >
                             <Check className="w-2.5 h-2.5" />
                             <span>{badge.label}</span>
                           </span>
-                        );
-                      })}
-
-                      {/* Staged Buffer Indicator */}
-                      <span className="px-1.5 py-0.5 rounded-[2px] text-[10px] bg-[#d4a745]/10 border border-[#d4a745]/30 text-[#d4a745]">
-                        FILTER PASSED
-                      </span>
+                        ))}
                     </div>
 
-                    {/* Expandable Snippet / Full Description */}
-                    <div className="pt-1">
-                      {isExpanded ? (
-                        <div className="mt-2 p-3 bg-[#0d0e12] border border-[#2a2e38] rounded-[2px] space-y-2">
-                          <div className="flex items-center justify-between text-xs font-mono text-[#a6abbd] pb-1 border-b border-[#2a2e38]">
-                            <span>Full Job Description &amp; Requirements</span>
-                            {job.url && (
-                              <a
-                                href={job.url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-[#d4a745] hover:underline flex items-center gap-1"
-                              >
-                                <span>Original Posting</span>
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
-                            )}
-                          </div>
-                          <p className="text-xs text-[#f4f2ec]/90 whitespace-pre-wrap font-mono leading-relaxed max-h-60 overflow-y-auto">
-                            {job.description || "No description provided."}
-                          </p>
+                    {/* Collapsible snippet / full job description view */}
+                    {job.description && (
+                      <div className="mt-2.5 font-mono text-xs text-[#a6abbd] bg-[#0d0e12] p-2.5 rounded-[2px] border border-[#2a2e38]">
+                        <div
+                          className={`leading-relaxed whitespace-pre-wrap ${
+                            isExpanded ? "" : "line-clamp-2"
+                          }`}
+                        >
+                          {job.description}
                         </div>
-                      ) : (
-                        <p className="text-xs text-[#a6abbd] font-mono line-clamp-2 leading-relaxed">
-                          {job.description || "No description provided."}
-                        </p>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setExpandedJobId(isExpanded ? null : job.id)
-                        }
-                        className="text-[11px] font-mono text-[#d4a745] hover:underline mt-1 flex items-center gap-1"
-                      >
-                        {isExpanded ? (
-                          <>
-                            <ChevronUp className="w-3 h-3" />
-                            <span>Collapse details</span>
-                          </>
-                        ) : (
-                          <>
-                            <ChevronDown className="w-3 h-3" />
-                            <span>Read full description →</span>
-                          </>
+                        {job.description.length > 180 && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedJobId(isExpanded ? null : job.id)
+                            }
+                            className="mt-1 text-[11px] text-[#d4a745] hover:underline flex items-center gap-0.5 cursor-pointer font-bold"
+                          >
+                            <span>{isExpanded ? "Collapse preview" : "Expand full listing preview"}</span>
+                            {isExpanded ? (
+                              <ChevronUp className="w-3 h-3" />
+                            ) : (
+                              <ChevronDown className="w-3 h-3" />
+                            )}
+                          </button>
                         )}
-                      </button>
-                    </div>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Quick Action Buttons on Right */}
-                  <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 shrink-0 self-center">
-                    {/* Dismiss button */}
+                  {/* Right Action Trigger Buttons */}
+                  <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 shrink-0 self-start">
+                    {/* View Original External Posting URL */}
+                    {job.url && (
+                      <a
+                        href={job.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="Open original job posting in new tab"
+                        className="p-1.5 rounded-[2px] border border-[#2a2e38] bg-[#1f222a] hover:bg-[#2a2e38] text-[#a6abbd] hover:text-[#f4f2ec] transition-colors"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+
+                    {/* Dismiss Button */}
                     <button
                       type="button"
-                      aria-label="Dismiss job from staging"
+                      aria-label="Dismiss job from staging inbox"
                       onClick={() => handleDismissSingleJob(job)}
                       disabled={isDismissing || isScoring}
-                      className="px-2.5 py-1.5 rounded-[2px] border border-[#2a2e38] bg-[#1f222a] hover:bg-[#c4634e]/20 hover:border-[#c4634e]/40 text-[#a6abbd] hover:text-[#c4634e] text-xs font-mono transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      className="px-2.5 py-1.5 rounded-[2px] border border-[#c4634e]/40 bg-[#c4634e]/10 hover:bg-[#c4634e]/20 text-[#c4634e] text-xs font-mono transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Dismiss</span>
+                      <span className="hidden sm:inline">
+                        {isDismissing ? "Dismissing..." : "Dismiss"}
+                      </span>
                     </button>
 
-                    {/* Score with AI button */}
+                    {/* Score with AI Button */}
                     <button
                       type="button"
-                      aria-label="Score job with AI"
+                      aria-label="Trigger AI scoring and promote to Priority Inbox"
                       onClick={() => handleScoreSingleJob(job)}
                       disabled={isScoring || isDismissing}
-                      className="px-3.5 py-1.5 rounded-[2px] bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] text-xs font-bold font-mono uppercase tracking-wider transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm"
+                      className="px-3 py-1.5 rounded-[2px] bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] text-xs font-bold font-mono uppercase tracking-wider transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm"
                     >
                       <Sparkles className={`w-3.5 h-3.5 ${isScoring ? "animate-spin" : ""}`} />
                       <span>{isScoring ? "Scoring..." : "Score with AI"}</span>
@@ -800,31 +788,29 @@ export function DiscoveryInbox({
       {totalPages > 1 && (
         <div className="shrink-0 bg-[#15171d] border-t border-[#2a2e38] p-3 flex items-center justify-between font-mono text-xs text-[#a6abbd]">
           <div>
-            Page {page} of {totalPages} ({totalCount} total opportunities)
+            Page {currentPage} of {totalPages} ({totalCount} total opportunities)
           </div>
 
           <div className="flex items-center gap-2">
             <button
               type="button"
-              disabled={page <= 1 || loading}
+              disabled={currentPage <= 1 || loading}
               onClick={() => {
-                const prev = Math.max(1, page - 1);
+                const prev = Math.max(1, currentPage - 1);
                 setPage(prev);
-                fetchDiscoveryJobs(prev);
               }}
-              className="px-3 py-1 rounded-[2px] border border-[#2a2e38] bg-[#1f222a] hover:bg-[#2a2e38] text-[#f4f2ec] disabled:opacity-40"
+              className="px-3 py-1 rounded-[2px] border border-[#2a2e38] bg-[#1f222a] hover:bg-[#2a2e38] text-[#f4f2ec] disabled:opacity-40 cursor-pointer"
             >
               Previous
             </button>
             <button
               type="button"
-              disabled={page >= totalPages || loading}
+              disabled={currentPage >= totalPages || loading}
               onClick={() => {
-                const next = Math.min(totalPages, page + 1);
+                const next = Math.min(totalPages, currentPage + 1);
                 setPage(next);
-                fetchDiscoveryJobs(next);
               }}
-              className="px-3 py-1 rounded-[2px] border border-[#2a2e38] bg-[#1f222a] hover:bg-[#2a2e38] text-[#f4f2ec] disabled:opacity-40"
+              className="px-3 py-1 rounded-[2px] border border-[#2a2e38] bg-[#1f222a] hover:bg-[#2a2e38] text-[#f4f2ec] disabled:opacity-40 cursor-pointer"
             >
               Next
             </button>

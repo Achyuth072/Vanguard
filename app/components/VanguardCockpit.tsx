@@ -207,33 +207,33 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
 
       {/* Main split cockpit, Kanban board, or Discovery Inbox */}
       <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-3">
-        {activeTab === "discovery" ? (
-          /* When in discovery tab, show the Discovery Inbox View */
-          <div className="col-span-12 h-full min-h-0 bg-[#15171d] border border-[#2a2e38] rounded-[3px] overflow-hidden flex flex-col">
-            <DiscoveryInbox
-              onJobIngested={() => {
-                handleDataRefreshed();
-                fetchDiscoveryCount();
-              }}
+        {/* Discovery Inbox View */}
+        <div className={`col-span-12 h-full min-h-0 bg-[#15171d] border border-[#2a2e38] rounded-[3px] overflow-hidden flex flex-col ${activeTab === "discovery" ? "flex" : "hidden"}`}>
+          <DiscoveryInbox
+            onJobIngested={() => {
+              handleDataRefreshed();
+              fetchDiscoveryCount();
+            }}
+          />
+        </div>
+
+        {/* Kanban Application Tracker */}
+        <div className={`col-span-12 h-full min-h-0 bg-[#15171d] border border-[#2a2e38] rounded-[3px] p-3.5 overflow-hidden flex flex-col ${activeTab === "pipeline" ? "flex" : "hidden"}`}>
+          <div className="px-2 py-2 border-b border-[#2a2e38] text-xs font-mono uppercase tracking-wider text-[#a6abbd] flex items-center justify-between shrink-0 mb-3 font-semibold">
+            <span>Active Application Pipeline · Interactive Kanban</span>
+            <span className="text-[#d4a745]">DRAG &amp; DROP READY</span>
+          </div>
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+            <ApplicationTracker
+              jobs={initialJobs}
+              onStatusUpdated={handleDataRefreshed}
+              onOpenPreparation={handleDeploy}
             />
           </div>
-        ) : activeTab === "pipeline" ? (
-          /* When in pipeline tab, show the Kanban Application Tracker */
-          <div className="col-span-12 h-full min-h-0 bg-[#15171d] border border-[#2a2e38] rounded-[3px] p-3.5 overflow-hidden flex flex-col">
-            <div className="px-2 py-2 border-b border-[#2a2e38] text-xs font-mono uppercase tracking-wider text-[#a6abbd] flex items-center justify-between shrink-0 mb-3 font-semibold">
-              <span>Active Application Pipeline · Interactive Kanban</span>
-              <span className="text-[#d4a745]">DRAG &amp; DROP READY</span>
-            </div>
-            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-              <ApplicationTracker
-                jobs={initialJobs}
-                onStatusUpdated={handleDataRefreshed}
-                onOpenPreparation={handleDeploy}
-              />
-            </div>
-          </div>
-        ) : (
-          /* Master-Detail Split Cockpit */
+        </div>
+
+        {/* Master-Detail Split Cockpit */}
+        {activeTab !== "discovery" && activeTab !== "pipeline" && (
           <>
             {/* Left pane: Dense Job Table (5 cols on lg) */}
             <div className="lg:col-span-5 h-[400px] lg:h-full min-h-0">

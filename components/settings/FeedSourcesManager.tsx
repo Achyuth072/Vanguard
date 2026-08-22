@@ -507,6 +507,10 @@ export function FeedSourcesManager({
                   <option value="REMOTEOK">RemoteOK (API)</option>
                   <option value="JOBICY">Jobicy (Remote API)</option>
                   <option value="HN">Hacker News (Algolia API)</option>
+                  <option value="HIRINGCAFE">HiringCafe (API)</option>
+                  <option value="WWR">We Work Remotely (RSS)</option>
+                  <option value="WELLFOUND">Wellfound / AngelList (API / Feed)</option>
+                  <option value="INDEED">Indeed (RSS)</option>
                   <option value="MANUAL">Manual Ingestion</option>
                 </select>
               </div>

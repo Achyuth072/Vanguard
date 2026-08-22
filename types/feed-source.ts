@@ -10,6 +10,9 @@ export const FeedSourceTypeSchema = z.enum([
   "JOBICY",
   "WELLFOUND",
   "YC",
+  "HIRINGCAFE",
+  "WWR",
+  "INDEED",
   "MANUAL",
 ]);
 
@@ -174,5 +177,53 @@ export const DEFAULT_BASELINE_FEED_SOURCES: BaselineFeedSourceDefinition[] = [
     enabled: true,
     autoPoll: false,
     pollIntervalMs: 86400000, // 24 hours
+  },
+  {
+    id: "feed-source-hiringcafe",
+    name: "HiringCafe",
+    type: "HIRINGCAFE",
+    url: "https://hiring.cafe/api/search",
+    config: {
+      tags: ["software-engineer", "fullstack", "frontend", "backend"],
+    },
+    enabled: true,
+    autoPoll: false,
+    pollIntervalMs: 21600000, // 6 hours
+  },
+  {
+    id: "feed-source-wwr",
+    name: "We Work Remotely",
+    type: "WWR",
+    url: "https://weworkremotely.com/categories/remote-programming-jobs.rss",
+    config: {
+      categories: ["remote-programming-jobs"],
+    },
+    enabled: true,
+    autoPoll: false,
+    pollIntervalMs: 21600000, // 6 hours
+  },
+  {
+    id: "feed-source-wellfound",
+    name: "Wellfound (AngelList)",
+    type: "WELLFOUND",
+    url: "https://wellfound.com/api/v1/jobs",
+    config: {
+      tags: ["software-engineer", "fullstack", "frontend", "backend", "ai"],
+    },
+    enabled: true,
+    autoPoll: false,
+    pollIntervalMs: 21600000, // 6 hours
+  },
+  {
+    id: "feed-source-indeed",
+    name: "Indeed RSS",
+    type: "INDEED",
+    url: "https://www.indeed.com/rss?q=software+engineer&l=Remote",
+    config: {
+      categories: ["software-engineer", "remote"],
+    },
+    enabled: true,
+    autoPoll: false,
+    pollIntervalMs: 21600000, // 6 hours
   },
 ];

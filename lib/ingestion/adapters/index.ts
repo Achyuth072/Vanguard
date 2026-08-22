@@ -7,6 +7,10 @@ import { HimalayasAdapter } from "./himalayas";
 import { RemoteOKAdapter } from "./remoteok";
 import { JobicyAdapter } from "./jobicy";
 import { HackerNewsAdapter } from "./hn";
+import { HiringCafeAdapter } from "./hiringcafe";
+import { WeWorkRemotelyAdapter } from "./wwr";
+import { WellfoundAdapter } from "./wellfound";
+import { IndeedRssAdapter } from "./indeed";
 
 export * from "./types";
 export * from "./ashby";
@@ -16,6 +20,10 @@ export * from "./himalayas";
 export * from "./remoteok";
 export * from "./jobicy";
 export * from "./hn";
+export * from "./hiringcafe";
+export * from "./wwr";
+export * from "./wellfound";
+export * from "./indeed";
 
 const ADAPTER_REGISTRY = new Map<string, FeedAdapter>([
   ["ASHBY", new AshbyAdapter()],
@@ -25,6 +33,10 @@ const ADAPTER_REGISTRY = new Map<string, FeedAdapter>([
   ["REMOTEOK", new RemoteOKAdapter()],
   ["JOBICY", new JobicyAdapter()],
   ["HN", new HackerNewsAdapter()],
+  ["HIRINGCAFE", new HiringCafeAdapter()],
+  ["WWR", new WeWorkRemotelyAdapter()],
+  ["WELLFOUND", new WellfoundAdapter()],
+  ["INDEED", new IndeedRssAdapter()],
 ]);
 
 export function getFeedAdapter(sourceType: FeedSourceType | string): FeedAdapter {

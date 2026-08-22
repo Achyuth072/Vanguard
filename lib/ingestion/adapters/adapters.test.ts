@@ -10,6 +10,10 @@ import {
   RemoteOKAdapter,
   JobicyAdapter,
   HackerNewsAdapter,
+  HiringCafeAdapter,
+  WeWorkRemotelyAdapter,
+  WellfoundAdapter,
+  IndeedRssAdapter,
   getFeedAdapter,
   getAllRegisteredAdapters,
 } from "./index";
@@ -22,18 +26,24 @@ function loadFixture(filename: string): unknown {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
+function loadTextFixture(filename: string): string {
+  const filePath = path.join(FIXTURES_DIR, filename);
+  return fs.readFileSync(filePath, "utf8");
+}
+
 function createMockFetch(fixtureMap: Record<string, unknown>): typeof fetch {
   return (async (input: RequestInfo | URL) => {
     const urlStr = input.toString();
 
     for (const [key, fixture] of Object.entries(fixtureMap)) {
       if (urlStr.includes(key)) {
+        const textContent = typeof fixture === "string" ? fixture : JSON.stringify(fixture);
         return {
           ok: true,
           status: 200,
           statusText: "OK",
-          json: async () => fixture,
-          text: async () => JSON.stringify(fixture),
+          json: async () => (typeof fixture === "string" ? JSON.parse(fixture) : fixture),
+          text: async () => textContent,
         } as unknown as Response;
       }
     }
@@ -50,13 +60,13 @@ function createMockFetch(fixtureMap: Record<string, unknown>): typeof fetch {
 
 describe("Deterministic Feed Adapters", () => {
   describe("Adapter Registry", () => {
-    it("registers and retrieves all 7 deterministic adapters", () => {
-      const types = ["ASHBY", "GREENHOUSE", "LEVER", "HIMALAYAS", "REMOTEOK", "JOBICY", "HN"];
+    it("registers and retrieves all 11 deterministic adapters", () => {
+      const types = ["ASHBY", "GREENHOUSE", "LEVER", "HIMALAYAS", "REMOTEOK", "JOBICY", "HN", "HIRINGCAFE", "WWR", "WELLFOUND", "INDEED"];
       for (const type of types) {
         const adapter = getFeedAdapter(type);
         assert.equal(adapter.sourceType, type);
       }
-      assert.equal(getAllRegisteredAdapters().length, 7);
+      assert.equal(getAllRegisteredAdapters().length, 11);
     });
 
     it("throws when requesting an unknown adapter type", () => {
@@ -523,6 +533,302 @@ describe("Deterministic Feed Adapters", () => {
       assert.equal(result.jobs[0].sourceExternalId, "1001");
       assert.equal(result.jobs[0].company, "Acme Corp");
       assert.equal(result.jobs[0].title, "Senior Backend Engineer");
+    });
+  });
+
+  describe("HiringCafeAdapter", () => {
+    const hiringcafeFixture = loadFixture("hiringcafe-response.json");
+    const adapter = new HiringCafeAdapter();
+
+    it("parses HiringCafe jobs, salary ranges, location, and advances page cursor", async () => {
+      const mockFetch = createMockFetch({ "hiring.cafe/api/search": hiringcafeFixture });
+      const source: FeedSource = {
+        id: "fs-hiringcafe",
+        name: "HiringCafe",
+        type: "HIRINGCAFE",
+        url: "https://hiring.cafe/api/search",
+        config: JSON.stringify({ tags: ["software-engineer"] }),
+        enabled: true,
+        autoPoll: false,
+        lastCursor: "1",
+        pollIntervalMs: 21600000,
+        consecutiveEmpty: 0,
+        jobsDiscovered: 0,
+        jobsPassed: 0,
+        errorCount: 0,
+        lastError: "",
+      };
+
+      const result = await adapter.poll(source, undefined, { fetchFn: mockFetch });
+
+      assert.equal(result.jobs.length, 2);
+      assert.equal(result.jobs[0].sourceExternalId, "hc-101");
+      assert.equal(result.jobs[0].title, "Full Stack Engineer");
+      assert.equal(result.jobs[0].company, "Vanguard Labs");
+      assert.equal(result.jobs[0].remoteStatus, "REMOTE");
+      assert.equal(result.jobs[0].salaryMin, 120000);
+      assert.equal(result.jobs[0].salaryMax, 160000);
+      assert.equal(result.nextCursor, "2");
+      assert.equal(result.hasMore, true);
+    });
+
+    it("throws descriptive error on HTTP failures", async () => {
+      const mockFetch = (async () => ({
+        ok: false,
+        status: 500,
+        statusText: "Internal Server Error",
+      })) as unknown as typeof fetch;
+
+      const source: FeedSource = {
+        id: "fs-hiringcafe-error",
+        name: "HiringCafe",
+        type: "HIRINGCAFE",
+        url: "https://hiring.cafe/api/search",
+        config: "{}",
+        enabled: true,
+        autoPoll: false,
+        lastCursor: "",
+        pollIntervalMs: 21600000,
+        consecutiveEmpty: 0,
+        jobsDiscovered: 0,
+        jobsPassed: 0,
+        errorCount: 0,
+        lastError: "",
+      };
+
+      await assert.rejects(
+        adapter.poll(source, undefined, { fetchFn: mockFetch }),
+        /HiringCafe API request failed \(500 Internal Server Error\)/
+      );
+    });
+  });
+
+  describe("WeWorkRemotelyAdapter", () => {
+    const wwrXmlFixture = loadTextFixture("wwr-feed.xml");
+    const adapter = new WeWorkRemotelyAdapter();
+
+    it("parses WWR RSS items, splits Company: Title, cleans HTML, and extracts salary", async () => {
+      const mockFetch = createMockFetch({ "weworkremotely.com": wwrXmlFixture });
+      const source: FeedSource = {
+        id: "fs-wwr",
+        name: "We Work Remotely",
+        type: "WWR",
+        url: "https://weworkremotely.com/categories/remote-programming-jobs.rss",
+        config: "{}",
+        enabled: true,
+        autoPoll: false,
+        lastCursor: "",
+        pollIntervalMs: 21600000,
+        consecutiveEmpty: 0,
+        jobsDiscovered: 0,
+        jobsPassed: 0,
+        errorCount: 0,
+        lastError: "",
+      };
+
+      const result = await adapter.poll(source, undefined, { fetchFn: mockFetch });
+
+      assert.equal(result.jobs.length, 2);
+      assert.equal(result.jobs[0].title, "Senior Backend Engineer");
+      assert.equal(result.jobs[0].company, "Stripe");
+      assert.equal(result.jobs[0].remoteStatus, "REMOTE");
+      assert.equal(result.jobs[0].salaryMin, 160000);
+      assert.equal(result.jobs[0].salaryMax, 210000);
+      assert.equal(result.jobs[0].salaryCurrency, "USD");
+      assert.equal(result.jobs[1].title, "Full Stack Engineer");
+      assert.equal(result.jobs[1].company, "Linear");
+    });
+
+    it("throws descriptive error on HTTP failures", async () => {
+      const mockFetch = (async () => ({
+        ok: false,
+        status: 503,
+        statusText: "Service Unavailable",
+      })) as unknown as typeof fetch;
+
+      const source: FeedSource = {
+        id: "fs-wwr-error",
+        name: "We Work Remotely",
+        type: "WWR",
+        url: "https://weworkremotely.com/categories/remote-programming-jobs.rss",
+        config: "{}",
+        enabled: true,
+        autoPoll: false,
+        lastCursor: "",
+        pollIntervalMs: 21600000,
+        consecutiveEmpty: 0,
+        jobsDiscovered: 0,
+        jobsPassed: 0,
+        errorCount: 0,
+        lastError: "",
+      };
+
+      await assert.rejects(
+        adapter.poll(source, undefined, { fetchFn: mockFetch }),
+        /We Work Remotely RSS request failed \(503 Service Unavailable\)/
+      );
+    });
+  });
+
+  describe("WellfoundAdapter", () => {
+    const wellfoundFixture = loadFixture("wellfound-response.json");
+    const adapter = new WellfoundAdapter();
+
+    it("parses startup jobs, normalizes salary + equity compensation, startup stage, and location", async () => {
+      const mockFetch = createMockFetch({ "wellfound.com/api/v1/jobs": wellfoundFixture });
+      const source: FeedSource = {
+        id: "fs-wellfound",
+        name: "Wellfound",
+        type: "WELLFOUND",
+        url: "https://wellfound.com/api/v1/jobs",
+        config: JSON.stringify({ tags: ["software-engineer"] }),
+        enabled: true,
+        autoPoll: false,
+        lastCursor: "",
+        pollIntervalMs: 21600000,
+        consecutiveEmpty: 0,
+        jobsDiscovered: 0,
+        jobsPassed: 0,
+        errorCount: 0,
+        lastError: "",
+      };
+
+      const result = await adapter.poll(source, undefined, { fetchFn: mockFetch });
+
+      assert.equal(result.jobs.length, 2);
+      const job1 = result.jobs[0];
+      assert.equal(job1.sourceExternalId, "wf-job-101");
+      assert.equal(job1.title, "Lead Founding Engineer");
+      assert.equal(job1.company, "Cognitive Robotics");
+      assert.equal(job1.location, "San Francisco, CA (Remote OK)");
+      assert.equal(job1.remoteStatus, "REMOTE");
+      assert.equal(job1.salaryMin, 180000);
+      assert.equal(job1.salaryMax, 240000);
+      assert.equal(job1.salaryCurrency, "USD");
+      assert.equal(job1.metadata?.startupStage, "Series A");
+      assert.equal(job1.metadata?.equity, "0.25% - 1.0%");
+      assert.match(job1.description, /Cognitive Robotics is building autonomous warehouse automation/);
+      assert.equal(job1.url, "https://wellfound.com/jobs/101-lead-founding-engineer");
+
+      const job2 = result.jobs[1];
+      assert.equal(job2.sourceExternalId, "wf-job-102");
+      assert.equal(job2.title, "Senior Full Stack AI Engineer");
+      assert.equal(job2.company, "VectorFlow");
+      assert.equal(job2.remoteStatus, "HYBRID");
+      assert.equal(job2.salaryMin, 150000);
+      assert.equal(job2.salaryMax, 190000);
+      assert.equal(job2.metadata?.startupStage, "Seed");
+      assert.equal(job2.metadata?.equity, "0.5% - 2.0%");
+
+      assert.equal(result.nextCursor, "2");
+      assert.equal(result.hasMore, true);
+    });
+
+    it("throws descriptive error on HTTP failures", async () => {
+      const mockFetch = (async () => ({
+        ok: false,
+        status: 403,
+        statusText: "Forbidden",
+      })) as unknown as typeof fetch;
+
+      const source: FeedSource = {
+        id: "fs-wellfound-err",
+        name: "Wellfound",
+        type: "WELLFOUND",
+        url: "https://wellfound.com/api/v1/jobs",
+        config: "{}",
+        enabled: true,
+        autoPoll: false,
+        lastCursor: "",
+        pollIntervalMs: 21600000,
+        consecutiveEmpty: 0,
+        jobsDiscovered: 0,
+        jobsPassed: 0,
+        errorCount: 0,
+        lastError: "",
+      };
+
+      await assert.rejects(
+        adapter.poll(source, undefined, { fetchFn: mockFetch }),
+        /Wellfound API request failed \(403 Forbidden\)/
+      );
+    });
+  });
+
+  describe("IndeedRssAdapter", () => {
+    const indeedXmlFixture = loadTextFixture("indeed-feed.xml");
+    const adapter = new IndeedRssAdapter();
+
+    it("parses category RSS XML, extracts company from source/title, cleans HTML, and normalizes salary", async () => {
+      const mockFetch = createMockFetch({ "indeed.com": indeedXmlFixture });
+      const source: FeedSource = {
+        id: "fs-indeed",
+        name: "Indeed RSS",
+        type: "INDEED",
+        url: "https://www.indeed.com/rss?q=software+engineer&l=Remote",
+        config: JSON.stringify({ categories: ["software-engineer"] }),
+        enabled: true,
+        autoPoll: false,
+        lastCursor: "",
+        pollIntervalMs: 21600000,
+        consecutiveEmpty: 0,
+        jobsDiscovered: 0,
+        jobsPassed: 0,
+        errorCount: 0,
+        lastError: "",
+      };
+
+      const result = await adapter.poll(source, undefined, { fetchFn: mockFetch });
+
+      assert.equal(result.jobs.length, 2);
+      const job1 = result.jobs[0];
+      assert.equal(job1.sourceExternalId, "indeed-jk-9901");
+      assert.equal(job1.title, "Senior Platform Engineer");
+      assert.equal(job1.company, "Datadog");
+      assert.equal(job1.remoteStatus, "REMOTE");
+      assert.equal(job1.salaryMin, 175000);
+      assert.equal(job1.salaryMax, 225000);
+      assert.equal(job1.salaryCurrency, "USD");
+      assert.match(job1.description, /Datadog is looking for a Senior Platform Engineer/);
+      assert.equal(job1.url, "https://www.indeed.com/viewjob?jk=indeed-jk-9901");
+
+      const job2 = result.jobs[1];
+      assert.equal(job2.sourceExternalId, "indeed-jk-9902");
+      assert.equal(job2.title, "Cloud Security Architect");
+      assert.equal(job2.company, "Snowflake");
+      assert.equal(job2.salaryMin, 190000);
+      assert.equal(job2.salaryMax, 260000);
+      assert.equal(job2.salaryCurrency, "USD");
+    });
+
+    it("throws descriptive error on HTTP failures", async () => {
+      const mockFetch = (async () => ({
+        ok: false,
+        status: 500,
+        statusText: "Internal Server Error",
+      })) as unknown as typeof fetch;
+
+      const source: FeedSource = {
+        id: "fs-indeed-err",
+        name: "Indeed RSS",
+        type: "INDEED",
+        url: "https://www.indeed.com/rss?q=software+engineer&l=Remote",
+        config: "{}",
+        enabled: true,
+        autoPoll: false,
+        lastCursor: "",
+        pollIntervalMs: 21600000,
+        consecutiveEmpty: 0,
+        jobsDiscovered: 0,
+        jobsPassed: 0,
+        errorCount: 0,
+        lastError: "",
+      };
+
+      await assert.rejects(
+        adapter.poll(source, undefined, { fetchFn: mockFetch }),
+        /Indeed RSS feed request failed \(500 Internal Server Error\)/
+      );
     });
   });
 });

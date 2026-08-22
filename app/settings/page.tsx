@@ -114,10 +114,10 @@ export default function SettingsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0d0e12] text-[#f4f2ec] p-3 sm:p-4 lg:p-5 font-sans flex flex-col">
-      <div className="w-full max-w-[1800px] mx-auto flex flex-col flex-1 space-y-4">
+    <main className="h-screen bg-[#0d0e12] text-[#f4f2ec] p-3 sm:p-4 lg:p-5 font-sans overflow-hidden flex flex-col">
+      <div className="w-full max-w-[1800px] mx-auto flex flex-col flex-1 min-h-0 space-y-3">
         {/* HEADER: Minimalist & Clean Tactical Command Header matching Cockpit */}
-        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#2a2e38]">
+        <header className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2.5 border-b border-[#2a2e38]">
           <div>
             <div className="flex items-center gap-2.5 mb-0.5">
               <VanguardIcon size={26} className="shrink-0" />
@@ -154,9 +154,9 @@ export default function SettingsPage() {
         </header>
 
         {/* 2-COLUMN TACTICAL COCKPIT LAYOUT */}
-        <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] lg:grid-cols-[300px_1fr] gap-4 items-start flex-1 min-h-0">
+        <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] lg:grid-cols-[300px_1fr] gap-4 items-stretch flex-1 min-h-0">
           {/* LEFT SIDEBAR: Navigation Rail & System Telemetry */}
-          <aside className="space-y-4 md:sticky md:top-4">
+          <aside className="space-y-3 shrink-0 flex flex-col min-h-0 overflow-y-auto pr-1">
             {/* Navigation Tabs */}
             <div
               role="tablist"
@@ -242,8 +242,8 @@ export default function SettingsPage() {
             </div>
           </aside>
 
-          {/* RIGHT WORKSPACE: Full-Width Active Configuration Panel */}
-          <section className="w-full min-w-0 space-y-4">
+          {/* RIGHT WORKSPACE: Full-Width Active Configuration Panel with smooth internal scroll */}
+          <section className="w-full min-w-0 flex-1 min-h-0 overflow-y-auto pr-1">
             {/* Tab 1: Feed Sources & Ingestion Management */}
             {activeTab === "feeds" && (
               <div className="animate-in fade-in space-y-4 w-full min-w-0">

@@ -16,8 +16,19 @@ import {
   DEFAULT_FIT_SCORE_WEIGHTS,
   type FitScoreWeights,
 } from "@/lib/scoring/fit-score";
+import {
+  Lock,
+  Unlock,
+  RotateCcw,
+  Sparkles,
+  Check,
+  Sliders,
+  History,
+  Terminal,
+} from "lucide-react";
 
 interface DimensionItem {
+  code: string;
   key: keyof FitScoreWeights;
   label: string;
   description: string;
@@ -25,24 +36,28 @@ interface DimensionItem {
 
 const DIMENSIONS: DimensionItem[] = [
   {
+    code: "01",
     key: "skills",
     label: "Skills Fit",
-    description: "Alignment with required tech stack and core competencies",
+    description: "Alignment with required tech stack, core proficiencies, and tools",
   },
   {
+    code: "02",
     key: "experience",
     label: "Experience Fit",
-    description: "Seniority level, scope, and years of experience",
+    description: "Seniority ceiling, scope of impact, and verified years of experience",
   },
   {
+    code: "03",
     key: "domain",
     label: "Domain Fit",
-    description: "Industry vertical, business model, and domain relevance",
+    description: "Industry vertical, business model, and operational domain relevance",
   },
   {
+    code: "04",
     key: "trajectory",
     label: "Trajectory Fit",
-    description: "Growth suitability, progression, and lateral alignment",
+    description: "Career progression, growth suitability, and lateral alignment",
   },
 ];
 
@@ -102,7 +117,7 @@ export default function ScoringFeedbackLoopSettings() {
       const res = await updateScoringWeights(weights, locked);
       if (res.success) {
         setWeights(res.weights);
-        setStatusMessage("Weights updated successfully!");
+        setStatusMessage("Weights updated successfully");
         await loadData();
       }
     } catch (err: unknown) {
@@ -122,7 +137,7 @@ export default function ScoringFeedbackLoopSettings() {
       const res = await applySuggestedWeights(state.calibratedWeights, locked);
       if (res.success) {
         setWeights(res.weights);
-        setStatusMessage("Calibrated weights applied!");
+        setStatusMessage("Calibrated weights applied");
         await loadData();
       }
     } catch (err: unknown) {
@@ -142,7 +157,7 @@ export default function ScoringFeedbackLoopSettings() {
       if (res.success) {
         setWeights(res.weights);
         setLocked({});
-        setStatusMessage("Reset to default baseline weights!");
+        setStatusMessage("Reset to default baseline weights");
         await loadData();
       }
     } catch (err: unknown) {
@@ -158,41 +173,41 @@ export default function ScoringFeedbackLoopSettings() {
     if (!state) return null;
     if (state.phase === "COLD_START") {
       return (
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-950/70 border border-blue-800 text-blue-300 text-xs font-semibold">
-          <span className="w-2 h-2 rounded-full bg-blue-400"></span>
-          <span>Phase 0: Cold Start ({state.sampleSize}/10 outcomes)</span>
+        <div className="flex items-center gap-2 px-2.5 py-1 rounded-[2px] bg-[#15171d] border border-[#2a2e38] text-[#a6abbd] text-xs font-mono">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#a6abbd]"></span>
+          <span>PHASE 0 · COLD START ({state.sampleSize}/10 OUTCOMES)</span>
         </div>
       );
     }
     if (state.phase === "SUGGESTED") {
       return (
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-950/70 border border-amber-800 text-amber-300 text-xs font-semibold">
-          <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-          <span>Phase 1: Suggested Drift ({state.sampleSize} outcomes)</span>
+        <div className="flex items-center gap-2 px-2.5 py-1 rounded-[2px] bg-[#d4a745]/15 border border-[#d4a745]/40 text-[#d4a745] text-xs font-mono font-semibold">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#d4a745] animate-pulse"></span>
+          <span>PHASE 1 · SUGGESTED DRIFT ({state.sampleSize} OUTCOMES)</span>
         </div>
       );
     }
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-950/70 border border-emerald-800 text-emerald-300 text-xs font-semibold">
-        <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-        <span>Phase 2: Automated Bayesian Loop ({state.sampleSize} outcomes)</span>
+      <div className="flex items-center gap-2 px-2.5 py-1 rounded-[2px] bg-[#8ab384]/15 border border-[#8ab384]/40 text-[#8ab384] text-xs font-mono font-semibold">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#8ab384]"></span>
+        <span>PHASE 2 · BAYESIAN ACTIVE ({state.sampleSize} OUTCOMES)</span>
       </div>
     );
   };
 
   return (
-    <div className="bg-[#111] p-6 rounded-xl border border-neutral-800 space-y-6">
+    <div className="bg-[#15171d] p-5 sm:p-6 rounded-[3px] border border-[#2a2e38] space-y-6">
       {/* Header & Phase Status */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-neutral-900">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#2a2e38]">
         <div>
           <div className="flex items-center gap-2.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
-            <h2 className="text-base font-bold text-white tracking-tight">
-              Adaptive Scoring & Feedback Loop
+            <Sliders className="w-4 h-4 text-[#d4a745]" />
+            <h2 className="text-base font-bold text-[#f4f2ec] tracking-tight">
+              Adaptive Scoring &amp; Feedback Calibration
             </h2>
           </div>
-          <p className="text-xs text-neutral-500 mt-1">
-            Calibrates sub-dimension weights via regularized Bayesian drift from real application outcomes.
+          <p className="text-xs text-[#a6abbd] mt-1 font-mono">
+            Calibrates sub-dimension weights via regularized Bayesian drift from confirmed application outcomes.
           </p>
         </div>
 
@@ -200,13 +215,13 @@ export default function ScoringFeedbackLoopSettings() {
       </div>
 
       {loading ? (
-        <div className="text-xs text-neutral-500 py-6 text-center">
+        <div className="text-xs text-[#a6abbd] py-12 text-center font-mono">
           Loading scoring calibration metrics...
         </div>
       ) : (
         <div className="space-y-6">
           {/* Sub-Dimension Sliders Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {DIMENSIONS.map((dim) => {
               const currentVal = Math.round((weights[dim.key] || 0) * 100);
               const suggestedVal = state
@@ -220,88 +235,91 @@ export default function ScoringFeedbackLoopSettings() {
               return (
                 <div
                   key={dim.key}
-                  className={`p-4 rounded-xl border transition-all ${
+                  className={`p-4 rounded-[2px] border transition-all flex flex-col justify-between ${
                     isLocked
-                      ? "bg-[#141414] border-purple-900/60"
-                      : "bg-[#161616] border-neutral-800/80 hover:border-neutral-700"
+                      ? "bg-[#1f222a] border-[#d4a745]/60"
+                      : "bg-[#0d0e12] border-[#2a2e38] hover:border-[#3d4352]"
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-white">{dim.label}</span>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-mono font-bold text-[#a6abbd] uppercase tracking-wider">
+                        {dim.code} · {dim.label}
+                      </span>
                       <button
                         type="button"
                         onClick={() => toggleLock(dim.key)}
-                        title={isLocked ? "Pinned / Locked (Click to unlock)" : "Unlocked (Click to pin/lock weight)"}
-                        className={`text-[10px] px-2 py-0.5 rounded border transition-colors flex items-center gap-1 ${
+                        title={isLocked ? "Pinned (Click to unlock)" : "Unlocked (Click to pin weight)"}
+                        className={`text-[10px] px-2 py-0.5 rounded-[2px] border font-mono transition-colors flex items-center gap-1 cursor-pointer ${
                           isLocked
-                            ? "bg-purple-950/80 border-purple-700 text-purple-300 font-semibold"
-                            : "bg-neutral-900 border-neutral-800 text-neutral-500 hover:text-neutral-300"
+                            ? "bg-[#d4a745]/20 border-[#d4a745]/60 text-[#d4a745] font-bold"
+                            : "bg-[#15171d] border-[#2a2e38] text-[#a6abbd] hover:text-[#f4f2ec] hover:border-[#3d4352]"
                         }`}
                       >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          {isLocked ? (
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                          ) : (
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                          )}
-                        </svg>
-                        <span>{isLocked ? "Pinned" : "Lock"}</span>
+                        {isLocked ? (
+                          <>
+                            <Lock className="w-2.5 h-2.5" />
+                            <span>PINNED</span>
+                          </>
+                        ) : (
+                          <>
+                            <Unlock className="w-2.5 h-2.5" />
+                            <span>LOCK</span>
+                          </>
+                        )}
                       </button>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold font-mono text-white">
+                    <div className="flex items-baseline justify-between pt-1">
+                      <span className="text-2xl font-bold font-mono text-[#f4f2ec]">
                         {currentVal}%
                       </span>
+                      {state && state.phase !== "COLD_START" && suggestedVal !== currentVal && (
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-[2px] bg-[#d4a745]/15 border border-[#d4a745]/40 text-[#d4a745]">
+                          Sugg: {suggestedVal}%
+                        </span>
+                      )}
                     </div>
+
+                    <p className="text-[11px] text-[#a6abbd] leading-relaxed line-clamp-2">
+                      {dim.description}
+                    </p>
                   </div>
 
-                  <p className="text-[11px] text-neutral-500 mb-3 leading-relaxed">
-                    {dim.description}
-                  </p>
-
-                  {/* Interactive Range Slider */}
-                  <div className="space-y-1.5">
-                    <input
-                      type="range"
-                      min="10"
-                      max="50"
-                      step="1"
-                      disabled={isLocked}
-                      value={currentVal}
-                      onChange={(e) => handleSliderChange(dim.key, Number(e.target.value))}
-                      className="w-full h-1.5 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-purple-500 disabled:opacity-40 disabled:cursor-not-allowed"
-                    />
-                    <div className="flex justify-between text-[9px] font-mono text-neutral-600">
-                      <span>10%</span>
-                      <span>30%</span>
-                      <span>50%</span>
+                  {/* Range Slider & Telemetry Footers */}
+                  <div className="space-y-3 pt-3 mt-3 border-t border-[#2a2e38]">
+                    <div className="space-y-1">
+                      <input
+                        type="range"
+                        min="10"
+                        max="50"
+                        step="1"
+                        disabled={isLocked}
+                        value={currentVal}
+                        onChange={(e) => handleSliderChange(dim.key, Number(e.target.value))}
+                        className="w-full h-1.5 bg-[#1f222a] rounded-[2px] appearance-none cursor-pointer accent-[#d4a745] disabled:opacity-40 disabled:cursor-not-allowed"
+                      />
+                      <div className="flex justify-between text-[9px] font-mono text-[#a6abbd]">
+                        <span>10%</span>
+                        <span>30%</span>
+                        <span>50%</span>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Conversion Delta & Suggestion Badges */}
-                  <div className="flex items-center justify-between gap-2 pt-3 mt-3 border-t border-neutral-800/60 text-[10px]">
-                    <div className="text-neutral-500">
-                      Outcome Delta:{" "}
+                    <div className="flex items-center justify-between text-[10px] font-mono pt-1">
+                      <span className="text-[#a6abbd]">Outcome Delta:</span>
                       <span
-                        className={`font-mono font-semibold ${
+                        className={`font-bold ${
                           deltaVal > 0
-                            ? "text-emerald-400"
+                            ? "text-[#8ab384]"
                             : deltaVal < 0
-                            ? "text-amber-400"
-                            : "text-neutral-400"
+                            ? "text-[#c4634e]"
+                            : "text-[#a6abbd]"
                         }`}
                       >
                         {deltaVal > 0 ? `+${deltaVal}%` : `${deltaVal}%`}
                       </span>
                     </div>
-
-                    {state && state.phase !== "COLD_START" && suggestedVal !== currentVal && (
-                      <div className="px-2 py-0.5 rounded bg-purple-950/80 border border-purple-800 text-purple-300 font-mono text-[10px]">
-                        Suggested: {suggestedVal}% ({suggestedVal > currentVal ? `+${suggestedVal - currentVal}%` : `${suggestedVal - currentVal}%`})
-                      </div>
-                    )}
                   </div>
                 </div>
               );
@@ -309,27 +327,28 @@ export default function ScoringFeedbackLoopSettings() {
           </div>
 
           {/* Weight Sum & Control Bar */}
-          <div className="bg-[#141414] p-4 rounded-xl border border-neutral-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="text-xs">
-                <span className="text-neutral-500">Total Sum: </span>
+          <div className="bg-[#0d0e12] p-4 rounded-[2px] border border-[#2a2e38] flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-mono">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="text-xs flex items-center gap-2">
+                <span className="text-[#a6abbd]">Total Weight Sum:</span>
                 <span
-                  className={`font-mono font-bold ${
-                    currentSum === 100 ? "text-emerald-400" : "text-amber-400"
+                  className={`font-bold text-sm ${
+                    currentSum === 100 ? "text-[#8ab384]" : "text-[#c4634e]"
                   }`}
                 >
                   {currentSum}%
                 </span>
                 {currentSum !== 100 && (
-                  <span className="text-[10px] text-amber-500 ml-2">
-                    (Must equal 100% — will auto-normalize on save)
+                  <span className="text-[10px] text-[#d4a745]">
+                    (Auto-normalizes to 100% on save)
                   </span>
                 )}
               </div>
 
               {statusMessage && (
-                <div className="text-xs text-purple-300 font-medium">
-                  {statusMessage}
+                <div className="text-xs text-[#d4a745] font-semibold flex items-center gap-1.5">
+                  <Check className="w-3.5 h-3.5" />
+                  <span>{statusMessage}</span>
                 </div>
               )}
             </div>
@@ -339,9 +358,10 @@ export default function ScoringFeedbackLoopSettings() {
                 type="button"
                 onClick={handleResetDefaults}
                 disabled={saving}
-                className="px-3 py-1.5 rounded-lg border border-neutral-800 hover:bg-neutral-900 text-neutral-400 hover:text-white text-xs font-semibold transition-colors disabled:opacity-50"
+                className="px-3 py-1.5 rounded-[2px] border border-[#2a2e38] bg-[#15171d] hover:bg-[#1f222a] text-[#a6abbd] hover:text-[#f4f2ec] text-xs font-mono transition-colors disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
               >
-                Reset to Defaults
+                <RotateCcw className="w-3 h-3" />
+                <span>Reset Baseline</span>
               </button>
 
               {state && state.hasChanges && state.phase !== "COLD_START" && (
@@ -349,9 +369,10 @@ export default function ScoringFeedbackLoopSettings() {
                   type="button"
                   onClick={handleApplySuggested}
                   disabled={saving}
-                  className="px-3 py-1.5 rounded-lg bg-purple-950/80 border border-purple-800 hover:bg-purple-900 text-purple-300 text-xs font-bold transition-all disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-[2px] bg-[#d4a745]/15 border border-[#d4a745]/40 hover:bg-[#d4a745]/25 text-[#d4a745] text-xs font-mono font-semibold transition-colors disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                 >
-                  Apply Suggested ({state.sampleSize} outcomes)
+                  <Sparkles className="w-3 h-3" />
+                  <span>Apply Calibrated ({state.sampleSize})</span>
                 </button>
               )}
 
@@ -359,7 +380,7 @@ export default function ScoringFeedbackLoopSettings() {
                 type="button"
                 onClick={handleSaveManual}
                 disabled={saving}
-                className="px-4 py-1.5 rounded-lg bg-white text-black hover:bg-neutral-200 text-xs font-bold transition-colors disabled:opacity-50"
+                className="px-4 py-1.5 rounded-[2px] bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] text-xs font-mono font-bold transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {saving ? "Saving..." : "Save Weights"}
               </button>
@@ -368,17 +389,17 @@ export default function ScoringFeedbackLoopSettings() {
 
           {/* Calibrated Conversion Insights Prompt Injection Preview */}
           {state && state.insights ? (
-            <div className="bg-[#141414] p-4 rounded-xl border border-neutral-800 space-y-2">
+            <div className="bg-[#0d0e12] p-4 rounded-[2px] border border-[#2a2e38] space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-neutral-300 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                <span className="text-xs font-bold text-[#f4f2ec] flex items-center gap-2 font-mono">
+                  <Terminal className="w-3.5 h-3.5 text-[#8ab384]" />
                   Active AI System Prompt Injection
                 </span>
-                <span className="text-[10px] font-mono text-neutral-500">
-                  Statistical clustering &ge; 15 apps
+                <span className="text-[10px] font-mono text-[#a6abbd]">
+                  Clustered Outcomes &ge; 15 Apps
                 </span>
               </div>
-              <pre className="p-3 bg-black rounded-lg border border-neutral-900 text-[11px] font-mono text-neutral-300 whitespace-pre-wrap leading-relaxed">
+              <pre className="p-3 bg-[#15171d] rounded-[2px] border border-[#2a2e38] text-[11px] font-mono text-[#f4f2ec] whitespace-pre-wrap leading-relaxed">
                 {state.insights}
               </pre>
             </div>
@@ -387,30 +408,33 @@ export default function ScoringFeedbackLoopSettings() {
           {/* Weight Change History */}
           {history.length > 0 && (
             <div className="space-y-3 pt-2">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-                Weight Calibration History
-              </h3>
+              <div className="flex items-center gap-2">
+                <History className="w-3.5 h-3.5 text-[#a6abbd]" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#a6abbd] font-mono">
+                  Weight Calibration Audit Log
+                </h3>
+              </div>
               <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                 {history.map((entry) => (
                   <div
                     key={entry.id}
-                    className="p-3 rounded-lg bg-[#141414] border border-neutral-900 flex items-center justify-between text-xs gap-3"
+                    className="p-3 rounded-[2px] bg-[#0d0e12] border border-[#2a2e38] flex items-center justify-between text-xs gap-3"
                   >
-                    <div className="space-y-0.5">
+                    <div className="space-y-0.5 font-mono">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-neutral-200">{entry.reason || entry.eventType}</span>
-                        <span className="text-[10px] text-neutral-500">
+                        <span className="font-semibold text-[#f4f2ec]">{entry.reason || entry.eventType}</span>
+                        <span className="text-[10px] text-[#a6abbd]">
                           {new Date(entry.timestamp).toLocaleString()}
                         </span>
                       </div>
-                      <div className="text-[10px] font-mono text-neutral-400 flex items-center gap-3">
-                        <span>Skills: {Math.round(entry.weights.skills * 100)}%</span>
-                        <span>Exp: {Math.round(entry.weights.experience * 100)}%</span>
-                        <span>Domain: {Math.round(entry.weights.domain * 100)}%</span>
-                        <span>Traj: {Math.round(entry.weights.trajectory * 100)}%</span>
+                      <div className="text-[10px] text-[#a6abbd] flex items-center gap-3">
+                        <span>SKL: {Math.round(entry.weights.skills * 100)}%</span>
+                        <span>EXP: {Math.round(entry.weights.experience * 100)}%</span>
+                        <span>DOM: {Math.round(entry.weights.domain * 100)}%</span>
+                        <span>TRJ: {Math.round(entry.weights.trajectory * 100)}%</span>
                       </div>
                     </div>
-                    <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-neutral-900 border border-neutral-800 text-neutral-400 shrink-0">
+                    <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-[2px] bg-[#15171d] border border-[#2a2e38] text-[#a6abbd] shrink-0">
                       {entry.eventType.replace("WEIGHTS_", "")}
                     </span>
                   </div>

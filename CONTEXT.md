@@ -39,6 +39,8 @@
 - **No Hallucinated Credentials**: AI tailoring and portal answers must never invent skills, metrics, experiences, or credentials not present in the candidate profile.
 - **Human-in-the-Loop Execution**: The agent automates administrative ingestion, filtering, scoring, drafting, and form mapping; final submission remains strictly human-initiated.
 - **Interactive Kanban Pipeline**: Active tracking stages are rendered as fixed-width, horizontally scrollable columns with native HTML5 Drag-and-Drop stage transitions and audit event logging.
+- **Vanguard Cockpit Design System**: Zero drop-shadows, zero glassmorphism, 1px solid `#2a2e38` hairline borders, and strict `#0d0e12` (canvas) / `#15171d` (surface) / `#1f222a` (elevated) backgrounds. Primary accents are `#d4a745` (brass), `#8ab384` (sage), and `#c4634e` (rust).
+- **Settings & Console Parity**: All operational sub-pages (Settings, Ingestion, Scoring) adhere to the full-width high-density `max-w-[1800px]` cockpit framework, avoiding isolated centered columns or floating pill cards.
 
 ### Terminology Rules & Avoided Synonyms
 
@@ -47,4 +49,5 @@
 - Use **Fit Score**, never *Match Percentage* or *AI Rating*.
 - Use **Priority Inbox**, never *Job Feed* or *Search Results*.
 - Avoid **Auto-apply** or **Mass Submission**: Vanguard is a personal filtering, preparation, and assisted application cockpit, not an unattended mass-submission bot.
+
 

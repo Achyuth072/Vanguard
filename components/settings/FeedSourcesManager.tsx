@@ -358,9 +358,9 @@ export function FeedSourcesManager({
   const activeSourcesCount = sources.filter((s) => s.enabled).length;
 
   return (
-    <div className={`space-y-6 font-sans ${className}`} data-testid="feed-sources-manager">
+    <div className={`space-y-4 font-sans w-full min-w-0 ${className}`} data-testid="feed-sources-manager">
       {/* Top Banner / Metrics & Global Actions */}
-      <div className="bg-[#15171d] border border-[#2a2e38] rounded-[3px] p-4 sm:p-5">
+      <div className="bg-[#15171d] border border-[#2a2e38] rounded-[3px] p-5 sm:p-6 w-full min-w-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#2a2e38]">
           <div>
             <div className="flex items-center gap-2.5">
@@ -626,7 +626,7 @@ export function FeedSourcesManager({
           <span>{error}</span>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 w-full min-w-0">
           {sources.map((source) => {
             const hasError = source.errorCount > 0;
             const isSyncing = syncingId === source.id || syncingAll;
@@ -637,7 +637,7 @@ export function FeedSourcesManager({
               <div
                 key={source.id}
                 data-testid={`feed-source-card-${source.id}`}
-                className={`bg-[#15171d] border rounded-[3px] p-4 flex flex-col justify-between transition-all ${
+                className={`bg-[#15171d] border rounded-[3px] p-4 flex flex-col justify-between transition-all min-w-0 overflow-hidden ${
                   !source.enabled
                     ? "border-[#2a2e38] opacity-60 bg-[#121318]"
                     : hasError
@@ -645,13 +645,13 @@ export function FeedSourcesManager({
                     : "border-[#2a2e38] hover:border-[#3d4352]"
                 }`}
               >
-                <div className="space-y-3">
+                <div className="space-y-3 min-w-0">
                   {/* Card Header: Name, Type, Status Pill */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="flex items-center gap-2">
+                  <div className="flex items-start justify-between gap-2 min-w-0">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 min-w-0">
                         <span
-                          className={`w-2 h-2 rounded-full ${
+                          className={`w-2 h-2 rounded-full shrink-0 ${
                             !source.enabled
                               ? "bg-[#64697b]"
                               : hasError
@@ -659,16 +659,16 @@ export function FeedSourcesManager({
                               : "bg-[#8ab384]"
                           }`}
                         />
-                        <h3 className="text-sm font-bold text-[#f4f2ec] tracking-tight font-sans">
+                        <h3 className="text-sm font-bold text-[#f4f2ec] tracking-tight font-sans truncate">
                           {source.name}
                         </h3>
-                        <span className="px-1.5 py-0.5 rounded-[2px] text-[10px] font-mono bg-[#1f222a] border border-[#2a2e38] text-[#a6abbd]">
+                        <span className="px-1.5 py-0.5 rounded-[2px] text-[10px] font-mono bg-[#1f222a] border border-[#2a2e38] text-[#a6abbd] shrink-0">
                           {source.type}
                         </span>
                       </div>
 
                       {/* Status indicator text */}
-                      <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-[#a6abbd]">
+                      <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-[#a6abbd] truncate">
                         {!source.enabled ? (
                           <span className="text-[#64697b] font-semibold">DISABLED</span>
                         ) : hasError ? (
@@ -683,7 +683,7 @@ export function FeedSourcesManager({
                           </span>
                         )}
                         <span>·</span>
-                        <span>
+                        <span className="truncate">
                           {source.lastPolledAt
                             ? `Last: ${new Date(source.lastPolledAt).toLocaleDateString([], {
                                 month: "short",
@@ -702,12 +702,12 @@ export function FeedSourcesManager({
                         type="button"
                         aria-label={`Toggle ${source.name}`}
                         onClick={() => handleToggleEnabled(source)}
-                        className={`w-8 h-4 rounded-full transition-colors relative cursor-pointer ${
+                        className={`w-8 h-4 rounded-[2px] transition-colors relative cursor-pointer ${
                           source.enabled ? "bg-[#8ab384]" : "bg-[#2a2e38]"
                         }`}
                       >
                         <span
-                          className={`w-3 h-3 rounded-full bg-white absolute top-0.5 transition-transform ${
+                          className={`w-3 h-3 rounded-[2px] bg-white absolute top-0.5 transition-transform ${
                             source.enabled ? "left-4.5" : "left-0.5"
                           }`}
                         />

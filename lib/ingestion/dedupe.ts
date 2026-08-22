@@ -52,3 +52,15 @@ export function generateDedupeKey(input: DedupeInput): string {
   const payload = `${companyTokens}|${titleTokens}|${canonicalUrl}`;
   return createHash("sha256").update(payload).digest("hex");
 }
+
+/**
+ * Computes a deterministic SHA-256 cross-source clustering key from normalized company and role title.
+ * Used to group the same job opportunity cross-posted across multiple boards or aggregators.
+ */
+export function generateClusterKey(company?: string | null, title?: string | null): string {
+  const companyTokens = normalizeAlphanumericTokens(company);
+  const titleTokens = normalizeAlphanumericTokens(title);
+
+  const payload = `${companyTokens}|${titleTokens}`;
+  return createHash("sha256").update(payload).digest("hex");
+}

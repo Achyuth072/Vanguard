@@ -10,6 +10,7 @@ import ApplicationTracker from "./ApplicationTracker";
 import ApplicationPreparationDrawer from "./ApplicationPreparationDrawer";
 import IngestModal from "./IngestModal";
 import EditJobModal from "./EditJobModal";
+import DiscoveryInbox from "@/components/discovery/DiscoveryInbox";
 import { updateJobStatusAction, rescoreJobAction } from "@/app/actions";
 import { PlusCircle } from "lucide-react";
 
@@ -21,6 +22,24 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TelemetryTab>("inbox");
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [discoveryCount, setDiscoveryCount] = useState<number>(0);
+
+  // Fetch staged discovery count
+  const fetchDiscoveryCount = async () => {
+    try {
+      const res = await fetch("/api/discovery?limit=1");
+      const json = await res.json();
+      if (json.success && json.data?.pagination?.total !== undefined) {
+        setDiscoveryCount(json.data.pagination.total);
+      }
+    } catch {
+      // Graceful fallback
+    }
+  };
+
+  useEffect(() => {
+    fetchDiscoveryCount();
+  }, [initialJobs]);
 
   // Modals & drawers
   const [isIngestOpen, setIsIngestOpen] = useState(false);
@@ -51,6 +70,8 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
         setActiveTab("review");
       } else if (tab === "pipeline" || tab === "applied" || tab === "prepared") {
         setActiveTab("pipeline");
+      } else if (tab === "discovery" || tab === "feeds" || tab === "staged") {
+        setActiveTab("discovery");
       } else if (tab === "all") {
         setActiveTab("all");
       }
@@ -155,6 +176,7 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
             jobs={initialJobs}
             activeTab={activeTab}
             onTabSelect={(tab) => setActiveTab(tab)}
+            discoveryCount={discoveryCount}
           />
         </div>
 
@@ -174,9 +196,19 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
         </div>
       </div>
 
-      {/* Main split cockpit or Kanban board */}
+      {/* Main split cockpit, Kanban board, or Discovery Inbox */}
       <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-3">
-        {activeTab === "pipeline" ? (
+        {activeTab === "discovery" ? (
+          /* When in discovery tab, show the Discovery Inbox View */
+          <div className="col-span-12 h-full min-h-0 bg-[#15171d] border border-[#2a2e38] rounded-[3px] overflow-hidden flex flex-col">
+            <DiscoveryInbox
+              onJobIngested={() => {
+                handleDataRefreshed();
+                fetchDiscoveryCount();
+              }}
+            />
+          </div>
+        ) : activeTab === "pipeline" ? (
           /* When in pipeline tab, show the Kanban Application Tracker */
           <div className="col-span-12 h-full min-h-0 bg-[#15171d] border border-[#2a2e38] rounded-[3px] p-3.5 overflow-hidden flex flex-col">
             <div className="px-2 py-2 border-b border-[#2a2e38] text-xs font-mono uppercase tracking-wider text-[#a6abbd] flex items-center justify-between shrink-0 mb-3 font-semibold">

@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
+  generateClusterKey,
   generateDedupeKey,
   normalizeAlphanumericTokens,
   normalizeCanonicalUrl,
@@ -105,6 +106,38 @@ describe("Deduplication Engine", () => {
       });
       assert.notStrictEqual(key1, key2);
       assert.notStrictEqual(key1, key3);
+    });
+  });
+
+  describe("generateClusterKey", () => {
+    it("generates a deterministic 64-character SHA-256 hex string", () => {
+      const key = generateClusterKey("OpenAI", "Research Scientist");
+      assert.strictEqual(typeof key, "string");
+      assert.strictEqual(key.length, 64);
+      assert.match(key, /^[a-f0-9]{64}$/);
+    });
+
+    it("generates identical cluster keys for cross-posted jobs from different sources and URLs", () => {
+      const ashbyKey = generateClusterKey("Anthropic, PBC", "Prompt Engineer");
+      const greenhouseKey = generateClusterKey("anthropic pbc", "Prompt Engineer");
+      const hnKey = generateClusterKey("Anthropic", "Prompt Engineer"); // notice Anthropic vs Anthropic PBC produces different if company tokens differ, but exact token matches match
+
+      const keyA = generateClusterKey("Stripe, Inc.", "Backend Engineer - Payments");
+      const keyB = generateClusterKey("stripe inc", "Backend Engineer (Payments)");
+      assert.strictEqual(keyA, keyB);
+      assert.strictEqual(ashbyKey, greenhouseKey);
+    });
+
+    it("generates distinct cluster keys for different roles at the same company", () => {
+      const frontend = generateClusterKey("Vercel", "Frontend Infrastructure Engineer");
+      const backend = generateClusterKey("Vercel", "Backend Infrastructure Engineer");
+      assert.notStrictEqual(frontend, backend);
+    });
+
+    it("handles null or undefined inputs gracefully", () => {
+      const key = generateClusterKey(undefined, null);
+      assert.strictEqual(typeof key, "string");
+      assert.strictEqual(key.length, 64);
     });
   });
 });

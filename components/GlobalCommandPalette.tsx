@@ -74,6 +74,18 @@ export default function GlobalCommandPalette() {
             <CommandItem
               onSelect={() =>
                 runCommand(() => {
+                  window.dispatchEvent(new CustomEvent("set-cockpit-filter", { detail: { tab: "discovery" } }));
+                })
+              }
+            >
+              <Target className="mr-2 h-4 w-4 text-[#d4a745]" />
+              <span>Open Discovery Staging Buffer</span>
+              <CommandShortcut>G F</CommandShortcut>
+            </CommandItem>
+
+            <CommandItem
+              onSelect={() =>
+                runCommand(() => {
                   window.dispatchEvent(new CustomEvent("open-ingest-modal", { detail: { mode: "url" } }));
                 })
               }
@@ -132,6 +144,18 @@ export default function GlobalCommandPalette() {
               <Flame className="mr-2 h-4 w-4 text-[#d4a745]" />
               <span>Filter: Priority Queue (Fit ≥80)</span>
               <CommandShortcut>G P</CommandShortcut>
+            </CommandItem>
+
+            <CommandItem
+              onSelect={() =>
+                runCommand(() => {
+                  window.dispatchEvent(new CustomEvent("set-cockpit-filter", { detail: { tab: "discovery" } }));
+                })
+              }
+            >
+              <Sparkles className="mr-2 h-4 w-4 text-[#d4a745]" />
+              <span>Filter: Staged Discovery Feeds</span>
+              <CommandShortcut>G 0</CommandShortcut>
             </CommandItem>
 
             <CommandItem
@@ -207,7 +231,7 @@ export default function GlobalCommandPalette() {
               }
             >
               <Settings className="mr-2 h-4 w-4 text-[#a6abbd]" />
-              <span>Scoring Settings &amp; Calibration</span>
+              <span>Feed Sources &amp; Scoring Settings</span>
               <CommandShortcut>G S</CommandShortcut>
             </CommandItem>
 

@@ -33,6 +33,14 @@ export default async function Home() {
             <ExportMenu />
             <CandidateProfileButton />
 
+            <a
+              href="/settings"
+              aria-label="Settings & Feed Sources"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[2px] border border-[#2a2e38] bg-[#15171d] text-[#a6abbd] hover:text-[#f4f2ec] hover:border-[#3d4352] text-xs font-mono transition-colors"
+            >
+              <span>Settings</span>
+            </a>
+
             <button
               type="button"
               onClick={undefined}

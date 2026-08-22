@@ -163,9 +163,9 @@ export default function SettingsPage() {
               aria-label="Settings Sections"
               className="bg-[#15171d] border border-[#2a2e38] rounded-[3px] p-2 space-y-1 font-mono text-xs select-none"
             >
-              <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-[#a6abbd] border-b border-[#2a2e38] mb-1 flex items-center justify-between">
+              <div className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#c5c9d6] border-b border-[#2a2e38] mb-1 flex items-center justify-between">
                 <span>Config Directory</span>
-                <span className="text-[9px] text-[#8ab384]">ONLINE</span>
+                <span className="text-[11px] text-[#8ab384] font-bold">ONLINE</span>
               </div>
 
               {TABS.map((tab) => {
@@ -175,27 +175,29 @@ export default function SettingsPage() {
                 return (
                   <button
                     key={tab.id}
+                    id={`tab-${tab.id}`}
                     type="button"
                     role="tab"
                     aria-selected={isActive}
+                    aria-controls={`panel-${tab.id}`}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`w-full p-2.5 rounded-[2px] text-left transition-all relative flex items-start gap-3 cursor-pointer ${
+                    className={`w-full p-2.5 rounded-[2px] text-left transition-all relative flex items-start gap-3 cursor-pointer focus-visible:outline-2 focus-visible:outline-[#d4a745] ${
                       isActive
                         ? "bg-[#1f222a] text-[#f4f2ec] border-l-2 border-l-[#d4a745]"
-                        : "text-[#a6abbd] hover:text-[#f4f2ec] hover:bg-[#191b22] border-l-2 border-l-transparent"
+                        : "text-[#c5c9d6] hover:text-[#f4f2ec] hover:bg-[#191b22] border-l-2 border-l-transparent"
                     }`}
                   >
                     <Icon
                       className="w-4 h-4 mt-0.5 shrink-0"
-                      style={{ color: isActive ? tab.accentColor : "#a6abbd" }}
+                      style={{ color: isActive ? tab.accentColor : "#c5c9d6" }}
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold tracking-tight truncate">
+                        <span className="font-bold tracking-tight truncate text-xs sm:text-sm">
                           {tab.code} · {tab.label}
                         </span>
                       </div>
-                      <div className="text-[10px] text-[#a6abbd] truncate mt-0.5">
+                      <div className="text-xs text-[#c5c9d6] truncate mt-0.5">
                         {tab.subtitle}
                       </div>
                     </div>
@@ -205,35 +207,35 @@ export default function SettingsPage() {
             </div>
 
             {/* Quick System Telemetry Card */}
-            <div className="bg-[#15171d] border border-[#2a2e38] rounded-[3px] p-3 space-y-3 font-mono text-xs hidden md:block">
+            <div className="bg-[#15171d] border border-[#2a2e38] rounded-[3px] p-3.5 space-y-3 font-mono text-xs hidden md:block">
               <div className="flex items-center justify-between pb-2 border-b border-[#2a2e38]">
-                <div className="flex items-center gap-1.5 text-[#f4f2ec] font-bold text-[11px]">
+                <div className="flex items-center gap-1.5 text-[#f4f2ec] font-bold text-xs">
                   <Cpu className="w-3.5 h-3.5 text-[#d4a745]" />
                   <span>Node Telemetry</span>
                 </div>
-                <span className="text-[10px] text-[#8ab384] flex items-center gap-1">
-                  <ShieldCheck className="w-3 h-3" />
+                <span className="text-xs text-[#8ab384] font-semibold flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5" />
                   <span>Verified</span>
                 </span>
               </div>
 
-              <div className="space-y-2 text-[11px]">
+              <div className="space-y-2 text-xs">
                 <div className="flex justify-between items-center">
-                  <span className="text-[#a6abbd]">Database:</span>
+                  <span className="text-[#c5c9d6]">Database:</span>
                   <span className="text-[#f4f2ec] font-bold">pulse.db (SQLite)</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[#a6abbd]">Inference Cost:</span>
+                  <span className="text-[#c5c9d6]">Inference Cost:</span>
                   <span className="text-[#8ab384] font-bold">₹0/mo Local Cascade</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[#a6abbd]">Target Role:</span>
-                  <span className="text-[#f4f2ec] truncate max-w-[140px]">
+                  <span className="text-[#c5c9d6]">Target Role:</span>
+                  <span className="text-[#f4f2ec] font-medium truncate max-w-[140px]">
                     {profile?.targetRole || "Not set"}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[#a6abbd]">Master Skills:</span>
+                  <span className="text-[#c5c9d6]">Master Skills:</span>
                   <span className="text-[#d4a745] font-bold">
                     {profile?.skills.length ?? 0} Cataloged
                   </span>
@@ -246,14 +248,24 @@ export default function SettingsPage() {
           <section className="w-full min-w-0 flex-1 min-h-0 overflow-y-auto pr-1">
             {/* Tab 1: Feed Sources & Ingestion Management */}
             {activeTab === "feeds" && (
-              <div className="animate-in fade-in space-y-4 w-full min-w-0">
+              <div
+                role="tabpanel"
+                id="panel-feeds"
+                aria-labelledby="tab-feeds"
+                className="animate-in fade-in space-y-4 w-full min-w-0"
+              >
                 <FeedSourcesManager />
               </div>
             )}
 
             {/* Tab 2: Candidate Master Profile & Resume Context */}
             {activeTab === "profile" && (
-              <div className="animate-in fade-in space-y-4 w-full min-w-0">
+              <div
+                role="tabpanel"
+                id="panel-profile"
+                aria-labelledby="tab-profile"
+                className="animate-in fade-in space-y-4 w-full min-w-0"
+              >
                 <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-start w-full min-w-0">
                   {/* Master Facts Summary (Left on XL) */}
                   {profile && (
@@ -261,7 +273,7 @@ export default function SettingsPage() {
                       <div className="flex items-center justify-between pb-3 border-b border-[#2a2e38]">
                         <div className="flex items-center gap-2">
                           <Layers className="w-4 h-4 text-[#8ab384]" />
-                          <h2 className="text-sm font-bold text-[#f4f2ec] tracking-tight">
+                          <h2 className="text-sm sm:text-base font-bold text-[#f4f2ec] tracking-tight">
                             Master Facts Repository
                           </h2>
                         </div>
@@ -276,25 +288,25 @@ export default function SettingsPage() {
 
                       <div className="grid grid-cols-2 gap-3 font-mono">
                         <div className="bg-[#0d0e12] p-3 rounded-[2px] border border-[#2a2e38]">
-                          <div className="text-[10px] text-[#a6abbd] uppercase font-semibold">Target Role</div>
-                          <div className="text-xs font-bold text-[#f4f2ec] truncate mt-0.5">
+                          <div className="text-xs text-[#c5c9d6] uppercase font-semibold">Target Role</div>
+                          <div className="text-xs sm:text-sm font-bold text-[#f4f2ec] truncate mt-0.5">
                             {profile.targetRole || "Not configured"}
                           </div>
                         </div>
 
                         <div className="bg-[#0d0e12] p-3 rounded-[2px] border border-[#2a2e38]">
-                          <div className="text-[10px] text-[#a6abbd] uppercase font-semibold">Master Projects</div>
-                          <div className="text-xs font-bold text-[#f4f2ec] mt-0.5">{profile.projects.length} verified</div>
+                          <div className="text-xs text-[#c5c9d6] uppercase font-semibold">Master Projects</div>
+                          <div className="text-xs sm:text-sm font-bold text-[#f4f2ec] mt-0.5">{profile.projects.length} verified</div>
                         </div>
 
                         <div className="bg-[#0d0e12] p-3 rounded-[2px] border border-[#2a2e38]">
-                          <div className="text-[10px] text-[#a6abbd] uppercase font-semibold">Skills Catalog</div>
-                          <div className="text-xs font-bold text-[#f4f2ec] mt-0.5">{profile.skills.length} skills</div>
+                          <div className="text-xs text-[#c5c9d6] uppercase font-semibold">Skills Catalog</div>
+                          <div className="text-xs sm:text-sm font-bold text-[#f4f2ec] mt-0.5">{profile.skills.length} skills</div>
                         </div>
 
                         <div className="bg-[#0d0e12] p-3 rounded-[2px] border border-[#2a2e38]">
-                          <div className="text-[10px] text-[#a6abbd] uppercase font-semibold">Experience</div>
-                          <div className="text-xs font-bold text-[#f4f2ec] mt-0.5">{profile.experiences.length} roles</div>
+                          <div className="text-xs text-[#c5c9d6] uppercase font-semibold">Experience</div>
+                          <div className="text-xs sm:text-sm font-bold text-[#f4f2ec] mt-0.5">{profile.experiences.length} roles</div>
                         </div>
                       </div>
 
@@ -302,7 +314,7 @@ export default function SettingsPage() {
                         <button
                           type="button"
                           onClick={() => setIsDrawerOpen(true)}
-                          className="w-full py-2 bg-[#1f222a] hover:bg-[#2a2e38] border border-[#2a2e38] hover:border-[#3d4352] text-[#f4f2ec] text-xs font-mono rounded-[2px] transition-colors flex items-center justify-center gap-1.5 cursor-pointer font-bold"
+                          className="w-full py-2.5 bg-[#1f222a] hover:bg-[#2a2e38] border border-[#2a2e38] hover:border-[#3d4352] text-[#f4f2ec] text-xs font-mono rounded-[2px] transition-colors flex items-center justify-center gap-1.5 cursor-pointer font-bold focus-visible:outline-2 focus-visible:outline-[#d4a745]"
                         >
                           <span>Open Full Master Profile Drawer</span>
                         </button>
@@ -314,23 +326,27 @@ export default function SettingsPage() {
                   <div className={`${profile ? "xl:col-span-7" : "xl:col-span-12"} bg-[#15171d] p-5 sm:p-6 rounded-[3px] border border-[#2a2e38] space-y-4 min-w-0`}>
                     <div className="flex items-center justify-between pb-3 border-b border-[#2a2e38]">
                       <div>
-                        <h2 className="text-sm font-bold text-[#f4f2ec] tracking-tight">Raw Resume / Bio Text</h2>
-                        <p className="text-xs text-[#a6abbd] mt-0.5 font-mono">
+                        <h2 className="text-sm sm:text-base font-bold text-[#f4f2ec] tracking-tight">Raw Resume / Bio Text</h2>
+                        <p className="text-xs text-[#c5c9d6] mt-0.5 font-mono">
                           Paste your Markdown bio or raw resume. Grounding engines use this for holistic synthesis.
                         </p>
                       </div>
-                      <span className="text-[11px] font-mono text-[#a6abbd]">
+                      <span className="text-xs font-mono text-[#c5c9d6]">
                         {resumeText.length.toLocaleString()} chars
                       </span>
                     </div>
 
                     <form onSubmit={handleSaveResume} className="space-y-4">
                       <div>
+                        <label htmlFor="settings-raw-resume" className="sr-only">
+                          Raw Resume and Bio Markdown
+                        </label>
                         <textarea
+                          id="settings-raw-resume"
                           value={resumeText}
                           onChange={(e) => setResumeText(e.target.value)}
                           rows={14}
-                          className="w-full bg-[#0d0e12] border border-[#2a2e38] focus:border-[#d4a745] rounded-[2px] p-4 text-xs text-[#f4f2ec] outline-none resize-none font-mono leading-relaxed"
+                          className="w-full bg-[#0d0e12] border border-[#2a2e38] focus:border-[#d4a745] rounded-[2px] p-4 text-xs sm:text-sm text-[#f4f2ec] placeholder-[#797f94] outline-none resize-none font-mono leading-relaxed"
                           placeholder="Paste your full bio, resume, or master bullet points here..."
                         />
                       </div>
@@ -339,7 +355,7 @@ export default function SettingsPage() {
                         <button
                           type="submit"
                           disabled={status === "Saving..."}
-                          className="bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] px-5 py-2 rounded-[2px] font-bold text-xs transition-colors cursor-pointer disabled:opacity-50 uppercase tracking-wider"
+                          className="bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] px-5 py-2.5 rounded-[2px] font-bold text-xs transition-colors cursor-pointer disabled:opacity-50 uppercase tracking-wider focus-visible:outline-2 focus-visible:outline-[#d4a745]"
                         >
                           {status === "Idle" ? "Save Resume Context" : status}
                         </button>
@@ -352,26 +368,36 @@ export default function SettingsPage() {
 
             {/* Tab 3: Adaptive Scoring Settings */}
             {activeTab === "scoring" && (
-              <div className="animate-in fade-in space-y-4 w-full min-w-0">
+              <div
+                role="tabpanel"
+                id="panel-scoring"
+                aria-labelledby="tab-scoring"
+                className="animate-in fade-in space-y-4 w-full min-w-0"
+              >
                 <ScoringFeedbackLoopSettings />
               </div>
             )}
 
             {/* Tab 4: Data Sovereignty & Backups */}
             {activeTab === "export" && (
-              <div className="animate-in fade-in space-y-4 w-full min-w-0">
+              <div
+                role="tabpanel"
+                id="panel-export"
+                aria-labelledby="tab-export"
+                className="animate-in fade-in space-y-4 w-full min-w-0"
+              >
                 <div className="bg-[#15171d] border border-[#2a2e38] rounded-[3px] p-5 sm:p-6 space-y-5 w-full min-w-0">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-[#2a2e38]">
                     <div>
-                      <h2 className="text-base font-bold tracking-tight text-[#f4f2ec] flex items-center gap-2">
+                      <h2 className="text-base sm:text-lg font-bold tracking-tight text-[#f4f2ec] flex items-center gap-2">
                         <Database className="w-4 h-4 text-[#d4a745]" />
                         <span>Data Sovereignty &amp; Local Backups</span>
                       </h2>
-                      <p className="text-xs text-[#a6abbd] mt-1 font-mono">
+                      <p className="text-xs text-[#c5c9d6] mt-1 font-mono">
                         Export your local SQLite database for offline backups, archiving, and spreadsheet interoperability.
                       </p>
                     </div>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-[2px] bg-[#1f222a] border border-[#2a2e38] text-[#a6abbd]">
+                    <span className="text-[11px] font-mono px-2 py-0.5 rounded-[2px] bg-[#1f222a] border border-[#2a2e38] text-[#c5c9d6] font-semibold">
                       LOCAL-FIRST SQLITE
                     </span>
                   </div>
@@ -380,18 +406,18 @@ export default function SettingsPage() {
                     <a
                       href="/api/export?format=json"
                       download
-                      className="flex flex-col justify-between p-4 rounded-[2px] border border-[#2a2e38] bg-[#0d0e12] hover:bg-[#1f222a] hover:border-[#3d4352] transition-all group"
+                      className="flex flex-col justify-between p-4 rounded-[2px] border border-[#2a2e38] bg-[#0d0e12] hover:bg-[#1f222a] hover:border-[#3d4352] transition-all group focus-visible:outline-2 focus-visible:outline-[#d4a745]"
                     >
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <span className="w-2 h-2 rounded-full bg-[#d4a745]"></span>
-                          <span className="font-bold text-xs text-[#f4f2ec]">JSON Snapshot</span>
+                          <span className="font-bold text-xs sm:text-sm text-[#f4f2ec]">JSON Snapshot</span>
                         </div>
-                        <p className="text-[11px] text-[#a6abbd] leading-relaxed">
+                        <p className="text-xs text-[#c5c9d6] leading-relaxed">
                           Full structured dump of Candidate, Job, FitScore, Application, and Event records.
                         </p>
                       </div>
-                      <div className="pt-3 mt-3 border-t border-[#2a2e38] flex items-center justify-between text-[11px] font-semibold text-[#d4a745] group-hover:underline">
+                      <div className="pt-3 mt-3 border-t border-[#2a2e38] flex items-center justify-between text-xs font-semibold text-[#d4a745] group-hover:underline">
                         <span>Download JSON</span>
                         <ExternalLink className="w-3.5 h-3.5" />
                       </div>
@@ -400,18 +426,18 @@ export default function SettingsPage() {
                     <a
                       href="/api/export?format=applications"
                       download
-                      className="flex flex-col justify-between p-4 rounded-[2px] border border-[#2a2e38] bg-[#0d0e12] hover:bg-[#1f222a] hover:border-[#3d4352] transition-all group"
+                      className="flex flex-col justify-between p-4 rounded-[2px] border border-[#2a2e38] bg-[#0d0e12] hover:bg-[#1f222a] hover:border-[#3d4352] transition-all group focus-visible:outline-2 focus-visible:outline-[#d4a745]"
                     >
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <span className="w-2 h-2 rounded-full bg-[#8ab384]"></span>
-                          <span className="font-bold text-xs text-[#f4f2ec]">Applications CSV</span>
+                          <span className="font-bold text-xs sm:text-sm text-[#f4f2ec]">Applications CSV</span>
                         </div>
-                        <p className="text-[11px] text-[#a6abbd] leading-relaxed">
+                        <p className="text-xs text-[#c5c9d6] leading-relaxed">
                           Flattened spreadsheet of tracked jobs, submission dates, and tailored notes.
                         </p>
                       </div>
-                      <div className="pt-3 mt-3 border-t border-[#2a2e38] flex items-center justify-between text-[11px] font-semibold text-[#8ab384] group-hover:underline">
+                      <div className="pt-3 mt-3 border-t border-[#2a2e38] flex items-center justify-between text-xs font-semibold text-[#8ab384] group-hover:underline">
                         <span>Download CSV</span>
                         <ExternalLink className="w-3.5 h-3.5" />
                       </div>
@@ -420,18 +446,18 @@ export default function SettingsPage() {
                     <a
                       href="/api/export?format=jobs"
                       download
-                      className="flex flex-col justify-between p-4 rounded-[2px] border border-[#2a2e38] bg-[#0d0e12] hover:bg-[#1f222a] hover:border-[#3d4352] transition-all group"
+                      className="flex flex-col justify-between p-4 rounded-[2px] border border-[#2a2e38] bg-[#0d0e12] hover:bg-[#1f222a] hover:border-[#3d4352] transition-all group focus-visible:outline-2 focus-visible:outline-[#d4a745]"
                     >
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <span className="w-2 h-2 rounded-full bg-[#8ab384]"></span>
-                          <span className="font-bold text-xs text-[#f4f2ec]">All Jobs CSV</span>
+                          <span className="font-bold text-xs sm:text-sm text-[#f4f2ec]">All Jobs CSV</span>
                         </div>
-                        <p className="text-[11px] text-[#a6abbd] leading-relaxed">
+                        <p className="text-xs text-[#c5c9d6] leading-relaxed">
                           Discovered opportunities, fit scores, strengths, gaps, and status.
                         </p>
                       </div>
-                      <div className="pt-3 mt-3 border-t border-[#2a2e38] flex items-center justify-between text-[11px] font-semibold text-[#8ab384] group-hover:underline">
+                      <div className="pt-3 mt-3 border-t border-[#2a2e38] flex items-center justify-between text-xs font-semibold text-[#8ab384] group-hover:underline">
                         <span>Download CSV</span>
                         <ExternalLink className="w-3.5 h-3.5" />
                       </div>

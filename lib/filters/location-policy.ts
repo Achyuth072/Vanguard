@@ -25,7 +25,7 @@ export interface LocationPolicyInput {
 }
 
 const WORLDWIDE_REMOTE_REGEX =
-  /\b(?:worldwide|global|anywhere|work\s+from\s+anywhere|remote\s*\(\s*worldwide\s*\)|remote\s*-\s*worldwide|remote\s*\(\s*anywhere\s*\)|distributed\s+worldwide)\b/i;
+  /\b(?:worldwide|global|anywhere|work\s+from\s+anywhere|remote\s*\(\s*worldwide\s*\)|remote\s*-\s*worldwide|remote\s*\(\s*anywhere\s*\)|distributed\s+(?:worldwide|software|engineering|team|workforce|company)|distributed|overlap\s+hours|remote\s+contract|fully\s+remote|100%\s+remote|all[- ]remote)\b/i;
 
 const GEO_RESTRICTED_REGEX =
   /\b(?:us\s*only|usa\s*only|emea\s*only|\bemea\b|north\s*america\s*only|eu\s*only|europe\s*only|latam\s*only|uk\s*only|canada\s*only|must\s*reside\s*in|us\/canada|us-based|us\s*citizens?|authorized\s*to\s*work\s*in\s*the\s*us|united\s*states\s*only)\b/i;
@@ -163,8 +163,22 @@ export function evaluateLocationPolicy(input: LocationPolicyInput): LocationPoli
       };
     }
 
+    const candidatePrefersRemote =
+      /\b(?:remote|worldwide|anywhere|global)\b/i.test(prefLocs) ||
+      /\b(?:remote|worldwide|anywhere|global)\b/i.test(candLoc) ||
+      candidateRemote === "REMOTE_ONLY" ||
+      candidateRemote === "ANY";
+
     // If job country is foreign and explicitly specified without worldwide indicator
     if (jobCountry && candCountry && jobCountry !== candCountry && !isWorldwideRemote) {
+      if (remoteStatus === "REMOTE" && candidatePrefersRemote && !isGeoRestricted) {
+        return {
+          passed: true,
+          isDomestic: false,
+          isWorldwideRemote: false,
+        };
+      }
+
       return {
         passed: false,
         reason: `Foreign remote job in '${jobLocation || jobCountry}' does not indicate worldwide/anywhere eligibility`,

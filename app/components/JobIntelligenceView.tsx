@@ -160,10 +160,11 @@ export function JobIntelligenceView({
                 href={job.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-3.5 py-2 bg-[#1f222a] hover:bg-[#2a2e38] border border-[#2a2e38] text-xs font-mono font-medium text-[#f4f2ec] rounded-[2px] transition-colors inline-flex items-center gap-1.5"
+                title="Open Original Job Posting"
+                aria-label="Open Original Job Posting"
+                className="p-2 bg-[#1f222a] hover:bg-[#2a2e38] border border-[#2a2e38] text-[#a6abbd] hover:text-[#f4f2ec] rounded-[2px] transition-colors inline-flex items-center cursor-pointer"
               >
-                <span>Link Out</span>
-                <ExternalLink className="w-3.5 h-3.5 text-[#a6abbd]" />
+                <ExternalLink className="w-4 h-4" />
               </a>
             )}
 

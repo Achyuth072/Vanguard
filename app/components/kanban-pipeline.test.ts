@@ -120,4 +120,15 @@ describe("Tactical Application Pipeline Kanban (Issue 04)", () => {
       assert.ok(content.includes("ArrowUpDown"), "Should render ArrowUpDown icon for sort toggle");
     });
   });
+
+  describe("Kanban Card Deletion Action", () => {
+    it("equips ApplicationTracker cards with delete button and server action integration", () => {
+      const content = fs.readFileSync(applicationTrackerPath, "utf-8");
+
+      assert.ok(content.includes("deleteJobAction"), "Should import and integrate deleteJobAction");
+      assert.ok(content.includes("handleDeleteJob"), "Should define handleDeleteJob handler");
+      assert.ok(content.includes("Trash2"), "Should render Trash2 icon for deletion");
+      assert.ok(content.includes("title=\"Delete Job\""), "Should provide accessible title for delete button");
+    });
+  });
 });

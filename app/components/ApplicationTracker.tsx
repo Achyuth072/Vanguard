@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import type { EnrichedJob } from "@/lib/data";
-import { updateJobStatusAction, autoGhostStaleApplicationsAction } from "../actions";
+import { updateJobStatusAction, autoGhostStaleApplicationsAction, deleteJobAction } from "../actions";
 import { calculateDaysSinceApplied, identifyGhostableJobs } from "@/lib/lifecycle/auto-ghost";
 import DraftButton from "./DraftButton";
 import EditJobModal from "./EditJobModal";
@@ -15,6 +15,7 @@ import {
   RotateCcw,
   Sparkles,
   Edit2,
+  Trash2,
   Clock,
   MapPin,
   Building2,
@@ -146,6 +147,20 @@ export default function ApplicationTracker({
       setUpdatingId(null);
       setDraggedJobId(null);
       setDragOverStageId(null);
+    }
+  }
+
+  async function handleDeleteJob(job: EnrichedJob) {
+    if (!confirm(`Delete "${job.title}" at ${job.company}? This cannot be undone.`)) return;
+    setUpdatingId(job.id);
+    try {
+      await deleteJobAction(job.id);
+      if (onStatusUpdated) onStatusUpdated();
+    } catch (err) {
+      console.error("Failed to delete job:", err);
+      alert(err instanceof Error ? err.message : "Delete failed");
+    } finally {
+      setUpdatingId(null);
     }
   }
 
@@ -574,20 +589,33 @@ export default function ApplicationTracker({
                             )}
                           </div>
 
-                          {/* Bottom controls: Edit Job Modal trigger & Draft Button */}
+                          {/* Bottom controls: Edit Job Modal trigger, Delete trigger & Draft Button */}
                           <div className="flex items-center justify-between gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedEditJob(job);
-                                setIsEditModalOpen(true);
-                              }}
-                              className="h-6 w-6 rounded-[2px] text-[#a6abbd] hover:text-[#f4f2ec] bg-[#15171d] hover:bg-[#1f222a] border border-[#2a2e38] flex items-center justify-center shrink-0 cursor-pointer transition-colors"
-                              title="Edit Job Details"
-                              aria-label={`Edit ${job.title} details`}
-                            >
-                              <Edit2 className="w-2.5 h-2.5" />
-                            </button>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedEditJob(job);
+                                  setIsEditModalOpen(true);
+                                }}
+                                disabled={isUpdating}
+                                className="h-6 w-6 rounded-[2px] text-[#a6abbd] hover:text-[#f4f2ec] bg-[#15171d] hover:bg-[#1f222a] border border-[#2a2e38] flex items-center justify-center shrink-0 cursor-pointer transition-colors"
+                                title="Edit Job Details"
+                                aria-label={`Edit ${job.title} details`}
+                              >
+                                <Edit2 className="w-2.5 h-2.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteJob(job)}
+                                disabled={isUpdating}
+                                className="h-6 w-6 rounded-[2px] text-[#c4634e]/80 hover:text-[#c4634e] bg-[#15171d] hover:bg-[#c4634e]/15 border border-[#2a2e38] hover:border-[#c4634e]/40 flex items-center justify-center shrink-0 cursor-pointer transition-colors"
+                                title="Delete Job"
+                                aria-label={`Delete ${job.title} at ${job.company}`}
+                              >
+                                <Trash2 className="w-2.5 h-2.5" />
+                              </button>
+                            </div>
                             <DraftButton company={job.company} role={job.title} />
                           </div>
                         </div>

@@ -1,7 +1,7 @@
 import test, { describe, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { z } from "zod";
-import type { LanguageModelV2 } from "ai";
+import type { LanguageModelV2 } from "@ai-sdk/provider";
 import {
   generateStructuredWithFallback,
   AICacheService,

@@ -258,6 +258,8 @@ export interface AIRouterOptions {
   profile?: WorkloadProfile | "extraction" | "scoring" | "resume" | "qa" | "parsing" | string;
   disableCache?: boolean;
   bypassCache?: boolean;
+  maxRetries?: number;
+  timeoutMs?: number;
 }
 
 export interface ConfiguredModelCandidate {
@@ -800,11 +802,17 @@ export async function generateStructuredWithFallback<T>({
     const candidate = prioritizedCandidates[i];
     poolManager.trackStart(candidate.id);
     try {
+      const effectiveMaxRetries = options?.maxRetries ?? 0;
+      const effectiveTimeoutMs = options?.timeoutMs ?? 10000;
+      const abortSignal = AbortSignal.timeout(effectiveTimeoutMs);
+
       const result = await generateObject({
         model: candidate.model,
         schema,
         system,
         prompt,
+        maxRetries: effectiveMaxRetries,
+        abortSignal,
         ...(effectiveTemperature !== undefined ? { temperature: effectiveTemperature } : {}),
         ...(effectiveMaxTokens !== undefined ? { maxTokens: effectiveMaxTokens } : {}),
       });

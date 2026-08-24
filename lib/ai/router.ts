@@ -803,7 +803,7 @@ export async function generateStructuredWithFallback<T>({
     poolManager.trackStart(candidate.id);
     try {
       const effectiveMaxRetries = options?.maxRetries ?? 0;
-      const effectiveTimeoutMs = options?.timeoutMs ?? 10000;
+      const effectiveTimeoutMs = options?.timeoutMs ?? 5000;
       const abortSignal = AbortSignal.timeout(effectiveTimeoutMs);
 
       const result = await generateObject({

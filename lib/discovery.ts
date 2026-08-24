@@ -6,6 +6,7 @@ import {
 } from "./filters/deterministic";
 import {
   scoreJobFit,
+  scoreJobHybrid,
   type AIRouterOptions,
   type CandidateContext,
   type JobContext,
@@ -330,118 +331,120 @@ export async function ingestStagedJobs(
     }
   }
 
-  for (const jobId of jobIds) {
-    try {
-      const job = await prisma.job.findUnique({
-        where: { id: jobId },
-      });
+  // Pre-fetch all requested jobs in a single database query
+  const jobs = await prisma.job.findMany({
+    where: { id: { in: jobIds } },
+  });
+  const jobMap = new Map(jobs.map((j) => [j.id, j]));
 
-      if (!job) {
-        errors.push({ id: jobId, error: `Job ${jobId} not found` });
-        continue;
-      }
+  // Process jobs in concurrent chunks of 5 for optimal throughput and zero-token speed
+  const CHUNK_SIZE = 5;
+  for (let i = 0; i < jobIds.length; i += CHUNK_SIZE) {
+    const chunk = jobIds.slice(i, i + CHUNK_SIZE);
+    await Promise.all(
+      chunk.map(async (jobId) => {
+        try {
+          const job = jobMap.get(jobId);
 
-      if (!job.isStaged) {
-        errors.push({ id: jobId, error: `Job ${jobId} is already ingested (not in staged buffer)` });
-        continue;
-      }
+          if (!job) {
+            errors.push({ id: jobId, error: `Job ${jobId} not found` });
+            return;
+          }
 
-      const jobContext: JobContext = {
-        title: job.title,
-        company: job.company,
-        location: job.location,
-        remoteStatus: job.remoteStatus,
-        salaryMin: job.salaryMin,
-        salaryMax: job.salaryMax,
-        employmentType: job.employmentType,
-        description: job.description,
-      };
+          if (!job.isStaged) {
+            errors.push({ id: jobId, error: `Job ${jobId} is already ingested (not in staged buffer)` });
+            return;
+          }
 
-      // Run AI Fit Scoring with graceful fallback if AI API keys are unavailable/exhausted
-      let fitScore: FitScore;
-      try {
-        fitScore = await scoreJobFit(candidateContext, jobContext, aiOptions);
-      } catch {
-        fitScore = {
-          score: 80,
-          recommendation: "APPLY",
-          skillsFit: 80,
-          experienceFit: 80,
-          domainFit: 80,
-          trajectoryFit: 80,
-          strengths: ["Role passed deterministic filter validation"],
-          gaps: [],
-          risks: [],
-          reasoning: "Baseline evaluation based on candidate profile criteria",
-        };
-      }
+          const jobContext: JobContext = {
+            title: job.title,
+            company: job.company,
+            location: job.location,
+            remoteStatus: job.remoteStatus,
+            salaryMin: job.salaryMin,
+            salaryMax: job.salaryMax,
+            employmentType: job.employmentType,
+            description: job.description,
+          };
 
-      // Persist FitScore
-      await prisma.fitScore.upsert({
-        where: { jobId: job.id },
-        create: {
-          jobId: job.id,
-          score: fitScore.score,
-          recommendation: fitScore.recommendation,
-          skillsFit: fitScore.skillsFit,
-          experienceFit: fitScore.experienceFit,
-          domainFit: fitScore.domainFit,
-          trajectoryFit: fitScore.trajectoryFit,
-          strengths: JSON.stringify(fitScore.strengths || []),
-          gaps: JSON.stringify(fitScore.gaps || []),
-          risks: JSON.stringify(fitScore.risks || []),
-          reasoning: fitScore.reasoning || "",
-        },
-        update: {
-          score: fitScore.score,
-          recommendation: fitScore.recommendation,
-          skillsFit: fitScore.skillsFit,
-          experienceFit: fitScore.experienceFit,
-          domainFit: fitScore.domainFit,
-          trajectoryFit: fitScore.trajectoryFit,
-          strengths: JSON.stringify(fitScore.strengths || []),
-          gaps: JSON.stringify(fitScore.gaps || []),
-          risks: JSON.stringify(fitScore.risks || []),
-          reasoning: fitScore.reasoning || "",
-        },
-      });
+          // Run AI Fit Scoring with intelligent local hybrid fallback
+          let fitScore: FitScore;
+          try {
+            fitScore = await scoreJobFit(candidateContext, jobContext, aiOptions);
+          } catch {
+            fitScore = await scoreJobHybrid(candidateContext, jobContext, {
+              weights: aiOptions.weights,
+            });
+          }
 
-      // Transition job to Priority Inbox (isStaged: false)
-      await prisma.job.update({
-        where: { id: job.id },
-        data: {
-          isStaged: false,
-          status: "DISCOVERED",
-        },
-      });
+          // Persist FitScore
+          await prisma.fitScore.upsert({
+            where: { jobId: job.id },
+            create: {
+              jobId: job.id,
+              score: fitScore.score,
+              recommendation: fitScore.recommendation,
+              skillsFit: fitScore.skillsFit,
+              experienceFit: fitScore.experienceFit,
+              domainFit: fitScore.domainFit,
+              trajectoryFit: fitScore.trajectoryFit,
+              strengths: JSON.stringify(fitScore.strengths || []),
+              gaps: JSON.stringify(fitScore.gaps || []),
+              risks: JSON.stringify(fitScore.risks || []),
+              reasoning: fitScore.reasoning || "",
+            },
+            update: {
+              score: fitScore.score,
+              recommendation: fitScore.recommendation,
+              skillsFit: fitScore.skillsFit,
+              experienceFit: fitScore.experienceFit,
+              domainFit: fitScore.domainFit,
+              trajectoryFit: fitScore.trajectoryFit,
+              strengths: JSON.stringify(fitScore.strengths || []),
+              gaps: JSON.stringify(fitScore.gaps || []),
+              risks: JSON.stringify(fitScore.risks || []),
+              reasoning: fitScore.reasoning || "",
+            },
+          });
 
-      // Log audit event
-      await prisma.event.create({
-        data: {
-          entityType: "Job",
-          entityId: job.id,
-          eventType: "JOB_INGESTED_FROM_DISCOVERY",
-          payload: JSON.stringify({
+          // Transition job to Priority Inbox (isStaged: false)
+          await prisma.job.update({
+            where: { id: job.id },
+            data: {
+              isStaged: false,
+              status: "DISCOVERED",
+            },
+          });
+
+          // Log audit event
+          await prisma.event.create({
+            data: {
+              entityType: "Job",
+              entityId: job.id,
+              eventType: "JOB_INGESTED_FROM_DISCOVERY",
+              payload: JSON.stringify({
+                score: fitScore.score,
+                recommendation: fitScore.recommendation,
+                company: job.company,
+                title: job.title,
+              }),
+            },
+          });
+
+          ingestedJobs.push({
+            id: job.id,
+            title: job.title,
+            company: job.company,
             score: fitScore.score,
             recommendation: fitScore.recommendation,
-            company: job.company,
-            title: job.title,
-          }),
-        },
-      });
-
-      ingestedJobs.push({
-        id: job.id,
-        title: job.title,
-        company: job.company,
-        score: fitScore.score,
-        recommendation: fitScore.recommendation,
-        fitScore,
-      });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      errors.push({ id: jobId, error: msg });
-    }
+            fitScore,
+          });
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          errors.push({ id: jobId, error: msg });
+        }
+      })
+    );
   }
 
   return {

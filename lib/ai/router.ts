@@ -13,6 +13,14 @@ import { poolManager } from "./pool";
 import { rateLimiter } from "./rate-limiter";
 import { stripJobBoilerplate, estimateTokens, truncateToTokenBudget } from "./tokenizer";
 import { BM25Scorer } from "../scoring/bm25";
+import {
+  scoreJobHybrid,
+  evaluateHybridFunnel,
+  classifyFunnelAction,
+  type HybridScoringOptions,
+  type FunnelAction,
+  type HybridFunnelResult,
+} from "../scoring/hybrid";
 
 export const FitScoreSchema = z.object({
   score: z.number().int().min(0).max(100),
@@ -934,17 +942,28 @@ ${cleanDescription}
 
 Evaluate the candidate's fit across all four sub-dimensions (skillsFit, experienceFit, domainFit, trajectoryFit) and return a structured FitScore.`;
 
-  const result = await generateStructuredWithFallback({
-    schema: FitScoreSchema,
-    system,
-    prompt,
-    options: {
-      workload: "FIT_SCORING",
-      ...options,
-    },
-  });
-
   const weights = options?.weights || DEFAULT_FIT_SCORE_WEIGHTS;
+
+  let result: FitScore;
+  try {
+    result = await generateStructuredWithFallback({
+      schema: FitScoreSchema,
+      system,
+      prompt,
+      options: {
+        workload: "FIT_SCORING",
+        ...options,
+      },
+    });
+  } catch (err) {
+    console.warn(
+      `[AIRouter] Cloud LLM scoreJobFit failed (${
+        err instanceof Error ? err.message : String(err)
+      }). Falling back to 0-token local hybrid scorer.`
+    );
+    return scoreJobHybrid(candidate, job, { weights });
+  }
+
   const computedScore = computeCompositeFitScore(
     {
       skillsFit: result.skillsFit,
@@ -1097,6 +1116,8 @@ export { poolManager, ModelPoolManager } from "./pool";
 export { rateLimiter, RateLimiter } from "./rate-limiter";
 export { estimateTokens, stripJobBoilerplate, truncateToTokenBudget } from "./tokenizer";
 export { BM25Scorer } from "../scoring/bm25";
+export { scoreJobHybrid, evaluateHybridFunnel, classifyFunnelAction } from "../scoring/hybrid";
+export type { HybridScoringOptions, FunnelAction, HybridFunnelResult } from "../scoring/hybrid";
 
 
 

@@ -331,6 +331,14 @@ export function preFilterRawText(
   const targetRoleKeywords = normalizeStringList(candidate.targetRoleKeywords);
   if (targetRoleKeywords.length === 0 && candidate.targetRole) {
     targetRoleKeywords.push(candidate.targetRole);
+    const trLower = candidate.targetRole.toLowerCase();
+    if (trLower.includes("fullstack") || trLower.includes("full stack") || trLower.includes("full-stack")) {
+      targetRoleKeywords.push("Full Stack", "Fullstack", "Software Engineer", "Full-Stack Engineer", "Full Stack Developer");
+    } else if (trLower.includes("frontend") || trLower.includes("front end") || trLower.includes("front-end")) {
+      targetRoleKeywords.push("Frontend", "Front End", "Software Engineer", "UI Engineer", "Frontend Developer");
+    } else if (trLower.includes("backend") || trLower.includes("back end") || trLower.includes("back-end")) {
+      targetRoleKeywords.push("Backend", "Back End", "Software Engineer", "API Engineer", "Backend Developer");
+    }
   }
 
   const detectedRoles: string[] = [];

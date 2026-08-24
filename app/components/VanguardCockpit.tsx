@@ -11,7 +11,7 @@ import ApplicationPreparationDrawer from "./ApplicationPreparationDrawer";
 import IngestModal from "./IngestModal";
 import EditJobModal from "./EditJobModal";
 import DiscoveryInbox from "@/components/discovery/DiscoveryInbox";
-import { updateJobStatusAction, rescoreJobAction } from "@/app/actions";
+import { updateJobStatusAction, rescoreJobAction, deleteJobAction } from "@/app/actions";
 import { PlusCircle } from "lucide-react";
 
 export interface VanguardCockpitProps {
@@ -176,6 +176,20 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
     }
   }
 
+  async function handleDeleteJob(job: EnrichedJob) {
+    if (!confirm(`Delete "${job.title}" at ${job.company}? This cannot be undone.`)) return;
+    try {
+      await deleteJobAction(job.id);
+      if (selectedJobId === job.id) {
+        setSelectedJobId(null);
+      }
+      handleDataRefreshed();
+    } catch (err) {
+      console.error("Delete error:", err);
+      alert(err instanceof Error ? err.message : "Delete failed");
+    }
+  }
+
   return (
     <div className="flex flex-col flex-1 min-h-0 space-y-3 font-sans">
       {/* Header telemetry strip and quick ingest */}
@@ -255,6 +269,7 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
                   setSelectedEditJob(job);
                   setIsEditModalOpen(true);
                 }}
+                onDelete={handleDeleteJob}
               />
             </div>
           </>

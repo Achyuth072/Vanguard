@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   Send,
   Edit2,
+  Trash2,
 } from "lucide-react";
 
 export interface JobIntelligenceViewProps {
@@ -20,6 +21,7 @@ export interface JobIntelligenceViewProps {
   onStatusChange?: (jobId: string, newStatus: string) => void;
   onRescore?: (jobId: string) => void;
   onEdit?: (job: EnrichedJob) => void;
+  onDelete?: (job: EnrichedJob) => void;
   className?: string;
 }
 
@@ -29,10 +31,12 @@ export function JobIntelligenceView({
   onStatusChange,
   onRescore,
   onEdit,
+  onDelete,
   className = "",
 }: JobIntelligenceViewProps) {
   const [activeTab, setActiveTab] = useState<"brief" | "description">("brief");
   const [isRescoring, setIsRescoring] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   if (!job) {
     return (
@@ -56,6 +60,25 @@ export function JobIntelligenceView({
       await onRescore(job.id);
     } finally {
       setIsRescoring(false);
+    }
+  }
+
+  async function handleDeleteClick() {
+    if (!job) return;
+    if (onDelete) {
+      onDelete(job);
+      return;
+    }
+    if (!confirm(`Delete "${job.title}" at ${job.company}? This cannot be undone.`)) return;
+    setIsDeleting(true);
+    try {
+      const { deleteJobAction } = await import("@/app/actions");
+      await deleteJobAction(job.id);
+    } catch (err) {
+      console.error("Delete error:", err);
+      alert(err instanceof Error ? err.message : "Delete failed");
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -160,13 +183,25 @@ export function JobIntelligenceView({
               <button
                 type="button"
                 onClick={handleRescoreClick}
-                disabled={isRescoring}
+                disabled={isRescoring || isDeleting}
                 title="Re-run AI evaluation"
+                aria-label="Re-run AI evaluation"
                 className="p-2 bg-[#1f222a] hover:bg-[#2a2e38] border border-[#2a2e38] text-[#a6abbd] hover:text-[#f4f2ec] rounded-[2px] transition-colors cursor-pointer disabled:opacity-50"
               >
                 <RefreshCw className={`w-4 h-4 ${isRescoring ? "animate-spin text-[#d4a745]" : ""}`} />
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={handleDeleteClick}
+              disabled={isDeleting || isRescoring}
+              title="Delete Target"
+              aria-label="Delete Target"
+              className="p-2 bg-[#1f222a] hover:bg-[#c4634e]/15 border border-[#2a2e38] hover:border-[#c4634e]/40 text-[#c4634e]/80 hover:text-[#c4634e] rounded-[2px] transition-colors cursor-pointer disabled:opacity-50"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
           </div>
         </div>
 

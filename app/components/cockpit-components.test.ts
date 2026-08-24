@@ -98,12 +98,14 @@ describe("Tactical Intelligence Cockpit — Master-Detail View (Issue 03)", () =
       assert.ok(content.includes("description") || content.includes("Target Description"));
     });
 
-    it("wires status change, rescore, and edit action triggers", () => {
+    it("wires status change, rescore, edit, and delete action triggers", () => {
       const content = fs.readFileSync(jobIntelligenceViewPath, "utf-8");
       assert.ok(content.includes("onStatusChange"));
       assert.ok(content.includes("onRescore"));
       assert.ok(content.includes("onDeployApplication"));
       assert.ok(content.includes("onEdit"));
+      assert.ok(content.includes("onDelete") || content.includes("handleDeleteClick"));
+      assert.ok(content.includes("Trash2"));
     });
   });
 

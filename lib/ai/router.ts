@@ -8,6 +8,11 @@ import {
   DEFAULT_FIT_SCORE_WEIGHTS,
   type FitScoreWeights,
 } from "../scoring/fit-score";
+import { AICacheService } from "./cache";
+import { poolManager } from "./pool";
+import { rateLimiter } from "./rate-limiter";
+import { stripJobBoilerplate, estimateTokens, truncateToTokenBudget } from "./tokenizer";
+import { BM25Scorer } from "../scoring/bm25";
 
 export const FitScoreSchema = z.object({
   score: z.number().int().min(0).max(100),
@@ -251,6 +256,8 @@ export interface AIRouterOptions {
   workload?: WorkloadProfile | "extraction" | "scoring" | "resume" | "qa" | "parsing" | string;
   workloadIdentifier?: string;
   profile?: WorkloadProfile | "extraction" | "scoring" | "resume" | "qa" | "parsing" | string;
+  disableCache?: boolean;
+  bypassCache?: boolean;
 }
 
 export interface ConfiguredModelCandidate {
@@ -713,6 +720,25 @@ export async function generateStructuredWithFallback<T>({
   const effectiveMaxTokens =
     options?.maxOutputTokens ?? options?.maxTokens ?? profileConfig?.defaultMaxTokens;
 
+  const hasExplicitModels = !!(
+    (options?.models && options.models.length > 0) ||
+    options?.primaryModel ||
+    options?.fallbackModel
+  );
+
+  // Deterministic Tier Caching: check if an identical request is already cached (for non-explicit runs)
+  const bypassCache = hasExplicitModels || options?.bypassCache || options?.disableCache;
+  const cacheKey = !bypassCache
+    ? AICacheService.generateKey([prompt, system, resolvedProfile, effectiveTemperature, effectiveMaxTokens])
+    : null;
+
+  if (cacheKey) {
+    const cached = AICacheService.get<T>(cacheKey);
+    if (cached !== null) {
+      return cached;
+    }
+  }
+
   let modelCandidates: Array<{ id: string; name: string; model: LanguageModel }>;
 
   if (options?.models && options.models.length > 0) {
@@ -750,21 +776,29 @@ export async function generateStructuredWithFallback<T>({
     }));
   }
 
-  const availableCandidates = modelCandidates.filter((c) => !isCandidateInCooldown(c.id));
+  const availableCandidates = modelCandidates.filter(
+    (c) => !isCandidateInCooldown(c.id) && !rateLimiter.isCandidateProactivelyThrottled(c.id)
+  );
   const errors: string[] = [];
 
   if (availableCandidates.length === 0) {
     if (modelCandidates.length > 0) {
       errors.push(
-        "All configured AI models are currently in cooldown due to previous rate limits or failures."
+        "All configured AI models are currently in cooldown or rate-limit throttle."
       );
     } else {
       errors.push("No active AI providers available (all candidates are in cooldown or unconfigured).");
     }
   }
 
-  for (let i = 0; i < availableCandidates.length; i++) {
-    const candidate = availableCandidates[i];
+  // Use Power-of-Two-Choices (P2C) load balancing only for auto-configured model pools
+  const prioritizedCandidates = hasExplicitModels
+    ? availableCandidates
+    : poolManager.prioritizeCandidates(availableCandidates);
+
+  for (let i = 0; i < prioritizedCandidates.length; i++) {
+    const candidate = prioritizedCandidates[i];
+    poolManager.trackStart(candidate.id);
     try {
       const result = await generateObject({
         model: candidate.model,
@@ -775,13 +809,20 @@ export async function generateStructuredWithFallback<T>({
         ...(effectiveMaxTokens !== undefined ? { maxTokens: effectiveMaxTokens } : {}),
       });
       clearCandidateCooldown(candidate.id);
+      poolManager.trackEnd(candidate.id, true);
+
+      if (cacheKey) {
+        AICacheService.set(cacheKey, result.object, undefined, candidate.name);
+      }
+
       return result.object;
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
       errors.push(`${candidate.name}: ${errMsg}`);
       recordCandidateCooldown(candidate.id, undefined, errMsg);
+      poolManager.trackEnd(candidate.id, false);
       console.warn(
-        `AI provider ${candidate.name} failed (${i + 1}/${availableCandidates.length}), attempting next provider in pool:`,
+        `AI provider ${candidate.name} failed (${i + 1}/${prioritizedCandidates.length}), attempting next provider in pool:`,
         errMsg
       );
     }
@@ -869,6 +910,7 @@ CRITICAL INVARIANTS:
     system += `\n\n${options.conversionInsights}`;
   }
 
+  const cleanDescription = stripJobBoilerplate(job.description);
   const prompt = `CANDIDATE FACTS:
 ${buildCandidateFactSheet(candidate)}
 
@@ -880,7 +922,7 @@ Remote Status: ${job.remoteStatus || "UNKNOWN"}
 Salary Range: ${job.salaryMin ?? "N/A"} - ${job.salaryMax ?? "N/A"}
 Employment Type: ${job.employmentType || "FULL_TIME"}
 Description:
-${job.description}
+${cleanDescription}
 
 Evaluate the candidate's fit across all four sub-dimensions (skillsFit, experienceFit, domainFit, trajectoryFit) and return a structured FitScore.`;
 
@@ -967,8 +1009,9 @@ EXTRACTION GUIDELINES:
    - requiredExperienceYears: Minimum integer years of experience required (e.g. 5 for "5+ years"). Null if unspecified.
    - skills: Array of key technical and domain skills listed in the posting.`;
 
+  const cleanRawText = stripJobBoilerplate(rawText);
   const prompt = `RAW JOB TEXT:
-${rawText}
+${cleanRawText}
 
 Extract structured job details adhering to the schema.`;
 
@@ -992,6 +1035,7 @@ export async function tailorApplicationSummary(
 Draft a factual, high-signal application summary and list matching strengths based strictly on verified candidate facts.
 Do not invent any achievements or skills not present in the candidate profile.`;
 
+  const cleanDescription = stripJobBoilerplate(job.description);
   const prompt = `CANDIDATE FACTS:
 ${buildCandidateFactSheet(candidate)}
 
@@ -999,7 +1043,7 @@ JOB DETAILS:
 Title: ${job.title}
 Company: ${job.company}
 Description:
-${job.description}
+${cleanDescription}
 
 Generate a concise tailored summary, key matching points, and relevant projects.`;
 
@@ -1039,6 +1083,12 @@ export {
 export const scoreJob = scoreJobFit;
 export const extractJob = extractJobDetails;
 export const tailorSummary = tailorApplicationSummary;
+
+export { AICacheService } from "./cache";
+export { poolManager, ModelPoolManager } from "./pool";
+export { rateLimiter, RateLimiter } from "./rate-limiter";
+export { estimateTokens, stripJobBoilerplate, truncateToTokenBudget } from "./tokenizer";
+export { BM25Scorer } from "../scoring/bm25";
 
 
 

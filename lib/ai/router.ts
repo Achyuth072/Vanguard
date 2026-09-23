@@ -128,9 +128,10 @@ export const WORKLOAD_PROFILE_CONFIGS: Record<WorkloadProfile, WorkloadProfileCo
     name: "Profile A: Fast Ingestion & Schema Extraction",
     preferredModels: [
       "gemini-3.5-flash-lite",
+      "gemini-3.8-flash",
       "gemini-3.5-flash",
-      "deepseek-ai/deepseek-v4-flash",
-      "deepseek-v4-flash",
+      "deepseek-ai/deepseek-v4.1-flash",
+      "z-ai/glm-5.3-flash",
     ],
     defaultMaxTokens: 1000,
     defaultTemperature: 0.1,
@@ -139,10 +140,11 @@ export const WORKLOAD_PROFILE_CONFIGS: Record<WorkloadProfile, WorkloadProfileCo
     profile: "FIT_SCORING",
     name: "Profile B: 4-Dimensional Fit Scoring",
     preferredModels: [
+      "gemini-3.8-flash",
       "gemini-3.7-flash",
       "gemini-3.6-flash",
-      "z-ai/glm-5.2",
-      "glm-5.2",
+      "z-ai/glm-5.3-flash",
+      "z-ai/glm-5.3",
       "gemini-3.5-flash",
     ],
     defaultMaxTokens: 2000,
@@ -152,12 +154,12 @@ export const WORKLOAD_PROFILE_CONFIGS: Record<WorkloadProfile, WorkloadProfileCo
     profile: "RESUME_TAILORING",
     name: "Profile C: Tailored Resume Preparation",
     preferredModels: [
+      "gemini-3.8-flash",
       "gemini-3.7-flash",
-      "z-ai/glm-5.2",
-      "glm-5.2",
+      "z-ai/glm-5.3",
+      "z-ai/glm-5.3-flash",
       "gemini-3.6-flash",
-      "minimaxai/minimax-m3",
-      "minimax-m3",
+      "deepseek-ai/deepseek-v4.1-flash",
     ],
     defaultMaxTokens: 4500,
     defaultTemperature: 0.3,
@@ -166,11 +168,11 @@ export const WORKLOAD_PROFILE_CONFIGS: Record<WorkloadProfile, WorkloadProfileCo
     profile: "SCREENING_QA",
     name: "Profile D: Humanized Screening Q&A",
     preferredModels: [
+      "gemini-3.8-flash",
       "gemini-3.7-flash",
-      "z-ai/glm-5.2",
-      "glm-5.2",
-      "moonshotai/kimi-k2.6",
-      "kimi-k2.6",
+      "z-ai/glm-5.3",
+      "z-ai/glm-5.3-flash",
+      "nvidia/nemotron-3.5-lightning-30b-a3b",
       "gemini-3.5-flash",
     ],
     defaultMaxTokens: 2500,
@@ -180,12 +182,11 @@ export const WORKLOAD_PROFILE_CONFIGS: Record<WorkloadProfile, WorkloadProfileCo
     profile: "RESUME_PARSING",
     name: "Profile E: Resume Parsing & Fact Sheet Extraction",
     preferredModels: [
+      "gemini-3.8-flash",
       "gemini-3.7-flash",
       "gemini-3.5-flash",
-      "deepseek-ai/deepseek-v4-flash",
-      "deepseek-v4-flash",
-      "z-ai/glm-5.2",
-      "glm-5.2",
+      "deepseek-ai/deepseek-v4.1-flash",
+      "z-ai/glm-5.3-flash",
     ],
     defaultMaxTokens: 4000,
     defaultTemperature: 0.1,
@@ -371,41 +372,40 @@ export function getCandidateCooldown(candidateId: string): CooldownRecord | unde
 }
 
 export const DEFAULT_GEMINI_MODELS = [
+  "gemini-3.8-flash",
   "gemini-3.7-flash",
   "gemini-3.6-flash",
   "gemini-3.5-flash",
   "gemini-3.5-flash-lite",
   "gemini-3.1-flash-lite",
+  "gemini-2.5-flash",
 ];
 
 export const DEFAULT_NVIDIA_MODELS = [
-  "z-ai/glm-5.2",
-  "deepseek-ai/deepseek-v4-flash",
-  "minimaxai/minimax-m3",
-  "moonshotai/kimi-k2.6",
+  "z-ai/glm-5.3-flash",
+  "z-ai/glm-5.3",
+  "deepseek-ai/deepseek-v4.1-flash",
+  "nvidia/nemotron-3.5-lightning-30b-a3b",
+  "openai/gpt-oss-20b",
 ];
 
 export const DEFAULT_OLLAMA_MODELS = [
-  "minimax-m3",
-  "nemotron-3-ultra",
-  "gpt-oss:120b",
-  "gpt-oss:20b",
+  "deepseek-v4-flash",
+  "deepseek-v4-pro",
 ];
 
 export const DEFAULT_OPENROUTER_MODELS = [
-  "nvidia/nemotron-3-ultra:free",
-  "google/gemma-4-31b:free",
-  "poolside/laguna-s-2.1:free",
-  "openrouter/free",
-];
-
-export const DEFAULT_OPENCODE_MODELS = [
-  "nemotron-3-ultra-free",
-  "mimo-v2.5-free",
+  "z-ai/glm-5.2:free",
+  "google/gemma-4-31b-it:free",
+  "nvidia/nemotron-3.5-lightning:free",
+  "inclusionai/ling-3.0-flash-sante:free",
+  "qwen/qwen3.8-27b:free",
 ];
 
 export const DEFAULT_GROQ_MODELS = [
-  "llama-3.3-70b-versatile",
+  "qwen/qwen3.8-27b",
+  "openai/gpt-oss-120b",
+  "openai/gpt-oss-20b",
 ];
 
 export function parseCommaSeparatedList(value?: string, defaultList: string[] = []): string[] {
@@ -457,15 +457,6 @@ export function getOllamaModel(apiKey?: string, modelName?: string): LanguageMod
   const resolvedModel =
     modelName || parseCommaSeparatedList(process.env.OLLAMA_MODEL, DEFAULT_OLLAMA_MODELS)[0];
   const baseURL = process.env.OLLAMA_BASE_URL || "https://api.ollama.com/v1";
-
-  return getOpenAICompatibleModel(baseURL, resolvedKey, resolvedModel);
-}
-
-export function getOpenCodeZenModel(apiKey?: string, modelName?: string): LanguageModel {
-  const resolvedKey = apiKey || parseCommaSeparatedList(process.env.OPENCODE_API_KEY)[0] || "";
-  const resolvedModel =
-    modelName || parseCommaSeparatedList(process.env.OPENCODE_MODEL, DEFAULT_OPENCODE_MODELS)[0];
-  const baseURL = process.env.OPENCODE_BASE_URL || "https://opencode.ai/zen/v1";
 
   return getOpenAICompatibleModel(baseURL, resolvedKey, resolvedModel);
 }
@@ -595,27 +586,7 @@ export function getAllConfiguredModels(
     }
   }
 
-  // 5. OpenCode Zen (coding gateway)
-  const openCodeKeys = Array.from(new Set(parseCommaSeparatedList(process.env.OPENCODE_API_KEY)));
-  const openCodeModels = parseCommaSeparatedList(
-    process.env.OPENCODE_MODEL,
-    DEFAULT_OPENCODE_MODELS
-  );
-  const openCodeBaseURL = process.env.OPENCODE_BASE_URL || "https://opencode.ai/zen/v1";
-  for (const key of openCodeKeys) {
-    const keyMask = maskKey(key);
-    for (const model of openCodeModels) {
-      candidates.push({
-        id: `OpenCode Zen:${keyMask}:${model}`,
-        providerName: "OpenCode Zen",
-        modelName: model,
-        model: getOpenAICompatibleModel(openCodeBaseURL, key, model),
-        keyMask,
-      });
-    }
-  }
-
-  // 6. Groq (fast fallback)
+  // 5. Groq (fast fallback)
   const groqKeys = Array.from(new Set(parseCommaSeparatedList(process.env.GROQ_API_KEY)));
   const groqModels = parseCommaSeparatedList(process.env.GROQ_MODEL, DEFAULT_GROQ_MODELS);
   const groqBaseURL = process.env.GROQ_BASE_URL || "https://api.groq.com/openai/v1";
@@ -811,7 +782,7 @@ export async function generateStructuredWithFallback<T>({
     poolManager.trackStart(candidate.id);
     try {
       const effectiveMaxRetries = options?.maxRetries ?? 0;
-      const effectiveTimeoutMs = options?.timeoutMs ?? 5000;
+      const effectiveTimeoutMs = options?.timeoutMs ?? 12000;
       const abortSignal = AbortSignal.timeout(effectiveTimeoutMs);
 
       const result = await generateObject({

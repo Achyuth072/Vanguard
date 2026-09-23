@@ -18,7 +18,6 @@ import {
   getOpenAICompatibleModel,
   getNvidiaModel,
   getOllamaModel,
-  getOpenCodeZenModel,
   getOpenRouterModel,
   getGroqModel,
   getGeminiModel,
@@ -26,7 +25,6 @@ import {
   DEFAULT_NVIDIA_MODELS,
   DEFAULT_OLLAMA_MODELS,
   DEFAULT_OPENROUTER_MODELS,
-  DEFAULT_OPENCODE_MODELS,
   DEFAULT_GROQ_MODELS,
   candidateCooldownMap,
   calculateCooldownDuration,
@@ -526,110 +524,100 @@ describe("Provider Fallback & Error Handling", () => {
       const nvidia = getNvidiaModel("nvapi-test12345678", "z-ai/glm-5.2");
       assert.ok(nvidia);
 
-      const ollama = getOllamaModel("ollama_test12345678", "minimax-m3");
+      const ollama = getOllamaModel("ollama_test12345678", "deepseek-v4-flash");
       assert.ok(ollama);
 
-      const openCode = getOpenCodeZenModel("zen_test12345678", "nemotron-3-ultra-free");
-      assert.ok(openCode);
-
-      const openRouter = getOpenRouterModel("sk-or-test12345678", "nvidia/nemotron-3-ultra:free");
+      const openRouter = getOpenRouterModel("sk-or-test12345678", "qwen/qwen3.8-27b:free");
       assert.ok(openRouter);
 
-      const groq = getGroqModel("gsk_test12345678", "llama-3.3-70b-versatile");
+      const groq = getGroqModel("gsk_test12345678", "qwen/qwen3.8-27b");
       assert.ok(groq);
 
-      const gemini = getGeminiModel("AIzaSyTest12345678", "gemini-3.7-flash");
+      const gemini = getGeminiModel("AIzaSyTest12345678", "gemini-3.8-flash");
       assert.ok(gemini);
     });
 
     it("verifies default model constants for all supported providers", () => {
       assert.deepStrictEqual(DEFAULT_GEMINI_MODELS, [
+        "gemini-3.8-flash",
         "gemini-3.7-flash",
         "gemini-3.6-flash",
         "gemini-3.5-flash",
         "gemini-3.5-flash-lite",
         "gemini-3.1-flash-lite",
+        "gemini-2.5-flash",
       ]);
 
       assert.deepStrictEqual(DEFAULT_NVIDIA_MODELS, [
-        "z-ai/glm-5.2",
-        "deepseek-ai/deepseek-v4-flash",
-        "minimaxai/minimax-m3",
-        "moonshotai/kimi-k2.6",
+        "z-ai/glm-5.3-flash",
+        "z-ai/glm-5.3",
+        "deepseek-ai/deepseek-v4.1-flash",
+        "nvidia/nemotron-3.5-lightning-30b-a3b",
+        "openai/gpt-oss-20b",
       ]);
 
       assert.deepStrictEqual(DEFAULT_OLLAMA_MODELS, [
-        "minimax-m3",
-        "nemotron-3-ultra",
-        "gpt-oss:120b",
-        "gpt-oss:20b",
+        "deepseek-v4-flash",
+        "deepseek-v4-pro",
       ]);
 
       assert.deepStrictEqual(DEFAULT_OPENROUTER_MODELS, [
-        "nvidia/nemotron-3-ultra:free",
-        "google/gemma-4-31b:free",
-        "poolside/laguna-s-2.1:free",
-        "openrouter/free",
-      ]);
-
-      assert.deepStrictEqual(DEFAULT_OPENCODE_MODELS, [
-        "nemotron-3-ultra-free",
-        "mimo-v2.5-free",
+        "z-ai/glm-5.2:free",
+        "google/gemma-4-31b-it:free",
+        "nvidia/nemotron-3.5-lightning:free",
+        "inclusionai/ling-3.0-flash-sante:free",
+        "qwen/qwen3.8-27b:free",
       ]);
 
       assert.deepStrictEqual(DEFAULT_GROQ_MODELS, [
-        "llama-3.3-70b-versatile",
+        "qwen/qwen3.8-27b",
+        "openai/gpt-oss-120b",
+        "openai/gpt-oss-20b",
       ]);
     });
 
-    it("expands 6-tier multi-provider matrix in prioritized cascade order", () => {
-      // Configure all 6 providers with custom keys and models
+    it("expands 5-tier multi-provider matrix in prioritized cascade order", () => {
+      // Configure all 5 providers with custom keys and models
       process.env.GEMINI_API_KEY = "AIzaGeminiKey11111111";
-      process.env.GEMINI_MODEL = "gemini-3.7-flash";
+      process.env.GEMINI_MODEL = "gemini-3.8-flash";
 
       process.env.NVIDIA_API_KEY = "nvapi-NvidiaKey111111";
-      process.env.NVIDIA_MODEL = "z-ai/glm-5.2";
+      process.env.NVIDIA_MODEL = "z-ai/glm-5.3-flash";
 
       process.env.OLLAMA_API_KEY = "ollama-Key1111111111";
-      process.env.OLLAMA_MODEL = "minimax-m3";
+      process.env.OLLAMA_MODEL = "deepseek-v4-flash";
 
       process.env.OPENROUTER_API_KEY = "sk-or-OpenRouterKey1";
-      process.env.OPENROUTER_MODEL = "nvidia/nemotron-3-ultra:free";
-
-      process.env.OPENCODE_API_KEY = "zen_OpenCodeKey11111";
-      process.env.OPENCODE_MODEL = "nemotron-3-ultra-free";
+      process.env.OPENROUTER_MODEL = "z-ai/glm-5.2:free";
 
       process.env.GROQ_API_KEY = "gsk_GroqKey1111111111";
-      process.env.GROQ_MODEL = "llama-3.3-70b-versatile";
+      process.env.GROQ_MODEL = "qwen/qwen3.8-27b";
 
       const candidates = getAllConfiguredModels();
 
-      assert.strictEqual(candidates.length, 6);
+      assert.strictEqual(candidates.length, 5);
 
       // Verify exact prioritized cascade sequence
       assert.strictEqual(candidates[0].providerName, "Google Gemini");
-      assert.strictEqual(candidates[0].id, "Google Gemini:AIza...1111:gemini-3.7-flash");
+      assert.strictEqual(candidates[0].id, "Google Gemini:AIza...1111:gemini-3.8-flash");
 
       assert.strictEqual(candidates[1].providerName, "NVIDIA NIM");
-      assert.strictEqual(candidates[1].id, "NVIDIA NIM:nvap...1111:z-ai/glm-5.2");
+      assert.strictEqual(candidates[1].id, "NVIDIA NIM:nvap...1111:z-ai/glm-5.3-flash");
 
       assert.strictEqual(candidates[2].providerName, "Ollama Cloud");
-      assert.strictEqual(candidates[2].id, "Ollama Cloud:olla...1111:minimax-m3");
+      assert.strictEqual(candidates[2].id, "Ollama Cloud:olla...1111:deepseek-v4-flash");
 
       assert.strictEqual(candidates[3].providerName, "OpenRouter");
-      assert.strictEqual(candidates[3].id, "OpenRouter:sk-o...Key1:nvidia/nemotron-3-ultra:free");
+      assert.strictEqual(candidates[3].id, "OpenRouter:sk-o...Key1:z-ai/glm-5.2:free");
 
-      assert.strictEqual(candidates[4].providerName, "OpenCode Zen");
-      assert.strictEqual(candidates[4].id, "OpenCode Zen:zen_...1111:nemotron-3-ultra-free");
-
-      assert.strictEqual(candidates[5].providerName, "Groq");
-      assert.strictEqual(candidates[5].id, "Groq:gsk_...1111:llama-3.3-70b-versatile");
+      assert.strictEqual(candidates[4].providerName, "Groq");
+      assert.strictEqual(candidates[4].id, "Groq:gsk_...1111:qwen/qwen3.8-27b");
 
       // Restore env
       process.env = { ...originalEnv };
     });
 
-    it("supports OLLAMA_CLOUD_API_KEY alias and default models for NVIDIA, Ollama, OpenRouter, and OpenCode", () => {
+    it("supports OLLAMA_CLOUD_API_KEY alias and default models for NVIDIA and Ollama", () => {
       delete process.env.GEMINI_API_KEY;
       delete process.env.GOOGLE_API_KEY;
       delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
@@ -643,36 +631,25 @@ describe("Provider Fallback & Error Handling", () => {
       delete process.env.OLLAMA_API_KEY;
       delete process.env.OLLAMA_MODEL;
 
-      process.env.OPENCODE_API_KEY = "zen_OpenCodeKey11111";
-      delete process.env.OPENCODE_MODEL;
-
       const candidates = getAllConfiguredModels();
 
-      // NVIDIA: 4 default models
-      // Ollama: 4 default models
-      // OpenCode: 2 default models
-      // Total = 10 candidates
-      assert.strictEqual(candidates.length, 10);
+      // NVIDIA: 5 default models
+      // Ollama: 2 default models
+      // Total = 7 candidates
+      assert.strictEqual(candidates.length, 7);
 
       const nvidiaCandidates = candidates.filter((c) => c.providerName === "NVIDIA NIM");
-      assert.strictEqual(nvidiaCandidates.length, 4);
+      assert.strictEqual(nvidiaCandidates.length, 5);
       assert.deepStrictEqual(
         nvidiaCandidates.map((c) => c.modelName),
         DEFAULT_NVIDIA_MODELS
       );
 
       const ollamaCandidates = candidates.filter((c) => c.providerName === "Ollama Cloud");
-      assert.strictEqual(ollamaCandidates.length, 4);
+      assert.strictEqual(ollamaCandidates.length, 2);
       assert.deepStrictEqual(
         ollamaCandidates.map((c) => c.modelName),
         DEFAULT_OLLAMA_MODELS
-      );
-
-      const openCodeCandidates = candidates.filter((c) => c.providerName === "OpenCode Zen");
-      assert.strictEqual(openCodeCandidates.length, 2);
-      assert.deepStrictEqual(
-        openCodeCandidates.map((c) => c.modelName),
-        DEFAULT_OPENCODE_MODELS
       );
 
       // Restore env
@@ -1255,27 +1232,31 @@ describe("Workload-Specific Routing Profiles & Options", () => {
       assert.strictEqual(pA.defaultMaxTokens, 1000);
       assert.strictEqual(pA.defaultTemperature, 0.1);
       assert.ok(pA.preferredModels.includes("gemini-3.5-flash-lite"));
+      assert.ok(pA.preferredModels.includes("gemini-3.8-flash"));
 
       const pB = WORKLOAD_PROFILE_CONFIGS.FIT_SCORING;
       assert.strictEqual(pB.defaultMaxTokens, 2000);
       assert.strictEqual(pB.defaultTemperature, 0.2);
+      assert.ok(pB.preferredModels.includes("gemini-3.8-flash"));
       assert.ok(pB.preferredModels.includes("gemini-3.7-flash"));
 
       const pC = WORKLOAD_PROFILE_CONFIGS.RESUME_TAILORING;
       assert.strictEqual(pC.defaultMaxTokens, 4500);
       assert.strictEqual(pC.defaultTemperature, 0.3);
-      assert.ok(pC.preferredModels.includes("gemini-3.7-flash"));
-      assert.ok(pC.preferredModels.includes("z-ai/glm-5.2"));
+      assert.ok(pC.preferredModels.includes("gemini-3.8-flash"));
+      assert.ok(pC.preferredModels.includes("z-ai/glm-5.3"));
 
       const pD = WORKLOAD_PROFILE_CONFIGS.SCREENING_QA;
       assert.strictEqual(pD.defaultMaxTokens, 2500);
       assert.strictEqual(pD.defaultTemperature, 0.4);
-      assert.ok(pD.preferredModels.includes("moonshotai/kimi-k2.6"));
+      assert.ok(pD.preferredModels.includes("gemini-3.8-flash"));
+      assert.ok(pD.preferredModels.includes("nvidia/nemotron-3.5-lightning-30b-a3b"));
 
       const pE = WORKLOAD_PROFILE_CONFIGS.RESUME_PARSING;
       assert.strictEqual(pE.defaultMaxTokens, 4000);
       assert.strictEqual(pE.defaultTemperature, 0.1);
-      assert.ok(pE.preferredModels.includes("deepseek-ai/deepseek-v4-flash"));
+      assert.ok(pE.preferredModels.includes("gemini-3.8-flash"));
+      assert.ok(pE.preferredModels.includes("deepseek-ai/deepseek-v4.1-flash"));
     });
   });
 
@@ -1289,59 +1270,60 @@ describe("Workload-Specific Routing Profiles & Options", () => {
       delete process.env.OPENCODE_API_KEY;
 
       process.env.GEMINI_API_KEY = "AIzaSyGeminiKey1111";
-      process.env.GEMINI_MODEL = "gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite";
+      process.env.GEMINI_MODEL = "gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3.5-flash-lite";
 
       process.env.NVIDIA_API_KEY = "nvapi-NvidiaKey1111";
-      process.env.NVIDIA_MODEL = "z-ai/glm-5.2,deepseek-ai/deepseek-v4-flash,minimaxai/minimax-m3,moonshotai/kimi-k2.6";
+      process.env.NVIDIA_MODEL = "z-ai/glm-5.3-flash,z-ai/glm-5.3,deepseek-ai/deepseek-v4.1-flash,nvidia/nemotron-3.5-lightning-30b-a3b";
     });
 
-    it("Profile A (FAST_INGESTION): prioritizes gemini-3.5-flash-lite -> gemini-3.5-flash -> deepseek-v4-flash", () => {
+    it("Profile A (FAST_INGESTION): prioritizes gemini-3.5-flash-lite -> gemini-3.8-flash -> gemini-3.5-flash", () => {
       const candidates = getAllConfiguredModels("FAST_INGESTION");
       const modelNames = candidates.map((c) => c.modelName);
 
       assert.strictEqual(modelNames[0], "gemini-3.5-flash-lite");
-      assert.strictEqual(modelNames[1], "gemini-3.5-flash");
-      assert.strictEqual(modelNames[2], "deepseek-ai/deepseek-v4-flash");
+      assert.strictEqual(modelNames[1], "gemini-3.8-flash");
+      assert.strictEqual(modelNames[2], "gemini-3.5-flash");
+      assert.strictEqual(modelNames[3], "deepseek-ai/deepseek-v4.1-flash");
     });
 
-    it("Profile B (FIT_SCORING): prioritizes gemini-3.7-flash -> gemini-3.6-flash -> z-ai/glm-5.2 -> gemini-3.5-flash", () => {
+    it("Profile B (FIT_SCORING): prioritizes gemini-3.8-flash -> gemini-3.7-flash -> gemini-3.6-flash -> z-ai/glm-5.3-flash", () => {
       const candidates = getAllConfiguredModels("FIT_SCORING");
       const modelNames = candidates.map((c) => c.modelName);
 
-      assert.strictEqual(modelNames[0], "gemini-3.7-flash");
-      assert.strictEqual(modelNames[1], "gemini-3.6-flash");
-      assert.strictEqual(modelNames[2], "z-ai/glm-5.2");
-      assert.strictEqual(modelNames[3], "gemini-3.5-flash");
+      assert.strictEqual(modelNames[0], "gemini-3.8-flash");
+      assert.strictEqual(modelNames[1], "gemini-3.7-flash");
+      assert.strictEqual(modelNames[2], "gemini-3.6-flash");
+      assert.strictEqual(modelNames[3], "z-ai/glm-5.3-flash");
     });
 
-    it("Profile C (RESUME_TAILORING): prioritizes gemini-3.7-flash -> z-ai/glm-5.2 -> gemini-3.6-flash -> minimaxai/minimax-m3", () => {
+    it("Profile C (RESUME_TAILORING): prioritizes gemini-3.8-flash -> gemini-3.7-flash -> z-ai/glm-5.3 -> z-ai/glm-5.3-flash", () => {
       const candidates = getAllConfiguredModels("RESUME_TAILORING");
       const modelNames = candidates.map((c) => c.modelName);
 
-      assert.strictEqual(modelNames[0], "gemini-3.7-flash");
-      assert.strictEqual(modelNames[1], "z-ai/glm-5.2");
-      assert.strictEqual(modelNames[2], "gemini-3.6-flash");
-      assert.strictEqual(modelNames[3], "minimaxai/minimax-m3");
+      assert.strictEqual(modelNames[0], "gemini-3.8-flash");
+      assert.strictEqual(modelNames[1], "gemini-3.7-flash");
+      assert.strictEqual(modelNames[2], "z-ai/glm-5.3");
+      assert.strictEqual(modelNames[3], "z-ai/glm-5.3-flash");
     });
 
-    it("Profile D (SCREENING_QA): prioritizes gemini-3.7-flash -> z-ai/glm-5.2 -> moonshotai/kimi-k2.6 -> gemini-3.5-flash", () => {
+    it("Profile D (SCREENING_QA): prioritizes gemini-3.8-flash -> gemini-3.7-flash -> z-ai/glm-5.3 -> z-ai/glm-5.3-flash", () => {
       const candidates = getAllConfiguredModels("SCREENING_QA");
       const modelNames = candidates.map((c) => c.modelName);
 
-      assert.strictEqual(modelNames[0], "gemini-3.7-flash");
-      assert.strictEqual(modelNames[1], "z-ai/glm-5.2");
-      assert.strictEqual(modelNames[2], "moonshotai/kimi-k2.6");
-      assert.strictEqual(modelNames[3], "gemini-3.5-flash");
+      assert.strictEqual(modelNames[0], "gemini-3.8-flash");
+      assert.strictEqual(modelNames[1], "gemini-3.7-flash");
+      assert.strictEqual(modelNames[2], "z-ai/glm-5.3");
+      assert.strictEqual(modelNames[3], "z-ai/glm-5.3-flash");
     });
 
-    it("Profile E (RESUME_PARSING): prioritizes gemini-3.7-flash -> gemini-3.5-flash -> deepseek-v4-flash -> z-ai/glm-5.2", () => {
+    it("Profile E (RESUME_PARSING): prioritizes gemini-3.8-flash -> gemini-3.7-flash -> gemini-3.5-flash -> deepseek-ai/deepseek-v4.1-flash", () => {
       const candidates = getAllConfiguredModels("RESUME_PARSING");
       const modelNames = candidates.map((c) => c.modelName);
 
-      assert.strictEqual(modelNames[0], "gemini-3.7-flash");
-      assert.strictEqual(modelNames[1], "gemini-3.5-flash");
-      assert.strictEqual(modelNames[2], "deepseek-ai/deepseek-v4-flash");
-      assert.strictEqual(modelNames[3], "z-ai/glm-5.2");
+      assert.strictEqual(modelNames[0], "gemini-3.8-flash");
+      assert.strictEqual(modelNames[1], "gemini-3.7-flash");
+      assert.strictEqual(modelNames[2], "gemini-3.5-flash");
+      assert.strictEqual(modelNames[3], "deepseek-ai/deepseek-v4.1-flash");
     });
 
     it("still skips candidates in cooldown when re-ordering for a profile", () => {
@@ -1351,9 +1333,10 @@ describe("Workload-Specific Routing Profiles & Options", () => {
       const candidates = getAllConfiguredModels("FAST_INGESTION");
       const modelNames = candidates.map((c) => c.modelName);
 
-      // gemini-3.5-flash-lite is skipped, gemini-3.5-flash takes top spot
-      assert.strictEqual(modelNames[0], "gemini-3.5-flash");
-      assert.strictEqual(modelNames[1], "deepseek-ai/deepseek-v4-flash");
+      // gemini-3.5-flash-lite is skipped, gemini-3.8-flash takes top spot
+      assert.strictEqual(modelNames[0], "gemini-3.8-flash");
+      assert.strictEqual(modelNames[1], "gemini-3.5-flash");
+      assert.strictEqual(modelNames[2], "deepseek-ai/deepseek-v4.1-flash");
     });
   });
 

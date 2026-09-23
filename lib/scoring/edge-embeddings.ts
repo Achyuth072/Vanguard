@@ -39,7 +39,7 @@ export class EdgeEmbeddingEngine {
     this.initPromise = (async () => {
       try {
         this.extractor = (await pipeline("feature-extraction", this.modelName, {
-          quantized: this.quantized,
+          dtype: this.quantized ? "q8" : "fp32",
         })) as FeatureExtractionPipeline;
       } catch (err) {
         // Log warning but allow graceful degradation to deterministic fallback

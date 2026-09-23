@@ -43,6 +43,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "baseline-browser-mapping": "^2.11.20",
     "eslint": "^9",
     "eslint-config-next": "16.0.3",
     "prisma": "^7.9.1",

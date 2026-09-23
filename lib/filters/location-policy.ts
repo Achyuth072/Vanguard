@@ -19,6 +19,7 @@ export interface LocationPolicyResult {
 export interface LocationPolicyInput {
   candidateLocation?: string;
   preferredLocations?: string[] | string;
+  candidateRemotePreference?: string;
   jobLocation?: string;
   jobRemoteStatus?: "REMOTE" | "HYBRID" | "ONSITE" | "UNKNOWN" | string;
   jobText?: string;
@@ -163,6 +164,7 @@ export function evaluateLocationPolicy(input: LocationPolicyInput): LocationPoli
       };
     }
 
+    const candidateRemote = input.candidateRemotePreference;
     const candidatePrefersRemote =
       /\b(?:remote|worldwide|anywhere|global)\b/i.test(prefLocs) ||
       /\b(?:remote|worldwide|anywhere|global)\b/i.test(candLoc) ||

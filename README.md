@@ -1,4 +1,4 @@
-# Vanguard
+# <img src="app/icon.svg" width="32" height="32" alt="Vanguard Logo" valign="middle" /> Vanguard
 
 **A local-first, human-in-the-loop Developer Career Cockpit & Application Assistant for software engineers.**
 
@@ -7,14 +7,24 @@ Vanguard is an intelligent career scouting and application preparation cockpit b
 ---
 
 ```mermaid
-flowchart LR
-    A["Raw Feeds & Portals<br/>(11 Adapters + URL)"] --> B["Zero-Token Pre-Filter<br/>(Salary, Geo, YOE, Stack)"]
-    B --> C["Discovery Staging<br/>(Fast In-Memory Buffer)"]
-    C -->|On-Demand Ingest| D["3-Tier Hybrid Scoring<br/>(BM25 + Edge ONNX + LLM)"]
-    D --> E["Priority Inbox & Kanban<br/>(Apply / Review / Ignore)"]
-    E --> F["Fact-Grounded Tailoring<br/>(Tailored Resumes & Q&A)"]
-    F --> G["Browser Automation<br/>(Headed Playwright Takeover)"]
-    G --> H["Lifecycle Tracking<br/>(Metrics & Auto-Ghosting)"]
+flowchart TD
+    subgraph Discovery["1. Sourcing & Zero-Token Pre-Filtering"]
+        direction LR
+        A["Raw Feeds & Portals<br/>(11 Adapters + URL)"] --> B["Zero-Token Pre-Filter<br/>(Salary, Geo, YOE, Stack)"] --> C["Discovery Staging<br/>(In-Memory Buffer)"]
+    end
+
+    subgraph Evaluation["2. Hybrid Intelligence & Review"]
+        direction LR
+        D["3-Tier Hybrid Scoring<br/>(BM25 + Edge ONNX + LLM)"] --> E["Priority Inbox & Kanban<br/>(Apply / Review / Ignore)"]
+    end
+
+    subgraph Execution["3. Preparation & Execution"]
+        direction LR
+        F["Technical Tailoring & Q&A<br/>(Fact-Grounded Code Evidence)"] --> G["Browser Automation<br/>(Headed Playwright Takeover)"] --> H["Lifecycle Tracking<br/>(Metrics & Auto-Ghosting)"]
+    end
+
+    Discovery -->|On-Demand Ingest| Evaluation
+    Evaluation -->|Candidate Selection| Execution
 ```
 
 ---
@@ -112,7 +122,7 @@ Vanguard evaluates candidate-job fit using a staged funnel that maximizes precis
 - **Framework**: Next.js 16 (App Router), React 19
 - **Styling**: Tailwind CSS v4, Lucide Icons, Radix UI Primitives
 - **Database & ORM**: SQLite (`pulse.db`), Prisma 7 with `@prisma/adapter-libsql`
-- **AI & LLM**: Vercel AI SDK (`ai`), `@ai-sdk/google` (Gemini), `@ai-sdk/openai` (NVIDIA NIM, Ollama Cloud, OpenRouter, OpenCode Zen, Groq)
+- **AI & LLM**: Vercel AI SDK (`ai`), `@ai-sdk/google` (Gemini), `@ai-sdk/openai` (NVIDIA NIM, Ollama Cloud, OpenRouter, Groq)
 - **Local ML & Embeddings**: `@huggingface/transformers` (Transformers.js v3, ONNX runtime, `Xenova/bge-small-en-v1.5`)
 - **Browser Automation**: Playwright (headed persistent contexts)
 - **Language & Runtime**: TypeScript 5, Node.js
@@ -150,15 +160,11 @@ NVIDIA_MODEL="z-ai/glm-5.3-flash,z-ai/glm-5.3,stepfun-ai/step-5-preview,deepseek
 
 # Ollama Cloud (Tier 3 - Hosted Open Models Pool)
 OLLAMA_API_KEY="ollama_..."
-OLLAMA_MODEL="deepseek-v4-pro,minimax-m3,nemotron-3-ultra"
+OLLAMA_MODEL="beam,gemma4:31b,gpt-oss:120b,gpt-oss:20b,nemotron-3-nano:30b,nemotron-3-super,nemotron-3-ultra"
 
 # OpenRouter (Tier 4 & Tier 6 - Free Models & Global Free Router)
 OPENROUTER_API_KEY="sk-or-..."
 OPENROUTER_MODEL="inclusionai/ling-3.1-flash,nvidia/nemotron-3.5-super-vl:free,nvidia/nemotron-3-ultra:free,nvidia/nemotron-3.5-lightning:free,google/gemma-4-31b-it:free"
-
-# OpenCode Zen (Tier 5 - Free Coding Gateway)
-OPENCODE_API_KEY="zen_..."
-OPENCODE_MODEL="nemotron-3-ultra-free,mimo-v2.5-free"
 
 # Groq (Fast Fallback)
 GROQ_API_KEY="gsk_..."

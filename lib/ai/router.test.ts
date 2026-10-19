@@ -554,8 +554,12 @@ describe("Provider Fallback & Error Handling", () => {
       ]);
 
       assert.deepStrictEqual(DEFAULT_OLLAMA_MODELS, [
-        "deepseek-v4-pro",
-        "minimax-m3",
+        "beam",
+        "gemma4:31b",
+        "gpt-oss:120b",
+        "gpt-oss:20b",
+        "nemotron-3-nano:30b",
+        "nemotron-3-super",
         "nemotron-3-ultra",
       ]);
 
@@ -632,9 +636,9 @@ describe("Provider Fallback & Error Handling", () => {
       const candidates = getAllConfiguredModels();
 
       // NVIDIA: 6 default models
-      // Ollama: 3 default models
-      // Total = 9 candidates
-      assert.strictEqual(candidates.length, 9);
+      // Ollama: 7 default models
+      // Total = 13 candidates
+      assert.strictEqual(candidates.length, 13);
 
       const nvidiaCandidates = candidates.filter((c) => c.providerName === "NVIDIA NIM");
       assert.strictEqual(nvidiaCandidates.length, 6);
@@ -644,7 +648,7 @@ describe("Provider Fallback & Error Handling", () => {
       );
 
       const ollamaCandidates = candidates.filter((c) => c.providerName === "Ollama Cloud");
-      assert.strictEqual(ollamaCandidates.length, 3);
+      assert.strictEqual(ollamaCandidates.length, 7);
       assert.deepStrictEqual(
         ollamaCandidates.map((c) => c.modelName),
         DEFAULT_OLLAMA_MODELS

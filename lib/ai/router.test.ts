@@ -487,7 +487,7 @@ describe("Provider Fallback & Error Handling", () => {
       process.env = { ...originalEnv };
     });
 
-    it("uses default 5-model cascade for Gemini when GEMINI_MODEL is not set", () => {
+    it("uses default 7-model cascade for Gemini when GEMINI_MODEL is not set", () => {
       delete process.env.GROQ_API_KEY;
       delete process.env.OPENROUTER_API_KEY;
       delete process.env.GOOGLE_API_KEY;
@@ -498,15 +498,11 @@ describe("Provider Fallback & Error Handling", () => {
 
       const candidates = getAllConfiguredModels();
 
-      assert.strictEqual(candidates.length, 5);
-      const modelNames = candidates.map((c) => c.modelName);
-      assert.deepStrictEqual(modelNames, [
-        "gemini-3.7-flash",
-        "gemini-3.6-flash",
-        "gemini-3.5-flash",
-        "gemini-3.5-flash-lite",
-        "gemini-3.1-flash-lite",
-      ]);
+      assert.strictEqual(candidates.length, 7);
+      assert.deepStrictEqual(
+        candidates.map((c) => c.modelName),
+        DEFAULT_GEMINI_MODELS
+      );
 
       // Restore env
       process.env = { ...originalEnv };

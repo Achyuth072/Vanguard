@@ -51,6 +51,7 @@ next-env.d.ts
 *.db-journal
 *.db-wal
 *.db-shm
+*.db.bak
 
 .scratch/
 .cache/

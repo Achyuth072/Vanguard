@@ -547,22 +547,24 @@ describe("Provider Fallback & Error Handling", () => {
       assert.deepStrictEqual(DEFAULT_NVIDIA_MODELS, [
         "z-ai/glm-5.3-flash",
         "z-ai/glm-5.3",
+        "stepfun-ai/step-5-preview",
         "deepseek-ai/deepseek-v4.1-flash",
-        "nvidia/nemotron-3.5-lightning-30b-a3b",
-        "openai/gpt-oss-20b",
+        "Nemotron 3.5 Super VL 120B A12B",
+        "moonshotai/kimi-k2.6",
       ]);
 
       assert.deepStrictEqual(DEFAULT_OLLAMA_MODELS, [
-        "deepseek-v4-flash",
         "deepseek-v4-pro",
+        "minimax-m3",
+        "nemotron-3-ultra",
       ]);
 
       assert.deepStrictEqual(DEFAULT_OPENROUTER_MODELS, [
-        "z-ai/glm-5.2:free",
-        "google/gemma-4-31b-it:free",
+        "inclusionai/ling-3.1-flash",
+        "nvidia/nemotron-3.5-super-vl:free",
+        "nvidia/nemotron-3-ultra:free",
         "nvidia/nemotron-3.5-lightning:free",
-        "inclusionai/ling-3.0-flash-sante:free",
-        "qwen/qwen3.8-27b:free",
+        "google/gemma-4-31b-it:free",
       ]);
 
       assert.deepStrictEqual(DEFAULT_GROQ_MODELS, [
@@ -629,20 +631,20 @@ describe("Provider Fallback & Error Handling", () => {
 
       const candidates = getAllConfiguredModels();
 
-      // NVIDIA: 5 default models
-      // Ollama: 2 default models
-      // Total = 7 candidates
-      assert.strictEqual(candidates.length, 7);
+      // NVIDIA: 6 default models
+      // Ollama: 3 default models
+      // Total = 9 candidates
+      assert.strictEqual(candidates.length, 9);
 
       const nvidiaCandidates = candidates.filter((c) => c.providerName === "NVIDIA NIM");
-      assert.strictEqual(nvidiaCandidates.length, 5);
+      assert.strictEqual(nvidiaCandidates.length, 6);
       assert.deepStrictEqual(
         nvidiaCandidates.map((c) => c.modelName),
         DEFAULT_NVIDIA_MODELS
       );
 
       const ollamaCandidates = candidates.filter((c) => c.providerName === "Ollama Cloud");
-      assert.strictEqual(ollamaCandidates.length, 2);
+      assert.strictEqual(ollamaCandidates.length, 3);
       assert.deepStrictEqual(
         ollamaCandidates.map((c) => c.modelName),
         DEFAULT_OLLAMA_MODELS
@@ -1246,7 +1248,7 @@ describe("Workload-Specific Routing Profiles & Options", () => {
       assert.strictEqual(pD.defaultMaxTokens, 2500);
       assert.strictEqual(pD.defaultTemperature, 0.4);
       assert.ok(pD.preferredModels.includes("gemini-3.8-flash"));
-      assert.ok(pD.preferredModels.includes("nvidia/nemotron-3.5-lightning-30b-a3b"));
+      assert.ok(pD.preferredModels.includes("stepfun-ai/step-5-preview"));
 
       const pE = WORKLOAD_PROFILE_CONFIGS.RESUME_PARSING;
       assert.strictEqual(pE.defaultMaxTokens, 4000);
@@ -1269,7 +1271,7 @@ describe("Workload-Specific Routing Profiles & Options", () => {
       process.env.GEMINI_MODEL = "gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3.5-flash-lite";
 
       process.env.NVIDIA_API_KEY = "nvapi-NvidiaKey1111";
-      process.env.NVIDIA_MODEL = "z-ai/glm-5.3-flash,z-ai/glm-5.3,deepseek-ai/deepseek-v4.1-flash,nvidia/nemotron-3.5-lightning-30b-a3b";
+      process.env.NVIDIA_MODEL = "z-ai/glm-5.3-flash,z-ai/glm-5.3,stepfun-ai/step-5-preview,deepseek-ai/deepseek-v4.1-flash";
     });
 
     it("Profile A (FAST_INGESTION): prioritizes gemini-3.5-flash-lite -> gemini-3.8-flash -> gemini-3.5-flash", () => {

@@ -18,16 +18,16 @@ Implement a **6-Tier Multi-Provider Cascading Inference Engine** with **Zero-Lat
 
 Requests traverse through 6 priority tiers:
 - **Tier 0**: Primary Google Gemini Pro / Paid Key (if configured).
-- **Tier 1**: Google Gemini Free Multi-Model Cascade (`gemini-3.7-flash` → `gemini-3.6-flash` → `gemini-3.5-flash` → `gemini-3.5-flash-lite` → `gemini-3.1-flash-lite`).
-- **Tier 2**: NVIDIA NIM High-Performance Free Tier (40 RPM) (`z-ai/glm-5.2`, `deepseek-ai/deepseek-v4-flash`, `minimaxai/minimax-m3`, `moonshotai/kimi-k2.6`).
-- **Tier 3**: Ollama Cloud Hosted Open Models (`minimax-m3`, `nemotron-3-ultra`, `gpt-oss:120b`, `gpt-oss:20b`).
-- **Tier 4**: OpenRouter Free Ranked Models (`nvidia/nemotron-3-ultra:free`, `google/gemma-4-31b:free`, `poolside/laguna-s-2.1:free`).
-- **Tier 5**: OpenCode Zen & Alternative Free Endpoints (`nemotron-3-ultra-free`, `mimo-v2.5-free`, Groq `llama-3.3-70b-versatile`).
+- **Tier 1**: Google Gemini Free Multi-Model Cascade (`gemini-3.8-flash` → `gemini-3.7-flash` → `gemini-3.6-flash` → `gemini-3.5-flash` → `gemini-3.5-flash-lite` → `gemini-3.1-flash-lite`).
+- **Tier 2**: NVIDIA NIM High-Performance Free Tier (40 RPM) (`z-ai/glm-5.3-flash`, `z-ai/glm-5.3`, `stepfun-ai/step-5-preview`, `deepseek-ai/deepseek-v4.1-flash`, `Nemotron 3.5 Super VL 120B A12B`, `moonshotai/kimi-k2.6`).
+- **Tier 3**: Ollama Cloud Hosted Open Models (`deepseek-v4-pro`, `minimax-m3`, `nemotron-3-ultra`).
+- **Tier 4**: OpenRouter Free Ranked Models (`inclusionai/ling-3.1-flash`, `nvidia/nemotron-3.5-super-vl:free`, `nvidia/nemotron-3-ultra:free`, `nvidia/nemotron-3.5-lightning:free`, `google/gemma-4-31b-it:free`).
+- **Tier 5**: Groq High-Speed Fallback (`qwen/qwen3.8-27b`, `openai/gpt-oss-120b`).
 - **Tier 6**: OpenRouter Global Free Router (`openrouter/free`).
 
 ### 2. Multi-Key and Multi-Model Matrix Expansion
 
-Configuration supports comma-separated keys and models in `.env` (e.g. `GEMINI_API_KEY="KEY1,KEY2"`, `GEMINI_MODEL="gemini-3.7-flash,gemini-3.5-flash"`). The router dynamically expands candidate tuples:
+Configuration supports comma-separated keys and models in `.env` (e.g. `GEMINI_API_KEY="KEY1,KEY2"`, `GEMINI_MODEL="gemini-3.8-flash,gemini-3.7-flash"`). The router dynamically expands candidate tuples:
 $$\text{Candidates} = \text{Keys in order} \times \text{Models in order}$$
 
 ### 3. In-Flight Circuit Breaker & Cooldown Cache
@@ -44,11 +44,11 @@ Each execution candidate is keyed by a compound tuple: `${providerName}:${keyMas
 ### 4. Workload-Specific Routing Profiles
 
 The router exposes 5 specialized workload profiles with tailored latency, token output, and reasoning cascades:
-- `FAST_INGESTION`: Low-latency schema extraction (`gemini-3.5-flash-lite` → `gemini-3.5-flash` → `deepseek-v4-flash`).
-- `FIT_SCORING`: Deep 4-dimensional reasoning (`gemini-3.7-flash` → `gemini-3.6-flash` → `z-ai/glm-5.2` → `gemini-3.5-flash`).
-- `RESUME_TAILORING`: High output context window (`gemini-3.7-flash` → `z-ai/glm-5.2` → `gemini-3.6-flash` → `minimax-m3`).
-- `SCREENING_QA`: Natural, non-cliché candidate voice (`gemini-3.7-flash` → `z-ai/glm-5.2` → `moonshotai/kimi-k2.6` → `gemini-3.5-flash`).
-- `RESUME_PARSING`: Structured JSON parsing with AST fallback (`gemini-3.7-flash` → `gemini-3.5-flash` → `deepseek-v4-flash`).
+- `FAST_INGESTION`: Low-latency schema extraction (`gemini-3.5-flash-lite` → `gemini-3.8-flash` → `gemini-3.5-flash` → `deepseek-ai/deepseek-v4.1-flash` → `z-ai/glm-5.3-flash`).
+- `FIT_SCORING`: Deep 4-dimensional reasoning (`gemini-3.8-flash` → `gemini-3.7-flash` → `gemini-3.6-flash` → `z-ai/glm-5.3-flash` → `z-ai/glm-5.3` → `stepfun-ai/step-5-preview`).
+- `RESUME_TAILORING`: High output context window (`gemini-3.8-flash` → `gemini-3.7-flash` → `z-ai/glm-5.3` → `z-ai/glm-5.3-flash` → `stepfun-ai/step-5-preview` → `gemini-3.6-flash`).
+- `SCREENING_QA`: Natural, non-cliché candidate voice (`gemini-3.8-flash` → `gemini-3.7-flash` → `z-ai/glm-5.3` → `z-ai/glm-5.3-flash` → `stepfun-ai/step-5-preview` → `moonshotai/kimi-k2.6`).
+- `RESUME_PARSING`: Structured JSON parsing with AST fallback (`gemini-3.8-flash` → `gemini-3.7-flash` → `gemini-3.5-flash` → `deepseek-ai/deepseek-v4.1-flash` → `z-ai/glm-5.3-flash`).
 
 ## Consequences
 

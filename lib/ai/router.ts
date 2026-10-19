@@ -145,6 +145,7 @@ export const WORKLOAD_PROFILE_CONFIGS: Record<WorkloadProfile, WorkloadProfileCo
       "gemini-3.6-flash",
       "z-ai/glm-5.3-flash",
       "z-ai/glm-5.3",
+      "stepfun-ai/step-5-preview",
       "gemini-3.5-flash",
     ],
     defaultMaxTokens: 2000,
@@ -158,6 +159,7 @@ export const WORKLOAD_PROFILE_CONFIGS: Record<WorkloadProfile, WorkloadProfileCo
       "gemini-3.7-flash",
       "z-ai/glm-5.3",
       "z-ai/glm-5.3-flash",
+      "stepfun-ai/step-5-preview",
       "gemini-3.6-flash",
       "deepseek-ai/deepseek-v4.1-flash",
     ],
@@ -172,7 +174,8 @@ export const WORKLOAD_PROFILE_CONFIGS: Record<WorkloadProfile, WorkloadProfileCo
       "gemini-3.7-flash",
       "z-ai/glm-5.3",
       "z-ai/glm-5.3-flash",
-      "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "stepfun-ai/step-5-preview",
+      "moonshotai/kimi-k2.6",
       "gemini-3.5-flash",
     ],
     defaultMaxTokens: 2500,
@@ -384,22 +387,24 @@ export const DEFAULT_GEMINI_MODELS = [
 export const DEFAULT_NVIDIA_MODELS = [
   "z-ai/glm-5.3-flash",
   "z-ai/glm-5.3",
+  "stepfun-ai/step-5-preview",
   "deepseek-ai/deepseek-v4.1-flash",
-  "nvidia/nemotron-3.5-lightning-30b-a3b",
-  "openai/gpt-oss-20b",
+  "Nemotron 3.5 Super VL 120B A12B",
+  "moonshotai/kimi-k2.6",
 ];
 
 export const DEFAULT_OLLAMA_MODELS = [
-  "deepseek-v4-flash",
   "deepseek-v4-pro",
+  "minimax-m3",
+  "nemotron-3-ultra",
 ];
 
 export const DEFAULT_OPENROUTER_MODELS = [
-  "z-ai/glm-5.2:free",
-  "google/gemma-4-31b-it:free",
+  "inclusionai/ling-3.1-flash",
+  "nvidia/nemotron-3.5-super-vl:free",
+  "nvidia/nemotron-3-ultra:free",
   "nvidia/nemotron-3.5-lightning:free",
-  "inclusionai/ling-3.0-flash-sante:free",
-  "qwen/qwen3.8-27b:free",
+  "google/gemma-4-31b-it:free",
 ];
 
 export const DEFAULT_GROQ_MODELS = [

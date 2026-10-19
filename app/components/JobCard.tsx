@@ -370,7 +370,7 @@ export default function JobCard({ job, onStatusUpdated, onOpenPreparation }: Job
       {/* Action Progression Toolbar */}
       <div className="mt-4 pt-3 border-t border-zinc-800/80 flex flex-wrap items-center justify-between gap-2">
         <div className="text-[11px] text-zinc-500 font-mono">
-          Discovered: <span className="tabular-nums">{new Date(job.discoveredAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+          Discovered: <span className="tabular-nums" suppressHydrationWarning>{new Date(job.discoveredAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">

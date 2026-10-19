@@ -495,7 +495,7 @@ export default function ApplicationTracker({
                           <div className="flex items-center justify-between gap-1 text-[10px] font-mono bg-[#15171d] p-1.5 rounded-[2px] border border-[#2a2e38]">
                             <span className="text-[#797f94] flex items-center gap-1">
                               <Clock className="w-2.5 h-2.5" />
-                              <span className="tabular-nums">
+                              <span className="tabular-nums" suppressHydrationWarning>
                                 {new Date(job.application.appliedAt).toLocaleDateString("en-US", {
                                   month: "short",
                                   day: "numeric",

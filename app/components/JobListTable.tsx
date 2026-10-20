@@ -237,7 +237,6 @@ export function JobListTable({
                 ref={isSelected ? selectedRowRef : undefined}
                 role="button"
                 tabIndex={0}
-                style={{ scrollMargin: "14px 0" }}
                 onClick={() => {
                   isClickSelectionRef.current = true;
                   onSelectJob(job);

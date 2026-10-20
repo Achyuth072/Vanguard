@@ -6,6 +6,7 @@ import path from "node:path";
 describe("Ingest Navigation & Auto-Focus on Success", () => {
   const ingestModalPath = path.join(process.cwd(), "app/components/IngestModal.tsx");
   const vanguardCockpitPath = path.join(process.cwd(), "app/components/VanguardCockpit.tsx");
+  const jobListTablePath = path.join(process.cwd(), "app/components/JobListTable.tsx");
 
   it("IngestModal exports and invokes onSuccess with IngestSuccessTarget payload", () => {
     const content = fs.readFileSync(ingestModalPath, "utf-8");
@@ -79,7 +80,6 @@ describe("Ingest Navigation & Auto-Focus on Success", () => {
   });
 
   it("JobListTable automatically and smoothly scrolls the selected job row into view", () => {
-    const jobListTablePath = path.join(process.cwd(), "app/components/JobListTable.tsx");
     const content = fs.readFileSync(jobListTablePath, "utf-8");
 
     // selectedRowRef or row ref

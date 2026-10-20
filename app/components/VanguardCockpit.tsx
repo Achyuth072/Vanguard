@@ -12,6 +12,7 @@ import IngestModal, { type IngestSuccessTarget } from "./IngestModal";
 import EditJobModal from "./EditJobModal";
 import DiscoveryInbox from "@/components/discovery/DiscoveryInbox";
 import { updateJobStatusAction, rescoreJobAction, deleteJobAction, overrideJobFilterAction } from "@/app/actions";
+import { compareJobsByRelevance } from "@/lib/utils/sorting";
 import { PlusCircle } from "lucide-react";
 
 export interface VanguardCockpitProps {
@@ -21,7 +22,9 @@ export interface VanguardCockpitProps {
 export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TelemetryTab>("inbox");
+  const [selectedJobIdByTab, setSelectedJobIdByTab] = useState<Partial<Record<TelemetryTab, string>>>({});
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [autoScrollTargetId, setAutoScrollTargetId] = useState<string | null>(null);
   const [discoveryCount, setDiscoveryCount] = useState<number>(0);
 
   // Fetch staged discovery count
@@ -96,26 +99,23 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
 
   // Categorize jobs for the active view tab
   const tabJobs = useMemo(() => {
+    let result: EnrichedJob[] = [];
     if (activeTab === "inbox") {
-      return initialJobs.filter((job) => {
+      result = initialJobs.filter((job) => {
         const s = job.status.toUpperCase();
         if (s === "ARCHIVED" || s === "IGNORED" || s === "FILTERED_OUT") return false;
         const score = job.fitScore?.score;
         return (score !== undefined && score !== null && score >= 80) || s === "SHORTLISTED";
       });
-    }
-
-    if (activeTab === "review") {
-      return initialJobs.filter((job) => {
+    } else if (activeTab === "review") {
+      result = initialJobs.filter((job) => {
         const s = job.status.toUpperCase();
         if (s === "ARCHIVED" || s === "IGNORED" || s === "FILTERED_OUT") return false;
         const score = job.fitScore?.score;
         return score !== undefined && score !== null && score >= 60 && score < 80;
       });
-    }
-
-    if (activeTab === "pipeline") {
-      return initialJobs.filter((job) => {
+    } else if (activeTab === "pipeline") {
+      result = initialJobs.filter((job) => {
         const s = job.status.toUpperCase();
         if (s === "ARCHIVED" || s === "IGNORED" || s === "FILTERED_OUT") return false;
         return (
@@ -130,31 +130,32 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
           job.application !== null
         );
       });
-    }
-
-    if (activeTab === "filtered") {
-      return initialJobs.filter((job) => {
+    } else if (activeTab === "filtered") {
+      result = initialJobs.filter((job) => {
         const s = job.status.toUpperCase();
         return s === "FILTERED_OUT" || s === "IGNORED";
       });
+    } else {
+      // "all" tab
+      result = initialJobs.filter((j) => {
+        const s = j.status.toUpperCase();
+        return s !== "ARCHIVED" && s !== "IGNORED" && s !== "FILTERED_OUT";
+      });
     }
 
-    // "all" tab
-    return initialJobs.filter((j) => {
-      const s = j.status.toUpperCase();
-      return s !== "ARCHIVED" && s !== "IGNORED" && s !== "FILTERED_OUT";
-    });
+    return [...result].sort(compareJobsByRelevance);
   }, [initialJobs, activeTab]);
 
   // Derive selectedJob without cascading setState effect
   const selectedJob = useMemo(() => {
     if (tabJobs.length === 0) return null;
-    if (selectedJobId) {
-      const match = tabJobs.find((j) => j.id === selectedJobId);
+    const tabSelectedId = selectedJobIdByTab[activeTab] || (selectedJobId && tabJobs.some((j) => j.id === selectedJobId) ? selectedJobId : null);
+    if (tabSelectedId) {
+      const match = tabJobs.find((j) => j.id === tabSelectedId);
       if (match) return match;
     }
     return tabJobs[0] || null;
-  }, [tabJobs, selectedJobId]);
+  }, [tabJobs, selectedJobId, selectedJobIdByTab, activeTab]);
 
   function handleDataRefreshed() {
     router.refresh();
@@ -172,12 +173,11 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
       return;
     }
 
-    if (!target.isRescue && score !== undefined && score !== null && score >= 60 && score < 80) {
-      setActiveTab("review");
-    } else {
-      setActiveTab("inbox");
-    }
+    const nextTab: TelemetryTab = (!target.isRescue && score !== undefined && score !== null && score >= 60 && score < 80) ? "review" : "inbox";
+    setActiveTab(nextTab);
     setSelectedJobId(target.id);
+    setSelectedJobIdByTab((prev) => ({ ...prev, [nextTab]: target.id }));
+    setAutoScrollTargetId(target.id);
   }, [router]);
 
   function handleDeploy(job: EnrichedJob) {
@@ -210,6 +210,15 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
       if (selectedJobId === job.id) {
         setSelectedJobId(null);
       }
+      setSelectedJobIdByTab((prev) => {
+        const next = { ...prev };
+        for (const tab of Object.keys(next) as TelemetryTab[]) {
+          if (next[tab] === job.id) {
+            delete next[tab];
+          }
+        }
+        return next;
+      });
       handleDataRefreshed();
     } catch (err) {
       console.error("Delete error:", err);
@@ -235,7 +244,10 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
           <TelemetryStrip
             jobs={initialJobs}
             activeTab={activeTab}
-            onTabSelect={(tab) => setActiveTab(tab)}
+            onTabSelect={(tab) => {
+              setAutoScrollTargetId(null);
+              setActiveTab(tab);
+            }}
             discoveryCount={discoveryCount}
           />
         </div>
@@ -289,9 +301,15 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
             {/* Left pane: Dense Job Table (5 cols on lg) */}
             <div className="lg:col-span-5 h-[400px] lg:h-full min-h-0">
               <JobListTable
+                activeTab={activeTab}
                 jobs={tabJobs}
                 selectedJobId={selectedJob?.id || null}
-                onSelectJob={(job) => setSelectedJobId(job.id)}
+                autoScrollTargetId={autoScrollTargetId}
+                onSelectJob={(job) => {
+                  setAutoScrollTargetId(null);
+                  setSelectedJobId(job.id);
+                  setSelectedJobIdByTab((prev) => ({ ...prev, [activeTab]: job.id }));
+                }}
               />
             </div>
 

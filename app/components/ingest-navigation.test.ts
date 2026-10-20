@@ -112,4 +112,36 @@ describe("Ingest Navigation & Auto-Focus on Success", () => {
       "JobListTable should track click selection to avoid scrolling rows out from under user cursor"
     );
   });
+
+  it("VanguardCockpit sorts tabJobs by relevance and maintains tab-isolated job selection", () => {
+    const content = fs.readFileSync(vanguardCockpitPath, "utf-8");
+
+    // tabJobs sorted by relevance
+    assert.ok(
+      content.includes("compareJobsByRelevance"),
+      "VanguardCockpit should sort tabJobs by relevance so index 0 matches the top of the table"
+    );
+
+    // tab-isolated job selection
+    assert.ok(
+      content.includes("selectedJobIdByTab"),
+      "VanguardCockpit should maintain selectedJobIdByTab to preserve selection across tabs"
+    );
+  });
+
+  it("JobListTable preserves scroll position per tab and suppresses scrollIntoView during tab switch", () => {
+    const content = fs.readFileSync(jobListTablePath, "utf-8");
+
+    // per-tab scroll preservation
+    assert.ok(
+      content.includes("scrollPositionsByTabRef"),
+      "JobListTable should maintain scroll positions per tab"
+    );
+
+    // tab switch suppression of scrollIntoView
+    assert.ok(
+      content.includes("isTabSwitchRef"),
+      "JobListTable should track tab switch state to prevent unwanted auto-scroll"
+    );
+  });
 });

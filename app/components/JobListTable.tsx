@@ -16,6 +16,8 @@ export interface JobListTableProps {
   selectedJobId: string | null;
   onSelectJob: (job: EnrichedJob) => void;
   className?: string;
+  activeTab?: string;
+  autoScrollTargetId?: string | null;
 }
 
 export function JobListTable({
@@ -23,6 +25,8 @@ export function JobListTable({
   selectedJobId,
   onSelectJob,
   className = "",
+  activeTab = "inbox",
+  autoScrollTargetId,
 }: JobListTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [sourceFilter, setSourceFilter] = useState<string>("ALL");
@@ -30,6 +34,10 @@ export function JobListTable({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const selectedRowRef = useRef<HTMLDivElement | null>(null);
   const isClickSelectionRef = useRef(false);
+  const listContainerRef = useRef<HTMLDivElement | null>(null);
+  const scrollPositionsByTabRef = useRef<Record<string, number>>({});
+  const prevTabRef = useRef<string>(activeTab);
+  const isTabSwitchRef = useRef(false);
 
   // Extract distinct sources for the dropdown filter
   const sources = useMemo(() => {
@@ -69,6 +77,21 @@ export function JobListTable({
     return result;
   }, [jobs, searchQuery, sourceFilter, sortMode]);
 
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    scrollPositionsByTabRef.current[activeTab] = e.currentTarget.scrollTop;
+  };
+
+  useEffect(() => {
+    if (prevTabRef.current !== activeTab) {
+      isTabSwitchRef.current = true;
+      prevTabRef.current = activeTab;
+      if (listContainerRef.current) {
+        const savedScroll = scrollPositionsByTabRef.current[activeTab] ?? 0;
+        listContainerRef.current.scrollTop = savedScroll;
+      }
+    }
+  }, [activeTab]);
+
   // Auto-scroll selected row into view smoothly and snappily for keyboard nav & programmatic ingest
   useEffect(() => {
     // If the user explicitly clicked the row, skip scroll adjustment to avoid moving the target under their cursor
@@ -77,13 +100,22 @@ export function JobListTable({
       return;
     }
 
+    const isProgrammaticIngest = Boolean(autoScrollTargetId && autoScrollTargetId === selectedJobId);
+
+    // If tab just switched and it's not a programmatic ingest target, skip scroll adjustment so preserved position is maintained
+    if (isTabSwitchRef.current && !isProgrammaticIngest) {
+      isTabSwitchRef.current = false;
+      return;
+    }
+    isTabSwitchRef.current = false;
+
     if (selectedJobId && selectedRowRef.current) {
       selectedRowRef.current.scrollIntoView?.({
         behavior: "smooth",
         block: "nearest",
       });
     }
-  }, [selectedJobId, filteredJobs]);
+  }, [selectedJobId, filteredJobs, autoScrollTargetId]);
 
   // Keyboard navigation [J/K] & Arrow keys & '/' focus
   useEffect(() => {
@@ -217,7 +249,11 @@ export function JobListTable({
       </div>
 
       {/* Rows Container */}
-      <div className="flex-1 overflow-y-auto divide-y divide-[#2a2e38] focus:outline-none">
+      <div
+        ref={listContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto divide-y divide-[#2a2e38] focus:outline-none"
+      >
         {filteredJobs.length === 0 ? (
           <div className="p-8 text-center text-[#a6abbd] font-mono text-xs">
             NO TARGETS MATCHING CURRENT CRITERIA

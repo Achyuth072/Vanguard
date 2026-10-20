@@ -210,6 +210,8 @@ export function JobListTable({
             const scoreStyle = getScoreStyle(job.fitScore?.score);
             const salary = formatSalary(job);
             const sourceName = normalizeSource(job.source, job.url);
+            const statusUpper = job.status.toUpperCase();
+            const isDropped = statusUpper === "FILTERED_OUT" || statusUpper === "IGNORED";
 
             return (
               <div
@@ -247,7 +249,13 @@ export function JobListTable({
                     <h3 className="text-sm font-semibold text-[#f4f2ec] truncate font-sans tracking-tight">
                       {job.title}
                     </h3>
-                    <span className="text-xs font-mono uppercase tracking-wider text-[#a6abbd] shrink-0 bg-[#0d0e12] px-2 py-0.5 rounded-[2px] border border-[#2a2e38]">
+                    <span
+                      className={`text-xs font-mono uppercase tracking-wider shrink-0 px-2 py-0.5 rounded-[2px] border ${
+                        isDropped
+                          ? "bg-[#c4634e]/15 border-[#c4634e]/40 text-[#c4634e]"
+                          : "bg-[#0d0e12] border-[#2a2e38] text-[#a6abbd]"
+                      }`}
+                    >
                       {job.status}
                     </span>
                   </div>

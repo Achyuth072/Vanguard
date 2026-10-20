@@ -103,6 +103,23 @@ describe("Candidate Profile Drawer, Ingest Modals & Command Palette (Issue 06)",
       assert.ok(content.includes("updateJobDetailsAction"));
       assert.ok(content.includes("rerunAI") || content.includes("rescore"));
     });
+
+    it("IngestModal displays dropped job warning banner, filter reasons, and 1-click rescue button", () => {
+      const content = fs.readFileSync(ingestModalPath, "utf-8");
+
+      // Warning state and alert icon
+      assert.ok(content.includes("droppedJobInfo"));
+      assert.ok(content.includes("AlertTriangle"));
+      assert.ok(content.includes("Target Opportunity Filtered Out"));
+
+      // Filter reason list rendering
+      assert.ok(content.includes("Filter Reasons") || content.includes("reasons"));
+      assert.ok(content.includes(".map"));
+
+      // 1-Click rescue trigger
+      assert.ok(content.includes("overrideJobFilterAction"));
+      assert.ok(content.includes("Rescue &amp; Move to Inbox") || content.includes("Rescue & Move to Inbox"));
+    });
   });
 
   describe("GlobalCommandPalette Component Specification", () => {

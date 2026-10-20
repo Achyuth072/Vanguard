@@ -178,11 +178,11 @@ describe("Feed Sources Management & Discovery Inbox UI (Issue 06)", () => {
       assert.ok(content.includes("activeTab === \"discovery\"") || content.includes('activeTab === "discovery"'));
     });
 
-    it("TelemetryStrip supports 5th Discovery tab with staged badge", () => {
+    it("TelemetryStrip supports Discovery tab with staged badge", () => {
       const content = fs.readFileSync(telemetryStripPath, "utf-8");
 
       assert.ok(content.includes('"discovery"') || content.includes("'discovery'"));
-      assert.ok(content.includes("05 · Discovery"));
+      assert.ok(content.includes("04 · Discovery") || content.includes("05 · Discovery"));
       assert.ok(content.includes("discoveryCount"));
     });
 

@@ -107,6 +107,14 @@ describe("Tactical Intelligence Cockpit — Master-Detail View (Issue 03)", () =
       assert.ok(content.includes("onDelete") || content.includes("handleDeleteClick"));
       assert.ok(content.includes("Trash2"));
     });
+
+    it("displays dropped target alert banner and Rescue Target button for FILTERED_OUT jobs", () => {
+      const content = fs.readFileSync(jobIntelligenceViewPath, "utf-8");
+      assert.ok(content.includes("onOverrideFilter"));
+      assert.ok(content.includes("Rescue Target"));
+      assert.ok(content.includes("DROPPED TARGET · AUTOMATICALLY FILTERED OUT"));
+      assert.ok(content.includes("filterReasons"));
+    });
   });
 
   describe("VanguardCockpit Master-Detail Orchestrator", () => {
@@ -123,6 +131,8 @@ describe("Tactical Intelligence Cockpit — Master-Detail View (Issue 03)", () =
       assert.ok(content.includes("ApplicationPreparationDrawer"));
       assert.ok(content.includes("IngestModal"));
       assert.ok(content.includes("EditJobModal"));
+      assert.ok(content.includes("handleOverrideFilter"));
+      assert.ok(content.includes('activeTab === "filtered"'));
     });
 
     it("renders split 5/7 columns master-detail layout on non-pipeline tabs", () => {

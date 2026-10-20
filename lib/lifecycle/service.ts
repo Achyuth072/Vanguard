@@ -191,3 +191,68 @@ export async function transitionApplicationStatus(
     rejectionReason,
   };
 }
+
+export async function overrideJobFilter(
+  jobId: string,
+  targetStatus: string = "SHORTLISTED",
+  overrideReason?: string,
+  prismaClient?: typeof db
+) {
+  const prisma = prismaClient || db;
+  const currentJob = await prisma.job.findUnique({
+    where: { id: jobId },
+    include: { application: true },
+  });
+
+  if (!currentJob) {
+    throw new Error(`Job not found: ${jobId}`);
+  }
+
+  const previousStatus = currentJob.status;
+  const normalizedTarget = normalizeStatus(targetStatus);
+
+  const isAppStatus = (APPLICATION_STATUSES as readonly string[]).includes(normalizedTarget);
+  if (isAppStatus) {
+    await prisma.application.upsert({
+      where: { jobId },
+      create: {
+        jobId,
+        status: normalizedTarget,
+      },
+      update: {
+        status: normalizedTarget,
+      },
+    });
+  }
+
+  // Update Job status and remove staged status
+  const updatedJob = await prisma.job.update({
+    where: { id: jobId },
+    data: {
+      status: normalizedTarget,
+      isStaged: false,
+    },
+    include: {
+      fitScore: true,
+      application: true,
+    },
+  });
+
+  // Create audit event for the filter override
+  await prisma.event.create({
+    data: {
+      entityType: "Job",
+      entityId: jobId,
+      eventType: "FILTER_OVERRIDDEN",
+      payload: JSON.stringify({
+        previousStatus,
+        targetStatus: normalizedTarget,
+        overrideReason: overrideReason || "Candidate manually rescued filtered/ignored job",
+        timestamp: new Date().toISOString(),
+      }),
+    },
+  });
+
+  return updatedJob;
+}
+

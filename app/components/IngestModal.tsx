@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { ingestJob } from "../actions";
+import { ingestJob, overrideJobFilterAction } from "../actions";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +22,7 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Sparkles,
   Building2,
   MapPin,
@@ -58,6 +59,13 @@ export default function IngestModal({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resultMessage, setResultMessage] = useState<string | null>(null);
+  const [isRescuing, setIsRescuing] = useState(false);
+  const [droppedJobInfo, setDroppedJobInfo] = useState<{
+    job: { id: string; title: string; company: string };
+    status: string;
+    reasons: string[];
+    recommendation?: string;
+  } | null>(null);
 
   // Derived effective source
   const effectiveSource = useMemo(() => {
@@ -93,11 +101,31 @@ export default function IngestModal({
     };
   }, [title, company, mode, rawText, effectiveSource, location, remoteStatus, salaryMin, salaryMax, currency]);
 
+  const resetFormAndClose = () => {
+    setRawText("");
+    setUrl("");
+    setSource("MANUAL");
+    setCompany("");
+    setTitle("");
+    setLocation("");
+    setRemoteStatus("AUTO");
+    setSalaryMin("");
+    setSalaryMax("");
+    setCurrency("USD");
+    setShowAdvanced(false);
+    setResultMessage(null);
+    setDroppedJobInfo(null);
+    setError(null);
+    onClose();
+    if (onSuccess) onSuccess();
+  };
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
     setResultMessage(null);
+    setDroppedJobInfo(null);
 
     try {
       const parsedSalaryMin = salaryMin.trim() ? Number(salaryMin.trim()) : null;
@@ -139,23 +167,34 @@ export default function IngestModal({
 
       const res = await ingestJob(payload);
       if (res && res.job) {
+        const isFilteredOut = res.status === "FILTERED_OUT" || res.filterResult?.passed === false;
+        const isIgnored = res.fitScore?.recommendation === "IGNORE";
+
+        if (isFilteredOut || isIgnored) {
+          const reasons: string[] = [];
+          if (res.filterResult?.reasons && res.filterResult.reasons.length > 0) {
+            reasons.push(...res.filterResult.reasons);
+          }
+          if (isIgnored && res.fitScore?.reasoning) {
+            reasons.push(`AI Fit Recommendation is IGNORE: ${res.fitScore.reasoning}`);
+          }
+          if (reasons.length === 0) {
+            reasons.push("Job failed candidate targeting constraints and was dropped.");
+          }
+
+          setDroppedJobInfo({
+            job: res.job,
+            status: res.status,
+            reasons,
+            recommendation: res.fitScore?.recommendation,
+          });
+          return;
+        }
+
         const scoreText = res.fitScore ? `Fit Score: ${res.fitScore.score}/100 (${res.fitScore.recommendation})` : "Ingested & Staged";
         setResultMessage(`✓ Successfully ingested "${res.job.title}" at ${res.job.company}. ${scoreText}`);
         setTimeout(() => {
-          setRawText("");
-          setUrl("");
-          setSource("MANUAL");
-          setCompany("");
-          setTitle("");
-          setLocation("");
-          setRemoteStatus("AUTO");
-          setSalaryMin("");
-          setSalaryMax("");
-          setCurrency("USD");
-          setShowAdvanced(false);
-          setResultMessage(null);
-          onClose();
-          if (onSuccess) onSuccess();
+          resetFormAndClose();
         }, 1500);
       } else {
         setError("Job ingestion did not return a valid record.");
@@ -269,6 +308,82 @@ export default function IngestModal({
           <div className="p-3 rounded-[2px] bg-[#0d0e12] border border-[#8ab384] text-[#8ab384] text-xs flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0 text-[#8ab384]" />
             <span>{resultMessage}</span>
+          </div>
+        )}
+
+        {droppedJobInfo && (
+          <div className="p-3.5 rounded-[2px] bg-[#d4a745]/10 border border-[#d4a745]/40 text-xs font-mono space-y-3">
+            <div className="flex items-start gap-2.5 text-[#d4a745]">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-sm text-[#f4f2ec]">
+                  Target Opportunity Filtered Out &amp; Dropped
+                </p>
+                <p className="text-xs text-[#d4a745] mt-0.5">
+                  &ldquo;{droppedJobInfo.job.title}&rdquo; at {droppedJobInfo.job.company} failed your candidate constraints and will not appear in the Priority Inbox.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-[#0d0e12] p-2.5 rounded-[2px] border border-[#2a2e38] space-y-1">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-[#a6abbd]">
+                Detection Rationale / Filter Reasons:
+              </span>
+              <ul className="list-disc list-inside space-y-1 text-[#f4f2ec]">
+                {droppedJobInfo.reasons.map((reason, idx) => (
+                  <li key={idx} className="text-xs leading-relaxed">
+                    {reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-1 border-t border-[#2a2e38]">
+              <button
+                type="button"
+                onClick={resetFormAndClose}
+                className="px-3 py-1.5 rounded-[2px] border border-[#2a2e38] bg-[#15171d] text-[#a6abbd] hover:text-[#f4f2ec] hover:border-[#3d4352] text-xs font-mono transition-colors"
+              >
+                Keep Filtered
+              </button>
+              <button
+                type="button"
+                disabled={isRescuing}
+                onClick={async () => {
+                  setIsRescuing(true);
+                  setError(null);
+                  try {
+                    await overrideJobFilterAction(
+                      droppedJobInfo.job.id,
+                      "SHORTLISTED",
+                      "Candidate manual rescue from Ingest Console"
+                    );
+                    setDroppedJobInfo(null);
+                    setResultMessage(`✓ Successfully rescued "${droppedJobInfo.job.title}" into Priority Inbox!`);
+                    setTimeout(() => {
+                      resetFormAndClose();
+                    }, 1200);
+                  } catch (err: unknown) {
+                    setError(err instanceof Error ? err.message : "Failed to override filter");
+                  } finally {
+                    setIsRescuing(false);
+                  }
+                }}
+                className="px-3 py-1.5 rounded-[2px] bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] font-bold text-xs font-mono transition-all flex items-center gap-1.5 focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+              >
+                {isRescuing ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Rescuing...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Rescue &amp; Move to Inbox</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         )}
 

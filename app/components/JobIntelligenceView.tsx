@@ -22,6 +22,7 @@ export interface JobIntelligenceViewProps {
   onRescore?: (jobId: string) => void;
   onEdit?: (job: EnrichedJob) => void;
   onDelete?: (job: EnrichedJob) => void;
+  onOverrideFilter?: (jobId: string) => void;
   className?: string;
 }
 
@@ -32,6 +33,7 @@ export function JobIntelligenceView({
   onRescore,
   onEdit,
   onDelete,
+  onOverrideFilter,
   className = "",
 }: JobIntelligenceViewProps) {
   const [activeTab, setActiveTab] = useState<"brief" | "description">("brief");
@@ -52,6 +54,8 @@ export function JobIntelligenceView({
   const score = fitScore?.score ?? 0;
   const sourceName = normalizeSource(job.source, job.url);
   const salary = formatSalaryRange(job.salaryMin, job.salaryMax, job.currency);
+  const statusUpper = job.status.toUpperCase();
+  const isDropped = statusUpper === "FILTERED_OUT" || statusUpper === "IGNORED";
 
   async function handleRescoreClick() {
     if (!job || !onRescore) return;
@@ -144,7 +148,7 @@ export function JobIntelligenceView({
               </select>
             )}
 
-            {onDeployApplication && (
+            {onDeployApplication && !isDropped && (
               <button
                 type="button"
                 onClick={() => onDeployApplication(job)}
@@ -152,6 +156,17 @@ export function JobIntelligenceView({
               >
                 <Send className="w-4 h-4 stroke-[2]" />
                 <span>Deploy Application</span>
+              </button>
+            )}
+
+            {isDropped && onOverrideFilter && (
+              <button
+                type="button"
+                onClick={() => onOverrideFilter(job.id)}
+                className="px-4 py-2 bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] text-xs font-bold font-sans uppercase tracking-wider rounded-[2px] transition-colors flex items-center gap-2 cursor-pointer shadow-sm"
+              >
+                <ShieldCheck className="w-4 h-4 stroke-[2]" />
+                <span>Rescue Target</span>
               </button>
             )}
 
@@ -244,6 +259,32 @@ export function JobIntelligenceView({
       <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-6">
         {activeTab === "brief" ? (
           <>
+            {/* Dropped / Filtered Out Notice */}
+            {isDropped && (
+              <div className="p-3.5 bg-[#d4a745]/10 border border-[#d4a745]/40 rounded-[2px] text-xs font-mono space-y-2">
+                <div className="flex items-center gap-2 text-[#d4a745] font-bold">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <span>DROPPED TARGET · AUTOMATICALLY FILTERED OUT</span>
+                </div>
+                {job.filterReasons && job.filterReasons.length > 0 ? (
+                  <div className="bg-[#0d0e12] p-2 rounded-[2px] border border-[#2a2e38] space-y-1">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-[#a6abbd]">
+                      Detection Rationale / Filter Reasons:
+                    </span>
+                    <ul className="list-disc list-inside space-y-0.5 text-[#f4f2ec]">
+                      {job.filterReasons.map((r, i) => (
+                        <li key={i} className="text-xs">{r}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <p className="text-xs text-[#a6abbd]">
+                    This opportunity failed candidate targeting constraints during ingestion. Use [Rescue Target] above to override and move to Priority Inbox.
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Section 1: Evaluation Dimensions (4-up Reticles) */}
             <div>
               <div className="text-xs font-mono uppercase tracking-wide font-semibold text-[#a6abbd] mb-3 flex items-center justify-between">

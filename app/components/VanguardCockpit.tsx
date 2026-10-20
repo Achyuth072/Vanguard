@@ -11,7 +11,7 @@ import ApplicationPreparationDrawer from "./ApplicationPreparationDrawer";
 import IngestModal from "./IngestModal";
 import EditJobModal from "./EditJobModal";
 import DiscoveryInbox from "@/components/discovery/DiscoveryInbox";
-import { updateJobStatusAction, rescoreJobAction, deleteJobAction } from "@/app/actions";
+import { updateJobStatusAction, rescoreJobAction, deleteJobAction, overrideJobFilterAction } from "@/app/actions";
 import { PlusCircle } from "lucide-react";
 
 export interface VanguardCockpitProps {
@@ -132,6 +132,13 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
       });
     }
 
+    if (activeTab === "filtered") {
+      return initialJobs.filter((job) => {
+        const s = job.status.toUpperCase();
+        return s === "FILTERED_OUT" || s === "IGNORED";
+      });
+    }
+
     // "all" tab
     return initialJobs.filter((j) => {
       const s = j.status.toUpperCase();
@@ -187,6 +194,16 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
     } catch (err) {
       console.error("Delete error:", err);
       alert(err instanceof Error ? err.message : "Delete failed");
+    }
+  }
+
+  async function handleOverrideFilter(jobId: string) {
+    try {
+      await overrideJobFilterAction(jobId, "SHORTLISTED", "Candidate override from cockpit");
+      handleDataRefreshed();
+    } catch (err) {
+      console.error("Filter override error:", err);
+      alert(err instanceof Error ? err.message : "Failed to override filter");
     }
   }
 
@@ -270,6 +287,7 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
                   setIsEditModalOpen(true);
                 }}
                 onDelete={handleDeleteJob}
+                onOverrideFilter={handleOverrideFilter}
               />
             </div>
           </>

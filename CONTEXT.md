@@ -34,6 +34,7 @@ Vanguard is a personal filtering, scoring, and application preparation assistant
 9. **Human Approval & Assisted Submission**: The human-controlled step where the user reviews filled fields, solves any CAPTCHA, and completes the submission.
 10. **Lifecycle Tracking & Auto-Ghosting**: Recording submission timestamps, calculating response latencies, and automatically transitioning silent applications to `GHOSTED` after 21 days of inactivity.
 11. **Outcome Feedback Loop**: Calibrating scoring weights across lifecycle outcomes with phased Bayesian guardrails (Phase 0 static, Phase 1 suggestions, Phase 2 clamped drift).
+12. **Filter Override & Job Rescue**: The human-in-the-loop mechanism allowing candidate inspection of rejected (`FILTERED_OUT` or `IGNORED`) jobs with exact failure reasons, granting 1-click rescue to the Priority Inbox and logging audit events for scoring calibration.
 
 ### System Principles & Invariants
 
@@ -55,6 +56,8 @@ Vanguard is a personal filtering, scoring, and application preparation assistant
 - Use **Priority Inbox**, never *Job Feed* or *Search Results*.
 - Use **Prepared**, never *Applying* or *Ready to Apply*.
 - Use **Assessment** or **Take-home / OA**, never *Coding Test* or *Quiz*.
+- Use **Filtered Out / Dropped Jobs**, never *Discarded Leads* or *Dead Postings*.
+- Use **Filter Override / Job Rescue**, never *Unban* or *Force Add*.
 - Avoid **Auto-apply** or **Mass Submission**: Vanguard is a personal filtering, preparation, and assisted application cockpit, not an unattended mass-submission bot.
 
 

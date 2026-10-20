@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { transitionApplicationStatus, type TransitionOptions } from "@/lib/lifecycle/service";
+import { transitionApplicationStatus, overrideJobFilter as serviceOverrideJobFilter, type TransitionOptions } from "@/lib/lifecycle/service";
 
 export interface EnrichedFitScore {
   id: string;
@@ -53,6 +53,7 @@ export interface EnrichedJob {
   aiAnalysis: string | null;
   fitScore: EnrichedFitScore | null;
   application: EnrichedApplication | null;
+  filterReasons?: string[];
 }
 
 function safeParseJsonArray(jsonStr?: string | null): string[] {
@@ -75,6 +76,31 @@ export async function getJobs(): Promise<EnrichedJob[]> {
       discoveredAt: "desc",
     },
   });
+
+  const filteredOutJobIds = jobs.filter((j) => j.status === "FILTERED_OUT").map((j) => j.id);
+  const filterReasonsByJobId = new Map<string, string[]>();
+
+  if (filteredOutJobIds.length > 0) {
+    const filterEvents = await db.event.findMany({
+      where: {
+        entityType: "Job",
+        entityId: { in: filteredOutJobIds },
+        eventType: "FILTERED_OUT",
+      },
+      orderBy: { timestamp: "desc" },
+    });
+
+    for (const ev of filterEvents) {
+      if (!filterReasonsByJobId.has(ev.entityId)) {
+        try {
+          const parsed = JSON.parse(ev.payload);
+          if (Array.isArray(parsed.reasons)) {
+            filterReasonsByJobId.set(ev.entityId, parsed.reasons);
+          }
+        } catch {}
+      }
+    }
+  }
 
   return jobs.map((job) => {
     const fitScore: EnrichedFitScore | null = job.fitScore
@@ -133,9 +159,16 @@ export async function getJobs(): Promise<EnrichedJob[]> {
       aiAnalysis: job.fitScore?.reasoning || (job.description ? job.description.slice(0, 150) : null),
       fitScore,
       application,
+      filterReasons:
+        filterReasonsByJobId.get(job.id) ||
+        (job.fitScore?.recommendation === "IGNORE" && job.fitScore.reasoning
+          ? [`AI Fit Recommendation is IGNORE: ${job.fitScore.reasoning}`]
+          : []),
     };
   });
 }
+
+export const overrideJobFilter = serviceOverrideJobFilter;
 
 export async function updateJobStatus(
   jobId: string,

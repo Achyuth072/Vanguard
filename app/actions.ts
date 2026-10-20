@@ -77,6 +77,19 @@ export async function shortlistJobAction(jobId: string) {
   return await updateJobStatusAction(jobId, "SHORTLISTED");
 }
 
+export async function overrideJobFilterAction(
+  jobId: string,
+  targetStatus: string = "SHORTLISTED",
+  reason?: string
+) {
+  const { overrideJobFilter } = await import("@/lib/data");
+  const updated = await overrideJobFilter(jobId, targetStatus, reason);
+  try {
+    revalidatePath("/");
+  } catch {}
+  return { success: true, job: updated };
+}
+
 export async function prepareJobAction(jobId: string) {
   return await updateJobStatusAction(jobId, "PREPARED");
 }

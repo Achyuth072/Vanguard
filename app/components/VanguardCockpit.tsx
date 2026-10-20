@@ -8,7 +8,7 @@ import { JobListTable } from "./JobListTable";
 import { JobIntelligenceView } from "./JobIntelligenceView";
 import ApplicationTracker from "./ApplicationTracker";
 import ApplicationPreparationDrawer from "./ApplicationPreparationDrawer";
-import IngestModal from "./IngestModal";
+import IngestModal, { type IngestSuccessTarget } from "./IngestModal";
 import EditJobModal from "./EditJobModal";
 import DiscoveryInbox from "@/components/discovery/DiscoveryInbox";
 import { updateJobStatusAction, rescoreJobAction, deleteJobAction, overrideJobFilterAction } from "@/app/actions";
@@ -101,7 +101,7 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
         const s = job.status.toUpperCase();
         if (s === "ARCHIVED" || s === "IGNORED" || s === "FILTERED_OUT") return false;
         const score = job.fitScore?.score;
-        return score !== undefined && score !== null && score >= 80;
+        return (score !== undefined && score !== null && score >= 80) || s === "SHORTLISTED";
       });
     }
 
@@ -159,6 +159,26 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
   function handleDataRefreshed() {
     router.refresh();
   }
+
+  const handleIngestSuccess = useCallback((target?: IngestSuccessTarget) => {
+    router.refresh();
+    if (!target) return;
+
+    const score = target.fitScore?.score;
+    const status = target.status?.toUpperCase();
+
+    // No navigation if it is dropped (FILTERED_OUT or IGNORED or score < 60)
+    if (!target.isRescue && (status === "FILTERED_OUT" || status === "IGNORED" || (score !== undefined && score !== null && score < 60))) {
+      return;
+    }
+
+    if (!target.isRescue && score !== undefined && score !== null && score >= 60 && score < 80) {
+      setActiveTab("review");
+    } else {
+      setActiveTab("inbox");
+    }
+    setSelectedJobId(target.id);
+  }, [router]);
 
   function handleDeploy(job: EnrichedJob) {
     setSelectedPrepJob(job);
@@ -298,7 +318,7 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
       <IngestModal
         isOpen={isIngestOpen}
         onClose={() => setIsIngestOpen(false)}
-        onSuccess={handleDataRefreshed}
+        onSuccess={handleIngestSuccess}
         initialMode={ingestMode}
       />
 

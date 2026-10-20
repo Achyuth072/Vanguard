@@ -31,10 +31,17 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+export interface IngestSuccessTarget {
+  id: string;
+  fitScore?: { score?: number | null } | null;
+  status?: string;
+  isRescue?: boolean;
+}
+
 interface IngestModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (target?: IngestSuccessTarget) => void;
   initialMode?: "paste" | "url" | "manual";
 }
 
@@ -103,7 +110,7 @@ export default function IngestModal({
     };
   }, [title, company, mode, rawText, effectiveSource, location, remoteStatus, salaryMin, salaryMax, currency]);
 
-  const resetFormAndClose = () => {
+  const resetFormAndClose = (target?: IngestSuccessTarget) => {
     setRawText("");
     setUrl("");
     setSource("MANUAL");
@@ -119,7 +126,7 @@ export default function IngestModal({
     setDroppedJobInfo(null);
     setError(null);
     onClose();
-    if (onSuccess) onSuccess();
+    onSuccess?.(target);
   };
 
   async function handleSubmit(e: React.FormEvent) {
@@ -196,7 +203,11 @@ export default function IngestModal({
         const scoreText = res.fitScore ? `Fit Score: ${res.fitScore.score}/100 (${res.fitScore.recommendation})` : "Ingested & Staged";
         setResultMessage(`✓ Successfully ingested "${res.job.title}" at ${res.job.company}. ${scoreText}`);
         setTimeout(() => {
-          resetFormAndClose();
+          resetFormAndClose({
+            id: res.job.id,
+            fitScore: res.fitScore,
+            status: res.status,
+          });
         }, 1500);
       } else {
         setError("Job ingestion did not return a valid record.");
@@ -343,7 +354,7 @@ export default function IngestModal({
             <div className="flex items-center justify-end gap-2 pt-1 border-t border-[#2a2e38]">
               <button
                 type="button"
-                onClick={resetFormAndClose}
+                onClick={() => resetFormAndClose()}
                 className="px-3 py-1.5 rounded-[2px] border border-[#2a2e38] bg-[#15171d] text-[#a6abbd] hover:text-[#f4f2ec] hover:border-[#3d4352] text-xs font-mono transition-colors"
               >
                 Keep Filtered
@@ -355,15 +366,22 @@ export default function IngestModal({
                   setIsRescuing(true);
                   setError(null);
                   try {
+                    const rescuedJobId = droppedJobInfo.job.id;
+                    const rescuedJobTitle = droppedJobInfo.job.title;
                     await overrideJobFilterAction(
-                      droppedJobInfo.job.id,
+                      rescuedJobId,
                       "SHORTLISTED",
                       "Candidate manual rescue from Ingest Console"
                     );
                     setDroppedJobInfo(null);
-                    setResultMessage(`✓ Successfully rescued "${droppedJobInfo.job.title}" into Priority Inbox!`);
+                    setResultMessage(`✓ Successfully rescued "${rescuedJobTitle}" into Priority Inbox!`);
                     setTimeout(() => {
-                      resetFormAndClose();
+                      resetFormAndClose({
+                        id: rescuedJobId,
+                        fitScore: { score: 85 },
+                        status: "SHORTLISTED",
+                        isRescue: true,
+                      });
                     }, 1200);
                   } catch (err: unknown) {
                     setError(err instanceof Error ? err.message : "Failed to override filter");

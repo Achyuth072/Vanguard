@@ -28,6 +28,7 @@ export function JobListTable({
   const [sourceFilter, setSourceFilter] = useState<string>("ALL");
   const [sortMode, setSortMode] = useState<"relevance" | "score" | "recent">("relevance");
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const selectedRowRef = useRef<HTMLDivElement | null>(null);
 
   // Extract distinct sources for the dropdown filter
   const sources = useMemo(() => {
@@ -66,6 +67,16 @@ export function JobListTable({
 
     return result;
   }, [jobs, searchQuery, sourceFilter, sortMode]);
+
+  // Auto-scroll selected row into view smoothly and snappily
+  useEffect(() => {
+    if (selectedJobId && selectedRowRef.current) {
+      selectedRowRef.current.scrollIntoView?.({
+        behavior: "smooth",
+        block: "nearest",
+      });
+    }
+  }, [selectedJobId, filteredJobs]);
 
   // Keyboard navigation [J/K] & Arrow keys & '/' focus
   useEffect(() => {
@@ -216,6 +227,7 @@ export function JobListTable({
             return (
               <div
                 key={job.id}
+                ref={isSelected ? selectedRowRef : undefined}
                 role="button"
                 tabIndex={0}
                 onClick={() => onSelectJob(job)}

@@ -76,7 +76,7 @@ export function buildCandidateProfilePayload(
 
   const location = profile.location || profile.preferredLocations?.[0] || "Remote";
   const currentExp = profile.experiences?.find((e) => e.isCurrent) || profile.experiences?.[0];
-  const currentCompany = currentExp?.company || "Pulse Technologies";
+  const currentCompany = currentExp?.company || "Vanguard Technologies";
   const currentTitle = currentExp?.title || profile.targetRole || "Senior Software Engineer";
 
   // Build social links

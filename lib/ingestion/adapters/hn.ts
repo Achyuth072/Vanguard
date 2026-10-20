@@ -164,7 +164,7 @@ export class HackerNewsAdapter implements FeedAdapter {
       const storyRes = await fetchFn(storySearchUrl, {
         headers: {
           Accept: "application/json",
-          "User-Agent": "PulseCareerBot/1.0",
+          "User-Agent": "VanguardCareerBot/1.0",
         },
         signal: options?.abortSignal,
       });
@@ -194,7 +194,7 @@ export class HackerNewsAdapter implements FeedAdapter {
     const commentsRes = await fetchFn(commentsUrl, {
       headers: {
         Accept: "application/json",
-        "User-Agent": "PulseCareerBot/1.0",
+        "User-Agent": "VanguardCareerBot/1.0",
       },
       signal: options?.abortSignal,
     });

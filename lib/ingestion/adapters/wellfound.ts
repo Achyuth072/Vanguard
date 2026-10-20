@@ -111,7 +111,7 @@ export class WellfoundAdapter implements FeedAdapter {
     const response = await fetchFn(url.toString(), {
       headers: {
         Accept: "application/json",
-        "User-Agent": "PulseCareerBot/1.0",
+        "User-Agent": "VanguardCareerBot/1.0",
       },
       signal: options?.abortSignal,
     });

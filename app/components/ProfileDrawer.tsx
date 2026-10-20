@@ -44,7 +44,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { SUPPORTED_CURRENCIES } from "@/lib/utils/currency";
 
@@ -1320,7 +1319,7 @@ export default function ProfileDrawer({
                                           company: e.target.value,
                                         })
                                       }
-                                      placeholder="e.g. Pulse or Independent"
+                                      placeholder="e.g. Vanguard or Independent"
                                       className="bg-[#15171d] border-[#2a2e38] text-[#f4f2ec] rounded-[2px]"
                                     />
                                   </div>

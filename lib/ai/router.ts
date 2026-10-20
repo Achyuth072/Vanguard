@@ -11,16 +11,8 @@ import {
 import { AICacheService } from "./cache";
 import { poolManager } from "./pool";
 import { rateLimiter } from "./rate-limiter";
-import { stripJobBoilerplate, estimateTokens, truncateToTokenBudget } from "./tokenizer";
-import { BM25Scorer } from "../scoring/bm25";
-import {
-  scoreJobHybrid,
-  evaluateHybridFunnel,
-  classifyFunnelAction,
-  type HybridScoringOptions,
-  type FunnelAction,
-  type HybridFunnelResult,
-} from "../scoring/hybrid";
+import { stripJobBoilerplate } from "./tokenizer";
+import { scoreJobHybrid } from "../scoring/hybrid";
 
 export const FitScoreSchema = z.object({
   score: z.number().int().min(0).max(100),
@@ -890,7 +882,7 @@ export async function scoreJobFit(
   job: JobContext,
   options?: AIRouterOptions
 ): Promise<FitScore> {
-  let system = `You are a precise, objective career matching assistant for Pulse.
+  let system = `You are a precise, objective career matching assistant for Vanguard.
 Your task is to evaluate whether a job posting is a viable match for a candidate based strictly on candidate facts.
 CRITICAL INVARIANTS:
 1. Ground your evaluation strictly in the provided candidate facts and job requirements.

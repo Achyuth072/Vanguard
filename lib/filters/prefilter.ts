@@ -1,5 +1,5 @@
 import { convertCurrency, formatSalary } from "../utils/currency";
-import { extractRequiredExperience, extractExperienceBounds, isSeniorityExcluded } from "./deterministic";
+import { extractExperienceBounds, isSeniorityExcluded } from "./deterministic";
 import { evaluateLocationPolicy } from "./location-policy";
 import type { MasterSkill } from "../../types/candidate";
 

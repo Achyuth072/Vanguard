@@ -110,7 +110,7 @@ export async function fetchJobPageContent(
 ): Promise<string> {
   const response = await fetchFn(url, {
     headers: {
-      "User-Agent": "PulseCareerBot/1.0 (+https://pulse-career.internal)",
+      "User-Agent": "VanguardCareerBot/1.0 (+https://vanguard-career.internal)",
       Accept: "text/html,application/xhtml+xml,text/plain",
     },
   });

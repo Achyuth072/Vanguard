@@ -79,7 +79,7 @@ export class LeverAdapter implements FeedAdapter {
       const response = await fetchFn(endpoint, {
         headers: {
           Accept: "application/json",
-          "User-Agent": "PulseCareerBot/1.0",
+          "User-Agent": "VanguardCareerBot/1.0",
         },
         signal: options?.abortSignal,
       });

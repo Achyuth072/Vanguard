@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { addJob } from "@/lib/data";
 import { generateText } from "ai";
 import { getModel } from "@/lib/ai";
 import { db } from "@/lib/db";

@@ -426,7 +426,7 @@ export async function parseResumeMarkdownWithAI(
     return parseResumeMarkdownToProfile("", candidateId);
   }
 
-  const system = `You are an expert technical resume parser and candidate profile extractor for Pulse.
+  const system = `You are an expert technical resume parser and candidate profile extractor for Vanguard.
 Extract structured candidate facts from the provided markdown resume.
 CRITICAL INVARIANTS:
 1. Ground all extractions strictly in the provided resume text. Never hallucinate skills, metrics, experiences, or project scopes not present in the markdown.

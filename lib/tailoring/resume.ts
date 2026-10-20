@@ -15,7 +15,7 @@ export async function tailorResume(
   job: JobContext,
   options?: AIRouterOptions
 ): Promise<TailoredResume> {
-  const system = `You are an expert career strategist and technical resume tailoring assistant for Pulse.
+  const system = `You are an expert career strategist and technical resume tailoring assistant for Vanguard.
 Your task is to tailor a candidate's resume and highlight their most relevant qualifications for a specific target job posting.
 
 CRITICAL ANTI-HALLUCINATION INVARIANTS:

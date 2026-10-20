@@ -118,7 +118,7 @@ export class IndeedRssAdapter implements FeedAdapter {
     const response = await fetchFn(targetUrl, {
       headers: {
         Accept: "application/rss+xml, application/xml, text/xml",
-        "User-Agent": "PulseCareerBot/1.0 (Indeed RSS Ingestion)",
+        "User-Agent": "VanguardCareerBot/1.0 (Indeed RSS Ingestion)",
       },
       signal: options?.abortSignal,
     });

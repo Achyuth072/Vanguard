@@ -81,12 +81,14 @@ export class WeWorkRemotelyAdapter implements FeedAdapter {
 
     const baseUrl = source.url && source.url.includes("weworkremotely.com")
       ? source.url
-      : "https://weworkremotely.com/categories/remote-programming-jobs.rss";
+      : config.categories?.[0]
+        ? `https://weworkremotely.com/categories/${config.categories[0]}.rss`
+        : "https://weworkremotely.com/categories/remote-programming-jobs.rss";
 
     const response = await fetchFn(baseUrl, {
       headers: {
         Accept: "application/rss+xml, application/xml, text/xml",
-        "User-Agent": "PulseCareerBot/1.0",
+        "User-Agent": "VanguardCareerBot/1.0",
       },
       signal: options?.abortSignal,
     });

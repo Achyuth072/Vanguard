@@ -101,5 +101,15 @@ describe("Ingest Navigation & Auto-Focus on Success", () => {
       content.includes('"nearest"') || content.includes("'nearest'"),
       "JobListTable should use block nearest for snappy localized scrolling"
     );
+
+    // UX polish: scroll-margin breathing room and click cursor stability
+    assert.ok(
+      content.includes("scrollMargin") || content.includes("scroll-my"),
+      "JobListTable rows should define scroll-margin to prevent clamping against the container rim"
+    );
+    assert.ok(
+      content.includes("isClickSelectionRef"),
+      "JobListTable should track click selection to avoid scrolling rows out from under user cursor"
+    );
   });
 });

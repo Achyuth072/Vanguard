@@ -29,6 +29,7 @@ export function JobListTable({
   const [sortMode, setSortMode] = useState<"relevance" | "score" | "recent">("relevance");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const selectedRowRef = useRef<HTMLDivElement | null>(null);
+  const isClickSelectionRef = useRef(false);
 
   // Extract distinct sources for the dropdown filter
   const sources = useMemo(() => {
@@ -68,8 +69,14 @@ export function JobListTable({
     return result;
   }, [jobs, searchQuery, sourceFilter, sortMode]);
 
-  // Auto-scroll selected row into view smoothly and snappily
+  // Auto-scroll selected row into view smoothly and snappily for keyboard nav & programmatic ingest
   useEffect(() => {
+    // If the user explicitly clicked the row, skip scroll adjustment to avoid moving the target under their cursor
+    if (isClickSelectionRef.current) {
+      isClickSelectionRef.current = false;
+      return;
+    }
+
     if (selectedJobId && selectedRowRef.current) {
       selectedRowRef.current.scrollIntoView?.({
         behavior: "smooth",
@@ -230,14 +237,18 @@ export function JobListTable({
                 ref={isSelected ? selectedRowRef : undefined}
                 role="button"
                 tabIndex={0}
-                onClick={() => onSelectJob(job)}
+                style={{ scrollMargin: "14px 0" }}
+                onClick={() => {
+                  isClickSelectionRef.current = true;
+                  onSelectJob(job);
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
                     onSelectJob(job);
                   }
                 }}
-                className={`w-full text-left p-3.5 transition-colors cursor-pointer flex items-start gap-3.5 select-none ${
+                className={`w-full text-left p-3.5 transition-colors cursor-pointer flex items-start gap-3.5 select-none scroll-my-3.5 ${
                   isSelected
                     ? "bg-[#1f222a] border-l-[3px] border-l-[#d4a745]"
                     : "bg-[#15171d] hover:bg-[#1b1e25] border-l-[3px] border-l-transparent"

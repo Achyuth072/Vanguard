@@ -54,7 +54,7 @@ export default function IngestModal({
   const [remoteStatus, setRemoteStatus] = useState<"AUTO" | "REMOTE" | "HYBRID" | "ONSITE">("AUTO");
   const [salaryMin, setSalaryMin] = useState("");
   const [salaryMax, setSalaryMax] = useState("");
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState("AUTO");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,12 +80,14 @@ export default function IngestModal({
     const minNum = salaryMin.trim() ? Number(salaryMin.trim()) : null;
     const maxNum = salaryMax.trim() ? Number(salaryMax.trim()) : null;
     let compStr = "Unspecified";
+    const currPrefix = currency === "AUTO" ? "" : `${currency} `;
+    const currSuffix = currency === "AUTO" ? " (Auto-detect)" : "";
     if (minNum !== null && maxNum !== null) {
-      compStr = `${currency} ${minNum.toLocaleString()} - ${maxNum.toLocaleString()}`;
+      compStr = `${currPrefix}${minNum.toLocaleString()} - ${maxNum.toLocaleString()}${currSuffix}`;
     } else if (minNum !== null) {
-      compStr = `From ${currency} ${minNum.toLocaleString()}`;
+      compStr = `From ${currPrefix}${minNum.toLocaleString()}${currSuffix}`;
     } else if (maxNum !== null) {
-      compStr = `Up to ${currency} ${maxNum.toLocaleString()}`;
+      compStr = `Up to ${currPrefix}${maxNum.toLocaleString()}${currSuffix}`;
     }
 
     const effectiveTitle = title.trim() || (mode === "paste" && rawText.trim() ? "AI Extracted Role" : "Role Title Required");
@@ -111,7 +113,7 @@ export default function IngestModal({
     setRemoteStatus("AUTO");
     setSalaryMin("");
     setSalaryMax("");
-    setCurrency("USD");
+    setCurrency("AUTO");
     setShowAdvanced(false);
     setResultMessage(null);
     setDroppedJobInfo(null);
@@ -162,7 +164,7 @@ export default function IngestModal({
         ...(remoteStatus !== "AUTO" ? { remoteStatus } : {}),
         ...(parsedSalaryMin !== null && !isNaN(parsedSalaryMin) ? { salaryMin: parsedSalaryMin } : {}),
         ...(parsedSalaryMax !== null && !isNaN(parsedSalaryMax) ? { salaryMax: parsedSalaryMax } : {}),
-        ...(currency ? { currency } : {}),
+        ...(currency && currency !== "AUTO" ? { currency } : {}),
       };
 
       const res = await ingestJob(payload);
@@ -560,6 +562,7 @@ export default function IngestModal({
                     onChange={(e) => setCurrency(e.target.value)}
                     className="flex h-9 w-full rounded-[2px] border border-[#2a2e38] bg-[#15171d] px-2 py-1 text-xs font-mono text-[#f4f2ec] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
                   >
+                    <option value="AUTO">Auto-detect from JD</option>
                     {SUPPORTED_CURRENCIES.map((c) => (
                       <option key={c.code} value={c.code}>
                         {c.label}
@@ -664,6 +667,7 @@ export default function IngestModal({
                         onChange={(e) => setCurrency(e.target.value)}
                         className="flex h-9 w-full rounded-[2px] border border-[#2a2e38] bg-[#15171d] px-2 py-1 text-xs font-mono text-[#f4f2ec] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
                       >
+                        <option value="AUTO">Auto-detect from JD</option>
                         {SUPPORTED_CURRENCIES.map((c) => (
                           <option key={c.code} value={c.code}>
                             {c.label}

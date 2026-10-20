@@ -157,7 +157,9 @@ export async function ingestJobPipeline(
   let remoteStatus = input.remoteStatus || "UNKNOWN";
   let salaryMin = input.salaryMin ?? null;
   let salaryMax = input.salaryMax ?? null;
-  let currency = input.currency || "INR";
+  const normalizedCurrency = input.currency?.trim().toUpperCase();
+  const explicitCurrency = normalizedCurrency && normalizedCurrency !== "AUTO" ? normalizedCurrency : null;
+  let currency = explicitCurrency || "INR";
   let employmentType = input.employmentType || "FULL_TIME";
   let description = input.description || rawContent;
   let requiredExperienceYears = input.requiredExperienceYears ?? null;
@@ -232,6 +234,7 @@ export async function ingestJobPipeline(
           remoteStatus === "UNKNOWN" ||
           salaryMin === null ||
           salaryMax === null ||
+          !explicitCurrency ||
           requiredExperienceYears === null)));
 
   if (needsExtraction) {
@@ -242,7 +245,7 @@ export async function ingestJobPipeline(
     remoteStatus = remoteStatus === "UNKNOWN" ? extracted.remoteStatus : remoteStatus;
     salaryMin = salaryMin ?? extracted.salaryMin ?? null;
     salaryMax = salaryMax ?? extracted.salaryMax ?? null;
-    currency = input.currency || extracted.currency || "INR";
+    currency = explicitCurrency || extracted.currency || "INR";
     employmentType =
       !input.employmentType || input.employmentType === "FULL_TIME"
         ? extracted.employmentType || employmentType

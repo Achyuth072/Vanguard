@@ -120,6 +120,30 @@ describe("Candidate Profile Drawer, Ingest Modals & Command Palette (Issue 06)",
       assert.ok(content.includes("overrideJobFilterAction"));
       assert.ok(content.includes("Rescue &amp; Move to Inbox") || content.includes("Rescue & Move to Inbox"));
     });
+
+    it("IngestModal defaults currency to AUTO with Auto-detect option and omits hardcoded USD payload", () => {
+      const content = fs.readFileSync(ingestModalPath, "utf-8");
+
+      // Defaults to AUTO
+      assert.ok(
+        content.includes('useState<string>("AUTO")') ||
+        content.includes('useState("AUTO")'),
+        "Currency state should default to AUTO"
+      );
+
+      // Has option for Auto-detect from JD
+      assert.ok(
+        content.includes('value="AUTO"') && content.includes("Auto-detect"),
+        "Currency dropdown should have an AUTO auto-detect option"
+      );
+
+      // Omits currency when AUTO in submission payload
+      assert.ok(
+        content.includes('currency !== "AUTO"') ||
+        content.includes('currency && currency !== "AUTO"'),
+        "Payload should only include currency override when not AUTO"
+      );
+    });
   });
 
   describe("GlobalCommandPalette Component Specification", () => {

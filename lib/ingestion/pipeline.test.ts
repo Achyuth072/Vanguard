@@ -778,4 +778,104 @@ describe("Ingestion Pipeline", () => {
     assert.strictEqual(result.fitScore?.score, 88);
     assert.strictEqual(scoringCallCount, 1, "Only AI scoring should be called (no extraction needed for pure manual entry)");
   });
+
+  it("preserves AI extracted currency (INR) when input currency is AUTO or undefined", async () => {
+    const mockDb = createMockDb();
+
+    const extractionResponse = {
+      title: "Senior Fullstack Engineer",
+      company: "Razorpay",
+      location: "Bengaluru, India",
+      remoteStatus: "HYBRID",
+      salaryMin: 2500000,
+      salaryMax: 3500000,
+      currency: "INR",
+      employmentType: "FULL_TIME",
+      description: "Fast-growing fintech platform.",
+      requiredExperienceYears: 4,
+      skills: ["Node.js", "TypeScript", "React"],
+    };
+
+    const scoringResponse = {
+      score: 87,
+      recommendation: "APPLY",
+      skillsFit: 88,
+      experienceFit: 86,
+      domainFit: 85,
+      trajectoryFit: 89,
+      strengths: ["Relevant fintech background"],
+      gaps: [],
+      risks: [],
+      reasoning: "Solid candidate match.",
+    };
+
+    let callCount = 0;
+    const mockModel: LanguageModel = {
+      specificationVersion: "v2",
+      provider: "test-mock-provider",
+      modelId: "test-mock-model",
+      supportedUrls: {},
+      async doGenerate() {
+        callCount++;
+        const output = callCount === 1 ? extractionResponse : scoringResponse;
+        return {
+          content: [{ type: "text", text: JSON.stringify(output) }],
+          finishReason: "stop",
+          usage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 },
+          rawCall: { rawPrompt: null, rawSettings: {} },
+          warnings: [],
+        };
+      },
+      async doStream() {
+        throw new Error("Stream not supported");
+      },
+    } as unknown as LanguageModel;
+
+    // Test with currency: "AUTO"
+    const resultAuto = await ingestJobPipeline(
+      {
+        rawText: "Razorpay is hiring a Senior Fullstack Engineer in Bengaluru, paying 25-35 LPA INR.",
+        currency: "AUTO",
+      },
+      {
+        prismaClient: mockDb as unknown as typeof db,
+        aiOptions: { primaryModel: mockModel },
+      }
+    );
+
+    assert.strictEqual(resultAuto.job.currency, "INR");
+    assert.strictEqual(resultAuto.job.salaryMin, 2500000);
+    assert.strictEqual(resultAuto.job.salaryMax, 3500000);
+
+    // Test with undefined currency (omitted)
+    const mockDbUndefined = createMockDb();
+    callCount = 0;
+    const resultUndefined = await ingestJobPipeline(
+      {
+        rawText: "Razorpay is hiring a Senior Fullstack Engineer in Bengaluru, paying 25-35 LPA INR.",
+      },
+      {
+        prismaClient: mockDbUndefined as unknown as typeof db,
+        aiOptions: { primaryModel: mockModel },
+      }
+    );
+
+    assert.strictEqual(resultUndefined.job.currency, "INR");
+
+    // Test with explicit currency override: "EUR" using fresh mockDb
+    const mockDbOverride = createMockDb();
+    callCount = 0;
+    const resultOverride = await ingestJobPipeline(
+      {
+        rawText: "Razorpay is hiring a Senior Fullstack Engineer in Bengaluru, paying 25-35 LPA INR.",
+        currency: "EUR",
+      },
+      {
+        prismaClient: mockDbOverride as unknown as typeof db,
+        aiOptions: { primaryModel: mockModel },
+      }
+    );
+
+    assert.strictEqual(resultOverride.job.currency, "EUR");
+  });
 });

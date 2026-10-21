@@ -78,6 +78,15 @@ interface WellfoundApiResponse {
   hasMore?: boolean;
 }
 
+function parseNumeric(val: unknown): number | null {
+  if (typeof val === "number") return val;
+  if (typeof val === "string") {
+    const parsed = parseFloat(val);
+    if (!isNaN(parsed)) return parsed;
+  }
+  return null;
+}
+
 export class WellfoundAdapter implements FeedAdapter {
   readonly sourceType = "WELLFOUND";
 
@@ -90,37 +99,67 @@ export class WellfoundAdapter implements FeedAdapter {
     _candidate?: unknown,
     options?: AdapterPollOptions
   ): Promise<FeedPollResult> {
-    const fetchFn = options?.fetchFn ?? fetch;
     const config = parseFeedSourceConfig(source.config);
-
-    const baseUrl = source.url && source.url.includes("wellfound.com")
-      ? source.url.replace(/\/+$/, "")
-      : "https://wellfound.com/api/v1/jobs";
-
-    const url = new URL(baseUrl);
+    const rawConfig = typeof source.config === "string" ? this.safeParseJson(source.config) : source.config;
     const limit = options?.limit ?? config.count ?? 50;
-    url.searchParams.set("limit", String(limit));
-
     const currentPage = source.lastCursor ? parseInt(source.lastCursor, 10) || 1 : 1;
-    url.searchParams.set("page", String(currentPage));
 
-    if (config.tags && config.tags.length > 0) {
-      url.searchParams.set("roles", config.tags.join(","));
+    // Injected session payload (CDP bridge / session cookie) takes precedence
+    const injectedPayload = (rawConfig as Record<string, unknown>)?.sessionPayload ||
+      (options as Record<string, unknown> | undefined)?.sessionPayload;
+
+    let payload: WellfoundApiResponse;
+
+    if (injectedPayload) {
+      payload = injectedPayload as WellfoundApiResponse;
+    } else {
+      const fetchFn = options?.fetchFn ?? fetch;
+      const baseUrl = source.url && source.url.includes("wellfound.com")
+        ? source.url.replace(/\/+$/, "")
+        : "https://wellfound.com/api/v1/jobs";
+
+      const url = new URL(baseUrl);
+      url.searchParams.set("limit", String(limit));
+      url.searchParams.set("page", String(currentPage));
+
+      if (config.tags && config.tags.length > 0) {
+        url.searchParams.set("roles", config.tags.join(","));
+      }
+
+      const response = await fetchFn(url.toString(), {
+        headers: {
+          Accept: "application/json",
+          "User-Agent": "VanguardCareerBot/1.0",
+        },
+        signal: options?.abortSignal,
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Wellfound API request failed (${response.status} ${response.statusText})${
+            response.status === 403 || response.status === 404
+              ? ": Wellfound requires an active browser session via Vanguard CDP bridge or session cookies to bypass Cloudflare protection."
+              : ""
+          }`
+        );
+      }
+
+      const contentType = response.headers?.get?.("content-type") || "";
+      if (contentType && !contentType.includes("json")) {
+        throw new Error(
+          "Wellfound returned a non-JSON challenge page (Cloudflare bot management). Use Vanguard CDP bridge session ingestion."
+        );
+      }
+
+      try {
+        payload = (await response.json()) as WellfoundApiResponse;
+      } catch (err) {
+        throw new Error(
+          `Wellfound response parsing failed: ${(err as Error).message}. Use Vanguard CDP bridge session ingestion.`
+        );
+      }
     }
 
-    const response = await fetchFn(url.toString(), {
-      headers: {
-        Accept: "application/json",
-        "User-Agent": "VanguardCareerBot/1.0",
-      },
-      signal: options?.abortSignal,
-    });
-
-    if (!response.ok) {
-      throw new Error(`Wellfound API request failed (${response.status} ${response.statusText})`);
-    }
-
-    const payload = (await response.json()) as WellfoundApiResponse;
     const rawItems = payload.results ?? payload.jobs ?? payload.listings ?? payload.data ?? (Array.isArray(payload) ? (payload as WellfoundJobItem[]) : []);
     const items = Array.isArray(rawItems) ? rawItems : [];
     const allJobs: RawFeedJob[] = [];
@@ -157,49 +196,22 @@ export class WellfoundAdapter implements FeedAdapter {
         location = item.company.location.trim();
       }
 
+      const workplaceOrLoc = `${item.workplace_type || ""} ${location}`;
       let remoteStatus: "REMOTE" | "HYBRID" | "ONSITE" | "UNKNOWN" = "REMOTE";
-      if (
-        item.is_remote === true ||
-        item.remote === true ||
-        /remote/i.test(item.workplace_type || location)
-      ) {
+      if (item.is_remote === true || item.remote === true || /remote/i.test(workplaceOrLoc)) {
         remoteStatus = "REMOTE";
-      } else if (/hybrid/i.test(item.workplace_type || location)) {
+      } else if (/hybrid/i.test(workplaceOrLoc)) {
         remoteStatus = "HYBRID";
-      } else if (/onsite|office|in-office/i.test(item.workplace_type || location)) {
+      } else if (/onsite|office|in-person/i.test(item.workplace_type || "") || (location !== "Remote" && !/remote/i.test(location))) {
         remoteStatus = "ONSITE";
       }
 
       const description = extractTextFromHtml(item.description || item.job_description || "");
 
-      let salaryMin: number | null = null;
-      let salaryMax: number | null = null;
-      let salaryCurrency = item.compensation?.currency || item.salary_currency || item.currency || null;
-
-      const rawMin =
-        item.compensation?.min_salary ??
-        item.compensation?.salary_min ??
-        item.min_salary ??
-        item.salary_min;
-      const rawMax =
-        item.compensation?.max_salary ??
-        item.compensation?.salary_max ??
-        item.max_salary ??
-        item.salary_max;
-
-      if (typeof rawMin === "number") {
-        salaryMin = rawMin;
-      } else if (typeof rawMin === "string") {
-        const parsed = parseFloat(rawMin);
-        if (!isNaN(parsed)) salaryMin = parsed;
-      }
-
-      if (typeof rawMax === "number") {
-        salaryMax = rawMax;
-      } else if (typeof rawMax === "string") {
-        const parsed = parseFloat(rawMax);
-        if (!isNaN(parsed)) salaryMax = parsed;
-      }
+      const comp = item.compensation;
+      let salaryMin = parseNumeric(item.salary_min ?? item.min_salary ?? comp?.salary_min ?? comp?.min_salary);
+      let salaryMax = parseNumeric(item.salary_max ?? item.max_salary ?? comp?.salary_max ?? comp?.max_salary);
+      let salaryCurrency = item.salary_currency ?? item.currency ?? comp?.currency ?? null;
 
       if (salaryMin === null && salaryMax === null) {
         const extracted = extractSalaryFromRawText(description);
@@ -210,23 +222,11 @@ export class WellfoundAdapter implements FeedAdapter {
         }
       }
 
-      // Equity parsing and metadata normalization
-      let equityString: string | undefined = undefined;
-      const comp = item.compensation;
-      if (comp?.equity_string) {
-        equityString = comp.equity_string;
-      } else if (item.equity_string) {
-        equityString = item.equity_string;
-      } else if (item.equity) {
-        equityString = item.equity;
-      } else if (comp?.equity_min !== undefined || comp?.equity_max !== undefined) {
-        const minEq = comp.equity_min ?? 0;
-        const maxEq = comp.equity_max ?? minEq;
-        equityString = `${minEq}% - ${maxEq}%`;
-      } else if (item.equity_min !== undefined || item.equity_max !== undefined) {
-        const minEq = item.equity_min ?? 0;
-        const maxEq = item.equity_max ?? minEq;
-        equityString = `${minEq}% - ${maxEq}%`;
+      let equity: string | null = item.equity ?? item.equity_string ?? comp?.equity_string ?? null;
+      if (!equity && item.equity_min !== undefined && item.equity_max !== undefined) {
+        equity = `${item.equity_min}% - ${item.equity_max}%`;
+      } else if (!equity && comp?.equity_min !== undefined && comp?.equity_max !== undefined) {
+        equity = `${comp.equity_min}% - ${comp.equity_max}%`;
       }
 
       const jobUrl = item.url || item.job_url || `https://wellfound.com/jobs/${rawId}`;
@@ -240,8 +240,9 @@ export class WellfoundAdapter implements FeedAdapter {
 
       const metadata: Record<string, unknown> = {};
       if (startupStage) metadata.startupStage = startupStage;
-      if (equityString) metadata.equity = equityString;
-      if (item.tags || item.skills) metadata.tags = item.tags || item.skills;
+      if (equity) metadata.equity = equity;
+      if (item.skills && Array.isArray(item.skills)) metadata.skills = item.skills;
+      if (item.tags && Array.isArray(item.tags)) metadata.tags = item.tags;
 
       allJobs.push({
         sourceExternalId: String(rawId),
@@ -267,5 +268,13 @@ export class WellfoundAdapter implements FeedAdapter {
       nextCursor,
       hasMore,
     };
+  }
+
+  private safeParseJson(str: string): Record<string, unknown> {
+    try {
+      return JSON.parse(str);
+    } catch {
+      return {};
+    }
   }
 }

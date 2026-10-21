@@ -14,6 +14,8 @@ import {
   WeWorkRemotelyAdapter,
   WellfoundAdapter,
   IndeedRssAdapter,
+  SmartRecruitersAdapter,
+  RemotiveAdapter,
   getFeedAdapter,
   getAllRegisteredAdapters,
 } from "./index";
@@ -60,13 +62,27 @@ function createMockFetch(fixtureMap: Record<string, unknown>): typeof fetch {
 
 describe("Deterministic Feed Adapters", () => {
   describe("Adapter Registry", () => {
-    it("registers and retrieves all 11 deterministic adapters", () => {
-      const types = ["ASHBY", "GREENHOUSE", "LEVER", "HIMALAYAS", "REMOTEOK", "JOBICY", "HN", "HIRINGCAFE", "WWR", "WELLFOUND", "INDEED"];
+    it("registers and retrieves all 13 deterministic adapters", () => {
+      const types = [
+        "ASHBY",
+        "GREENHOUSE",
+        "LEVER",
+        "HIMALAYAS",
+        "REMOTEOK",
+        "JOBICY",
+        "HN",
+        "HIRINGCAFE",
+        "WWR",
+        "WELLFOUND",
+        "INDEED",
+        "SMARTRECRUITERS",
+        "REMOTIVE",
+      ];
       for (const type of types) {
         const adapter = getFeedAdapter(type);
         assert.equal(adapter.sourceType, type);
       }
-      assert.equal(getAllRegisteredAdapters().length, 11);
+      assert.equal(getAllRegisteredAdapters().length, 13);
     });
 
     it("throws when requesting an unknown adapter type", () => {
@@ -538,7 +554,46 @@ describe("Deterministic Feed Adapters", () => {
 
   describe("HiringCafeAdapter", () => {
     const hiringcafeFixture = loadFixture("hiringcafe-response.json");
+    const hiringcafeMcpFixture = loadFixture("hiringcafe-mcp-response.json");
     const adapter = new HiringCafeAdapter();
+
+    it("parses live HiringCafe MCP search_jobs Markdown cards into RawFeedJob records", async () => {
+      const mockFetch = createMockFetch({ "hiring.cafe/api/mcp": hiringcafeMcpFixture });
+      const source: FeedSource = {
+        id: "fs-hiringcafe-mcp",
+        name: "HiringCafe",
+        type: "HIRINGCAFE",
+        url: "https://hiring.cafe/api/mcp",
+        config: JSON.stringify({ tags: ["frontend-developer"] }),
+        enabled: true,
+        autoPoll: false,
+        lastCursor: "",
+        pollIntervalMs: 21600000,
+        consecutiveEmpty: 0,
+        jobsDiscovered: 0,
+        jobsPassed: 0,
+        errorCount: 0,
+        lastError: "",
+      };
+
+      const result = await adapter.poll(source, undefined, { fetchFn: mockFetch });
+
+      assert.equal(result.jobs.length, 2);
+      assert.equal(result.jobs[0].sourceExternalId, "7hr2h8sbp1h87o2d");
+      assert.equal(result.jobs[0].title, "Frontend Developer");
+      assert.equal(result.jobs[0].company, "FastForward.ai");
+      assert.equal(result.jobs[0].location, "Mexico or Argentina");
+      assert.equal(result.jobs[0].remoteStatus, "ONSITE");
+
+      assert.equal(result.jobs[1].sourceExternalId, "nshobltxq25va79h");
+      assert.equal(result.jobs[1].title, "Senior Distributed Systems Engineer");
+      assert.equal(result.jobs[1].company, "Perena");
+      assert.equal(result.jobs[1].location, "United States or Europe");
+      assert.equal(result.jobs[1].remoteStatus, "REMOTE");
+      assert.equal(result.jobs[1].salaryMin, 180000);
+      assert.equal(result.jobs[1].salaryMax, 220000);
+      assert.equal(result.jobs[1].salaryCurrency, "USD");
+    });
 
     it("parses HiringCafe jobs, salary ranges, location, and advances page cursor", async () => {
       const mockFetch = createMockFetch({ "hiring.cafe/api/search": hiringcafeFixture });
@@ -724,6 +779,29 @@ describe("Deterministic Feed Adapters", () => {
       assert.equal(result.hasMore, true);
     });
 
+    it("ingests jobs directly from browser session payload without unauthenticated HTTP calls", async () => {
+      const source: FeedSource = {
+        id: "fs-wellfound-session",
+        name: "Wellfound",
+        type: "WELLFOUND",
+        url: "https://wellfound.com",
+        config: JSON.stringify({ sessionPayload: wellfoundFixture }),
+        enabled: true,
+        autoPoll: false,
+        lastCursor: "",
+        pollIntervalMs: 21600000,
+        consecutiveEmpty: 0,
+        jobsDiscovered: 0,
+        jobsPassed: 0,
+        errorCount: 0,
+        lastError: "",
+      };
+
+      const result = await adapter.poll(source, undefined);
+      assert.equal(result.jobs.length, 2);
+      assert.equal(result.jobs[0].title, "Lead Founding Engineer");
+    });
+
     it("throws descriptive error on HTTP failures", async () => {
       const mockFetch = (async () => ({
         ok: false,
@@ -828,6 +906,163 @@ describe("Deterministic Feed Adapters", () => {
       await assert.rejects(
         adapter.poll(source, undefined, { fetchFn: mockFetch }),
         /Indeed RSS feed request failed \(500 Internal Server Error\)/
+      );
+    });
+  });
+
+  describe("SmartRecruitersAdapter", () => {
+    const smartRecruitersFixture = loadFixture("smartrecruiters-response.json");
+    const adapter = new SmartRecruitersAdapter();
+
+    it("parses enterprise job postings, accurately setting ONSITE, HYBRID, and REMOTE from location flags", async () => {
+      const mockFetch = createMockFetch({ "api.smartrecruiters.com/v1/companies/BoschGroup/postings": smartRecruitersFixture });
+      const source: FeedSource = {
+        id: "fs-smartrecruiters",
+        name: "SmartRecruiters Enterprise",
+        type: "SMARTRECRUITERS",
+        url: "https://api.smartrecruiters.com/v1/companies",
+        config: JSON.stringify({ boardSlugs: ["BoschGroup"] }),
+        enabled: true,
+        autoPoll: false,
+        lastCursor: "",
+        pollIntervalMs: 14400000,
+        consecutiveEmpty: 0,
+        jobsDiscovered: 0,
+        jobsPassed: 0,
+        errorCount: 0,
+        lastError: "",
+      };
+
+      const result = await adapter.poll(source, undefined, { fetchFn: mockFetch });
+
+      assert.equal(result.jobs.length, 3);
+
+      // Job 1: Hybrid
+      const job1 = result.jobs[0];
+      assert.equal(job1.sourceExternalId, "sr-101");
+      assert.equal(job1.title, "Senior Embedded Software Engineer");
+      assert.equal(job1.company, "Bosch Group");
+      assert.equal(job1.location, "Stuttgart, Germany");
+      assert.equal(job1.remoteStatus, "HYBRID");
+      assert.equal(job1.url, "https://jobs.smartrecruiters.com/BoschGroup/sr-101");
+
+      // Job 2: Remote
+      const job2 = result.jobs[1];
+      assert.equal(job2.sourceExternalId, "sr-102");
+      assert.equal(job2.title, "Staff Cloud Platform Engineer");
+      assert.equal(job2.company, "Canonical");
+      assert.equal(job2.remoteStatus, "REMOTE");
+
+      // Job 3: Onsite
+      const job3 = result.jobs[2];
+      assert.equal(job3.sourceExternalId, "sr-103");
+      assert.equal(job3.title, "Site Reliability Engineer");
+      assert.equal(job3.company, "Visa");
+      assert.equal(job3.remoteStatus, "ONSITE");
+    });
+
+    it("handles multiple company slugs and skips 404 slugs gracefully", async () => {
+      const mockFetch = createMockFetch({
+        "companies/BoschGroup/postings": smartRecruitersFixture,
+      });
+
+      const source: FeedSource = {
+        id: "fs-smartrecruiters-multi",
+        name: "SmartRecruiters Enterprise",
+        type: "SMARTRECRUITERS",
+        url: "https://api.smartrecruiters.com/v1/companies",
+        config: JSON.stringify({ boardSlugs: ["BoschGroup", "non-existent-slug"] }),
+        enabled: true,
+        autoPoll: false,
+        lastCursor: "",
+        pollIntervalMs: 14400000,
+        consecutiveEmpty: 0,
+        jobsDiscovered: 0,
+        jobsPassed: 0,
+        errorCount: 0,
+        lastError: "",
+      };
+
+      const result = await adapter.poll(source, undefined, { fetchFn: mockFetch });
+      assert.equal(result.jobs.length, 3);
+    });
+  });
+
+  describe("RemotiveAdapter", () => {
+    const remotiveFixture = loadFixture("remotive-response.json");
+    const adapter = new RemotiveAdapter();
+
+    it("parses curated remote engineering roles, salary ranges, tags, and candidate location bounds", async () => {
+      const mockFetch = createMockFetch({ "remotive.com/api/remote-jobs": remotiveFixture });
+      const source: FeedSource = {
+        id: "fs-remotive",
+        name: "Remotive Tech",
+        type: "REMOTIVE",
+        url: "https://remotive.com/api/remote-jobs",
+        config: JSON.stringify({ categories: ["software-dev"] }),
+        enabled: true,
+        autoPoll: false,
+        lastCursor: "",
+        pollIntervalMs: 21600000,
+        consecutiveEmpty: 0,
+        jobsDiscovered: 0,
+        jobsPassed: 0,
+        errorCount: 0,
+        lastError: "",
+      };
+
+      const result = await adapter.poll(source, undefined, { fetchFn: mockFetch });
+
+      assert.equal(result.jobs.length, 2);
+
+      const job1 = result.jobs[0];
+      assert.equal(job1.sourceExternalId, "2091158");
+      assert.equal(job1.title, "Software Engineer, AI Coding Tasks");
+      assert.equal(job1.company, "Askable");
+      assert.equal(job1.location, "Worldwide");
+      assert.equal(job1.remoteStatus, "REMOTE");
+      assert.equal(job1.salaryMin, 120000);
+      assert.equal(job1.salaryMax, 160000);
+      assert.equal(job1.salaryCurrency, "USD");
+      assert.equal(job1.url, "https://remotive.com/remote-jobs/software-development/software-engineer-ai-coding-tasks-2091158");
+
+      const job2 = result.jobs[1];
+      assert.equal(job2.sourceExternalId, "2091159");
+      assert.equal(job2.title, "Senior Backend Engineer");
+      assert.equal(job2.company, "CloudScale");
+      assert.equal(job2.location, "USA Only");
+      assert.equal(job2.remoteStatus, "REMOTE");
+      assert.equal(job2.salaryMin, 160000);
+      assert.equal(job2.salaryMax, 200000);
+    });
+
+    it("throws descriptive error on HTTP failures", async () => {
+      const mockFetch = (async () => ({
+        ok: false,
+        status: 429,
+        statusText: "Too Many Requests",
+      })) as unknown as typeof fetch;
+
+      const source: FeedSource = {
+        id: "fs-remotive-err",
+        name: "Remotive",
+        type: "REMOTIVE",
+        url: "https://remotive.com/api/remote-jobs",
+        config: "{}",
+        enabled: true,
+        autoPoll: false,
+        lastCursor: "",
+        pollIntervalMs: 21600000,
+        consecutiveEmpty: 0,
+        jobsDiscovered: 0,
+        jobsPassed: 0,
+        errorCount: 0,
+        lastError: "",
+      };
+
+      await assert.rejects(
+        adapter.poll(source, undefined, { fetchFn: mockFetch }),
+        /Remotive API request failed \(429 Too Many Requests\)/
       );
     });
   });

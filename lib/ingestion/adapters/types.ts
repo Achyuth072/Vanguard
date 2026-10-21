@@ -15,6 +15,7 @@ export interface AdapterPollOptions {
   timeoutMs?: number;
   limit?: number;
   abortSignal?: AbortSignal;
+  boardSlugOverride?: string;
 }
 
 export interface FeedAdapter {

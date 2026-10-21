@@ -80,14 +80,14 @@ async function main() {
     }));
 
   if (sourcesToProbe.length === 0) {
-    console.error(`No baseline sources matched filter '${sourceType}'. Available: ASHBY, GREENHOUSE, LEVER, HIMALAYAS, REMOTEOK, JOBICY, HN, HIRINGCAFE, WWR, WELLFOUND, INDEED`);
+    console.error(`No baseline sources matched filter '${sourceType}'. Available: ASHBY, GREENHOUSE, LEVER, HIMALAYAS, REMOTEOK, JOBICY, HN, HIRINGCAFE, WWR, WELLFOUND, INDEED, SMARTRECRUITERS, REMOTIVE`);
     process.exit(1);
   }
 
   const results: FeedSourceProbeResult[] = [];
 
   for (const source of sourcesToProbe) {
-    process.stdout.write(`Probing ${source.name.padEnd(20)} [${source.type.padEnd(10)}] ... `);
+    process.stdout.write(`Probing ${source.name.padEnd(26)} [${source.type.padEnd(15)}] ... `);
     const res = await probeFeedSource(source, {
       sampleLimit: limit,
       timeoutMs,

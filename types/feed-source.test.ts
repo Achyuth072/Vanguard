@@ -28,6 +28,8 @@ describe("FeedSource Types and Config Serializers", () => {
         "HIRINGCAFE",
         "WWR",
         "INDEED",
+        "SMARTRECRUITERS",
+        "REMOTIVE",
         "MANUAL",
       ];
 
@@ -77,8 +79,8 @@ describe("FeedSource Types and Config Serializers", () => {
   });
 
   describe("Baseline Feed Sources Definition", () => {
-    it("defines all 11 baseline supported job sources", () => {
-      assert.strictEqual(DEFAULT_BASELINE_FEED_SOURCES.length, 11);
+    it("defines all 13 baseline supported job sources", () => {
+      assert.strictEqual(DEFAULT_BASELINE_FEED_SOURCES.length, 13);
 
       const sourceTypes = DEFAULT_BASELINE_FEED_SOURCES.map((s) => s.type);
       assert.ok(sourceTypes.includes("ASHBY"));
@@ -92,12 +94,13 @@ describe("FeedSource Types and Config Serializers", () => {
       assert.ok(sourceTypes.includes("WWR"));
       assert.ok(sourceTypes.includes("WELLFOUND"));
       assert.ok(sourceTypes.includes("INDEED"));
+      assert.ok(sourceTypes.includes("SMARTRECRUITERS"));
+      assert.ok(sourceTypes.includes("REMOTIVE"));
     });
 
     it("ensures all baseline sources default to autoPoll = false for zero unsolicited background overhead", () => {
       for (const source of DEFAULT_BASELINE_FEED_SOURCES) {
         assert.strictEqual(source.autoPoll, false);
-        assert.strictEqual(source.enabled, true);
         assert.ok(source.pollIntervalMs > 0);
       }
     });

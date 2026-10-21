@@ -13,6 +13,8 @@ export const FeedSourceTypeSchema = z.enum([
   "HIRINGCAFE",
   "WWR",
   "INDEED",
+  "SMARTRECRUITERS",
+  "REMOTIVE",
   "MANUAL",
 ]);
 
@@ -99,7 +101,7 @@ export const DEFAULT_BASELINE_FEED_SOURCES: BaselineFeedSourceDefinition[] = [
     type: "ASHBY",
     url: "https://api.ashbyhq.com/posting-api/job-board",
     config: {
-      boardSlugs: ["anthropic", "openai", "perplexity", "ramp", "replit", "cursor"],
+      boardSlugs: ["openai", "perplexity", "ramp", "replit", "cursor"],
     },
     enabled: true,
     autoPoll: false,
@@ -111,7 +113,7 @@ export const DEFAULT_BASELINE_FEED_SOURCES: BaselineFeedSourceDefinition[] = [
     type: "GREENHOUSE",
     url: "https://boards-api.greenhouse.io/v1/boards",
     config: {
-      boardSlugs: ["stripe", "figma", "vercel", "datadog", "airbnb", "uber", "coinbase"],
+      boardSlugs: ["stripe", "figma", "vercel", "datadog", "airbnb", "coinbase"],
     },
     enabled: true,
     autoPoll: false,
@@ -182,7 +184,7 @@ export const DEFAULT_BASELINE_FEED_SOURCES: BaselineFeedSourceDefinition[] = [
     id: "feed-source-hiringcafe",
     name: "HiringCafe",
     type: "HIRINGCAFE",
-    url: "https://hiring.cafe/api/search",
+    url: "https://hiring.cafe/api/mcp",
     config: {
       tags: ["software-engineer", "fullstack", "frontend", "backend"],
     },
@@ -221,6 +223,31 @@ export const DEFAULT_BASELINE_FEED_SOURCES: BaselineFeedSourceDefinition[] = [
     url: "https://www.indeed.com/rss?q=software+engineer&l=Remote",
     config: {
       categories: ["software-engineer", "remote"],
+    },
+    enabled: false,
+    autoPoll: false,
+    pollIntervalMs: 21600000, // 6 hours
+  },
+  {
+    id: "feed-source-smartrecruiters",
+    name: "SmartRecruiters Enterprise",
+    type: "SMARTRECRUITERS",
+    url: "https://api.smartrecruiters.com/v1/companies",
+    config: {
+      boardSlugs: ["BoschGroup", "Canonical"],
+    },
+    enabled: true,
+    autoPoll: false,
+    pollIntervalMs: 14400000, // 4 hours
+  },
+  {
+    id: "feed-source-remotive",
+    name: "Remotive Remote Tech",
+    type: "REMOTIVE",
+    url: "https://remotive.com/api/remote-jobs",
+    config: {
+      categories: ["software-dev"],
+      tags: ["software-engineer"],
     },
     enabled: true,
     autoPoll: false,

@@ -409,6 +409,8 @@ export function DiscoveryInbox({
     { value: "WWR", label: "We Work Remotely" },
     { value: "WELLFOUND", label: "Wellfound" },
     { value: "INDEED", label: "Indeed RSS" },
+    { value: "SMARTRECRUITERS", label: "SmartRecruiters" },
+    { value: "REMOTIVE", label: "Remotive" },
     { value: "YC", label: "YC" },
     { value: "MANUAL", label: "Manual / Paste" },
   ];

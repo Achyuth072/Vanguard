@@ -564,6 +564,8 @@ export function FeedSourcesManager({
                   <option value="WWR">We Work Remotely (RSS)</option>
                   <option value="WELLFOUND">Wellfound / AngelList (API / Feed)</option>
                   <option value="INDEED">Indeed (RSS)</option>
+                  <option value="SMARTRECRUITERS">SmartRecruiters (Company Boards)</option>
+                  <option value="REMOTIVE">Remotive (Remote API)</option>
                   <option value="MANUAL">Manual Ingestion</option>
                 </select>
               </div>

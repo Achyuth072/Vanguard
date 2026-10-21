@@ -11,6 +11,8 @@ import { HiringCafeAdapter } from "./hiringcafe";
 import { WeWorkRemotelyAdapter } from "./wwr";
 import { WellfoundAdapter } from "./wellfound";
 import { IndeedRssAdapter } from "./indeed";
+import { SmartRecruitersAdapter } from "./smartrecruiters";
+import { RemotiveAdapter } from "./remotive";
 
 export * from "./types";
 export * from "./ashby";
@@ -24,6 +26,8 @@ export * from "./hiringcafe";
 export * from "./wwr";
 export * from "./wellfound";
 export * from "./indeed";
+export * from "./smartrecruiters";
+export * from "./remotive";
 
 const ADAPTER_REGISTRY = new Map<string, FeedAdapter>([
   ["ASHBY", new AshbyAdapter()],
@@ -37,6 +41,8 @@ const ADAPTER_REGISTRY = new Map<string, FeedAdapter>([
   ["WWR", new WeWorkRemotelyAdapter()],
   ["WELLFOUND", new WellfoundAdapter()],
   ["INDEED", new IndeedRssAdapter()],
+  ["SMARTRECRUITERS", new SmartRecruitersAdapter()],
+  ["REMOTIVE", new RemotiveAdapter()],
 ]);
 
 export function getFeedAdapter(sourceType: FeedSourceType | string): FeedAdapter {

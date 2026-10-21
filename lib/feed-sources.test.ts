@@ -162,12 +162,12 @@ describe("FeedSource Database Extensions & Seed Helper", () => {
     await db.candidate.delete({ where: { id: candidateId } });
   });
 
-  it("idempotently seeds all 11 baseline feed sources via seedDefaultFeedSources", async () => {
+  it("idempotently seeds all 13 baseline feed sources via seedDefaultFeedSources", async () => {
     const firstRun = await seedDefaultFeedSources(db);
-    assert.strictEqual(firstRun.length, 11);
+    assert.strictEqual(firstRun.length, 13);
 
     const secondRun = await seedDefaultFeedSources(db);
-    assert.strictEqual(secondRun.length, 11);
+    assert.strictEqual(secondRun.length, 13);
 
     const allSources = await db.feedSource.findMany({
       where: {
@@ -177,7 +177,7 @@ describe("FeedSource Database Extensions & Seed Helper", () => {
       },
     });
 
-    assert.strictEqual(allSources.length, 11);
+    assert.strictEqual(allSources.length, 13);
     const types = allSources.map((s) => s.type);
     assert.ok(types.includes("ASHBY"));
     assert.ok(types.includes("GREENHOUSE"));
@@ -190,5 +190,7 @@ describe("FeedSource Database Extensions & Seed Helper", () => {
     assert.ok(types.includes("WWR"));
     assert.ok(types.includes("WELLFOUND"));
     assert.ok(types.includes("INDEED"));
+    assert.ok(types.includes("SMARTRECRUITERS"));
+    assert.ok(types.includes("REMOTIVE"));
   });
 });

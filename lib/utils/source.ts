@@ -43,6 +43,20 @@ export const SUPPORTED_SOURCES: SourceDefinition[] = [
     dotColorClass: "bg-indigo-400",
   },
   {
+    key: "SMARTRECRUITERS",
+    label: "SmartRecruiters",
+    badgeVariant: "emerald",
+    colorClass: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+    dotColorClass: "bg-emerald-400",
+  },
+  {
+    key: "REMOTIVE",
+    label: "Remotive",
+    badgeVariant: "amber",
+    colorClass: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+    dotColorClass: "bg-amber-400",
+  },
+  {
     key: "OTTA",
     label: "Otta",
     badgeVariant: "violet",
@@ -107,6 +121,9 @@ export function detectSourceFromUrl(url?: string | null): string | null {
   if (clean.includes("otta.com")) {
     return "OTTA";
   }
+  if (clean.includes("remotive.com")) {
+    return "REMOTIVE";
+  }
   if (
     clean.includes("greenhouse.io") ||
     clean.includes("lever.co") ||
@@ -154,6 +171,12 @@ export function normalizeSource(source?: string | null, url?: string | null): st
     }
     if (raw === "otta") {
       return "OTTA";
+    }
+    if (raw === "smartrecruiters") {
+      return "SMARTRECRUITERS";
+    }
+    if (raw === "remotive") {
+      return "REMOTIVE";
     }
     if (
       raw === "companysite" ||

@@ -45,7 +45,7 @@
 flowchart TD
     subgraph Discovery["1. Sourcing & Zero-Token Pre-Filtering"]
         direction LR
-        A["Raw Feeds & Portals<br/>(11 Adapters + URL)"] --> B["Zero-Token Pre-Filter<br/>(Salary, Geo, YOE, Stack)"] --> C["Discovery Staging<br/>(In-Memory Buffer)"]
+        A["Raw Feeds & Portals<br/>(13 Adapters + URL)"] --> B["Zero-Token Pre-Filter<br/>(Salary, Geo, YOE, Stack)"] --> C["Discovery Staging<br/>(In-Memory Buffer)"]
     end
 
     subgraph Evaluation["2. Hybrid Intelligence & Review"]
@@ -83,7 +83,7 @@ flowchart TD
 > [!NOTE]
 > Multi-source feed ingestion and third-party adapters are currently in active Beta testing and subject to ongoing edge-case hardening.
 
-- **11 Deterministic Feed Adapters**: Native scheduled and on-demand synchronization across Ashby, Greenhouse, Lever, HiringCafe, Wellfound, Himalayas, RemoteOK, Jobicy, We Work Remotely, Indeed RSS, and top-level Hacker News "Who is hiring?" posts (with conversational noise rejection and header parsing).
+- **13 Deterministic Feed Adapters**: Native scheduled and on-demand synchronization across Ashby, Greenhouse, Lever, HiringCafe, Wellfound, Himalayas, RemoteOK, Jobicy, We Work Remotely, Indeed RSS, SmartRecruiters, Remotive, and top-level Hacker News "Who is hiring?" posts (with conversational noise rejection and header parsing).
 - **Direct & URL Ingestion**: Ingest raw postings via manual paste or direct URL import with automatic compensation and currency normalization (LPA, symbols, multi-currency conversion).
 - **Dual-Mode Candidate Parser**: Import candidate resumes via deterministic Markdown AST parsing with structured AI fallback.
 - **Cross-Aggregator Clustering**: Computes a deterministic `dedupeKey` (company + title + URL tokens) and a cross-board `clusterKey` (company + title) to group duplicate listings across multiple job boards.
@@ -158,7 +158,7 @@ Vanguard evaluates candidate-job fit using a staged funnel that maximizes precis
 - **Styling**: Tailwind CSS v4, Lucide Icons, Radix UI Primitives
 - **Database & ORM**: SQLite (`pulse.db`), Prisma 7 with `@prisma/adapter-libsql`
 - **AI & LLM**: Vercel AI SDK (`ai`), `@ai-sdk/google` (Gemini), `@ai-sdk/openai` (NVIDIA NIM, Ollama Cloud, OpenRouter, Groq)
-- **Local ML & Embeddings**: `@huggingface/transformers` (Transformers.js v3, ONNX runtime, `Xenova/bge-small-en-v1.5`)
+- **Local ML & Embeddings**: `@huggingface/transformers` (Transformers.js v4, ONNX runtime, `Xenova/bge-small-en-v1.5`)
 - **Browser Automation**: Playwright (headed persistent contexts)
 - **Language & Runtime**: TypeScript 5, Node.js
 
@@ -251,9 +251,11 @@ Access Vanguard securely from iOS or Android without opening firewall ports:
 
 ## Quality & Verification
 
-Run type verification and the automated test suite:
+Run type verification, the automated test suite, and live feed source probe checks:
 
 ```bash
 npx tsc --noEmit
 npm test
+npm run test:sources        # Probe live feed adapter connectivity
+npm run test:sources:all    # Probe all adapters with live multi-post verification
 ```

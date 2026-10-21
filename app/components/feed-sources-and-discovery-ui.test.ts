@@ -167,6 +167,54 @@ describe("Feed Sources Management & Discovery Inbox UI (Issue 06)", () => {
       assert.ok(content.includes("Discovery Buffer Empty"));
       assert.ok(content.includes("Check for New Feed Jobs") || content.includes("Trigger a feed sync"));
     });
+
+    it("enforces WCAG AAA contrast tokens and surface hierarchy per .scratch/design-doc.md", () => {
+      const content = fs.readFileSync(discoveryInboxPath, "utf-8");
+
+      // High-contrast muted secondary text #c5c9d6 (7.6:1 AAA)
+      assert.ok(content.includes("#c5c9d6"), "Must use #c5c9d6 AAA token for secondary metadata");
+      // Elevated selection surface #1f222a and tactical active border
+      assert.ok(content.includes("bg-[#1f222a]"), "Selected card state should elevate to #1f222a");
+      assert.ok(content.includes("border-l-") || content.includes("border-l-[#d4a745]"), "Selected card should have tactical brass left border accent");
+    });
+
+    it("eliminates forbidden drop shadows and rounded-full button geometry per design philosophy", () => {
+      const content = fs.readFileSync(discoveryInboxPath, "utf-8");
+
+      assert.ok(!content.includes("shadow-sm") && !content.includes("shadow-md"), "No drop shadows allowed per design doc");
+      assert.ok(!content.includes("rounded-full bg-[#1f222a]"), "No rounded-full icon containers or panels");
+      assert.ok(!content.includes("rounded-full py-") && !content.includes("rounded-full px-"), "No rounded-full pill buttons");
+    });
+
+    it("enforces font size floor (>= 12px / text-xs) across all badges and controls", () => {
+      const content = fs.readFileSync(discoveryInboxPath, "utf-8");
+
+      // No sub-10px text
+      assert.ok(!content.includes("text-[8px]") && !content.includes("text-[9px]"), "No sub-10px micro-text");
+      // Badges and labels should use standard text-xs (12px)
+      assert.ok(content.includes("text-xs font-mono"), "Badges and labels must respect >= 12px font size floor");
+    });
+
+    it("guarantees responsive wrapping for scraped job descriptions, URLs, and titles", () => {
+      const content = fs.readFileSync(discoveryInboxPath, "utf-8");
+
+      assert.ok(
+        content.includes("break-words") || content.includes("[overflow-wrap:anywhere]"),
+        "Scraped job descriptions and titles must declare break-words/[overflow-wrap:anywhere] to prevent mobile overflow"
+      );
+    });
+
+    it("enforces accessible mobile touch targets (>= 44px min-h) and ARIA semantics", () => {
+      const content = fs.readFileSync(discoveryInboxPath, "utf-8");
+
+      assert.ok(
+        content.includes("min-h-11") || content.includes("min-h-[44px]"),
+        "Mobile buttons must maintain 44px minimum touch height on touch viewports"
+      );
+      assert.ok(content.includes('role="region"'), "Discovery container must define landmark role='region'");
+      assert.ok(content.includes('aria-label="Search staged discovery jobs'), "Search input must have explicit aria-label");
+      assert.ok(content.includes('aria-live="polite"'), "Status messages must announce via aria-live='polite'");
+    });
   });
 
   describe("Cockpit & Settings Navigation Integration", () => {

@@ -143,6 +143,18 @@ describe("Mobile UI Ergonomics & Tactical Cockpit Refinements", () => {
         "Discovery cards must adapt layout responsively on mobile"
       );
     });
+
+    it("prevents horizontal overflow when scraped job postings contain long text, URLs, or tokens", () => {
+      const content = fs.readFileSync(discoveryInboxPath, "utf-8");
+      assert.ok(
+        content.includes("break-words") && content.includes("[overflow-wrap:anywhere]"),
+        "Discovery description and title must declare break-words and [overflow-wrap:anywhere]"
+      );
+      assert.ok(
+        content.includes("min-h-11"),
+        "Discovery mobile action bar must use 44px min-h touch targets"
+      );
+    });
   });
 
   describe("Phase 6: Uniform Card Height, Mobile Space Reclamation & Desktop Overlay Guard", () => {

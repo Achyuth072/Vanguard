@@ -32,6 +32,27 @@ export interface DiscoveryInboxProps {
 
 // Estimated tokens consumed per AI fit scoring evaluation
 const TOKENS_PER_JOB_ESTIMATE = 800;
+const PAGE_SIZE = 20;
+
+// Unique sources in result list for dropdown filter
+const SOURCE_OPTIONS = [
+  { value: "ALL", label: "All Platforms" },
+  { value: "ASHBY", label: "Ashby" },
+  { value: "GREENHOUSE", label: "Greenhouse" },
+  { value: "LEVER", label: "Lever" },
+  { value: "HIMALAYAS", label: "Himalayas" },
+  { value: "REMOTEOK", label: "RemoteOK" },
+  { value: "JOBICY", label: "Jobicy" },
+  { value: "HN", label: "Hacker News" },
+  { value: "HIRINGCAFE", label: "HiringCafe" },
+  { value: "WWR", label: "We Work Remotely" },
+  { value: "WELLFOUND", label: "Wellfound" },
+  { value: "INDEED", label: "Indeed RSS" },
+  { value: "SMARTRECRUITERS", label: "SmartRecruiters" },
+  { value: "REMOTIVE", label: "Remotive" },
+  { value: "YC", label: "YC" },
+  { value: "MANUAL", label: "Manual / Paste" },
+];
 
 interface DiscoveryCacheEntry {
   jobs: DiscoveryJobItem[];
@@ -45,6 +66,17 @@ const discoveryCache = new Map<string, DiscoveryCacheEntry>();
 
 export function clearDiscoveryCache() {
   discoveryCache.clear();
+}
+
+function formatSalary(job: DiscoveryJobItem): string {
+  const symbol = job.currency || "$";
+  if (job.salaryMin && job.salaryMax) {
+    return `${symbol} ${job.salaryMin.toLocaleString()} - ${job.salaryMax.toLocaleString()}`;
+  }
+  if (job.salaryMin) {
+    return `${symbol} ${job.salaryMin.toLocaleString()}+`;
+  }
+  return `${symbol} Up to ${job.salaryMax?.toLocaleString()}`;
 }
 
 export function DiscoveryInbox({
@@ -116,84 +148,47 @@ export function DiscoveryInbox({
   }, [rawJobs, selectedSource, searchQuery, sortBy]);
 
   const [page, setPage] = useState<number>(1);
-  const pageSize = 20;
-  const totalPages = Math.max(1, Math.ceil(jobs.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(jobs.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const paginatedJobs = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return jobs.slice(start, start + pageSize);
-  }, [jobs, currentPage, pageSize]);
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return jobs.slice(start, start + PAGE_SIZE);
+  }, [jobs, currentPage]);
 
   const totalCount = jobs.length;
 
-  const fetchDiscoveryJobs = useCallback(
-    async (force = false) => {
-      if (!force && rawJobs.length > 0) {
-        return;
+  const fetchDiscoveryJobs = useCallback(async () => {
+    setIsFetching(true);
+    setError(null);
+    const currentSeq = ++querySeqRef.current;
+
+    try {
+      const res = await fetch("/api/discovery?limit=100");
+      const json = await res.json();
+
+      if (currentSeq !== querySeqRef.current) return;
+
+      if (json.success && json.data) {
+        setRawJobs(json.data.jobs || []);
+      } else {
+        throw new Error(json.error || "Failed to load discovery jobs");
       }
-
-      if (rawJobs.length === 0) {
-        setLoading(true);
-      }
-      setIsFetching(true);
-      setError(null);
-      const currentSeq = ++querySeqRef.current;
-
-      try {
-        const res = await fetch("/api/discovery?limit=100");
-        const json = await res.json();
-
-        if (currentSeq !== querySeqRef.current) return;
-
-        if (json.success && json.data) {
-          const newJobs: DiscoveryJobItem[] = json.data.jobs || [];
-          setRawJobs(newJobs);
-        } else {
-          throw new Error(json.error || "Failed to load discovery jobs");
-        }
-      } catch (err) {
-        if (currentSeq === querySeqRef.current) {
-          console.error("Error loading discovery jobs:", err);
-          setError(err instanceof Error ? err.message : "Error fetching discovery jobs");
-        }
-      } finally {
-        if (currentSeq === querySeqRef.current) {
-          setLoading(false);
-          setIsFetching(false);
-        }
-      }
-    },
-    [rawJobs.length]
-  );
-
-  useEffect(() => {
-    let active = true;
-    void (async () => {
-      try {
-        const res = await fetch("/api/discovery?limit=100");
-        const json = await res.json();
-        if (!active) return;
-        if (json.success && json.data) {
-          const newJobs: DiscoveryJobItem[] = json.data.jobs || [];
-          setRawJobs(newJobs);
-        } else {
-          throw new Error(json.error || "Failed to load discovery jobs");
-        }
-      } catch (err) {
-        if (!active) return;
+    } catch (err) {
+      if (currentSeq === querySeqRef.current) {
         console.error("Error loading discovery jobs:", err);
         setError(err instanceof Error ? err.message : "Error fetching discovery jobs");
-      } finally {
-        if (active) {
-          setLoading(false);
-          setIsFetching(false);
-        }
       }
-    })();
-    return () => {
-      active = false;
-    };
+    } finally {
+      if (currentSeq === querySeqRef.current) {
+        setLoading(false);
+        setIsFetching(false);
+      }
+    }
   }, []);
+
+  useEffect(() => {
+    fetchDiscoveryJobs();
+  }, [fetchDiscoveryJobs]);
 
   const [prevFilterKey, setPrevFilterKey] = useState(`${selectedSource}|${searchQuery}|${sortBy}`);
   const currentFilterKey = `${selectedSource}|${searchQuery}|${sortBy}`;
@@ -203,15 +198,15 @@ export function DiscoveryInbox({
     setSelectedJobIds(new Set());
   }
 
-  const showToast = (message: string, type: "success" | "error" | "info" = "success") => {
+  const showToast = useCallback((message: string, type: "success" | "error" | "info" = "success") => {
     setStatusNotification({ message, type });
     setTimeout(() => {
       setStatusNotification((prev) => (prev?.message === message ? null : prev));
     }, 4500);
-  };
+  }, []);
 
   // Toggle selection for a single job
-  const toggleSelectJob = (id: string) => {
+  const toggleSelectJob = useCallback((id: string) => {
     setSelectedJobIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -221,7 +216,7 @@ export function DiscoveryInbox({
       }
       return next;
     });
-  };
+  }, []);
 
   // Select all or deselect all visible jobs
   const handleSelectAllToggle = () => {
@@ -342,7 +337,7 @@ export function DiscoveryInbox({
           "success"
         );
         setSelectedJobIds(new Set());
-        fetchDiscoveryJobs(true);
+        fetchDiscoveryJobs();
         if (onJobIngested) onJobIngested();
       } else {
         throw new Error(json.error || "Batch ingestion failed");
@@ -377,7 +372,7 @@ export function DiscoveryInbox({
         const count = json.data?.dismissedCount ?? idsToDismiss.length;
         showToast(`Dismissed ${count} postings from buffer`, "info");
         setSelectedJobIds(new Set());
-        fetchDiscoveryJobs(true);
+        fetchDiscoveryJobs();
       } else {
         throw new Error(json.error || "Batch dismissal failed");
       }
@@ -391,34 +386,14 @@ export function DiscoveryInbox({
     }
   };
 
-  const estimatedTokens = useMemo(() => {
-    return selectedJobIds.size * TOKENS_PER_JOB_ESTIMATE;
-  }, [selectedJobIds.size]);
-
-  // Unique sources in result list for dropdown filter
-  const sourceOptions = [
-    { value: "ALL", label: "All Platforms" },
-    { value: "ASHBY", label: "Ashby" },
-    { value: "GREENHOUSE", label: "Greenhouse" },
-    { value: "LEVER", label: "Lever" },
-    { value: "HIMALAYAS", label: "Himalayas" },
-    { value: "REMOTEOK", label: "RemoteOK" },
-    { value: "JOBICY", label: "Jobicy" },
-    { value: "HN", label: "Hacker News" },
-    { value: "HIRINGCAFE", label: "HiringCafe" },
-    { value: "WWR", label: "We Work Remotely" },
-    { value: "WELLFOUND", label: "Wellfound" },
-    { value: "INDEED", label: "Indeed RSS" },
-    { value: "SMARTRECRUITERS", label: "SmartRecruiters" },
-    { value: "REMOTIVE", label: "Remotive" },
-    { value: "YC", label: "YC" },
-    { value: "MANUAL", label: "Manual / Paste" },
-  ];
+  const estimatedTokens = selectedJobIds.size * TOKENS_PER_JOB_ESTIMATE;
 
   return (
     <div
       className={`h-full flex flex-col bg-[#0d0e12] text-[#f4f2ec] font-sans ${className}`}
       data-testid="discovery-inbox-view"
+      role="region"
+      aria-label="Discovery Staging Buffer"
     >
       {/* Top Header & Telemetry Bar */}
       <div className="shrink-0 bg-[#15171d] border-b border-[#2a2e38] p-3 sm:p-4">
@@ -431,11 +406,11 @@ export function DiscoveryInbox({
               <h2 className="text-base sm:text-lg font-bold text-[#f4f2ec] tracking-tight truncate">
                 Discovery<span className="hidden sm:inline"> Staging</span> Inbox
               </h2>
-              <span className="px-2 py-0.5 rounded-[2px] text-[10px] uppercase font-mono font-bold tracking-widest bg-[#d4a745]/15 border border-[#d4a745]/40 text-[#d4a745] shrink-0 whitespace-nowrap">
+              <span className="px-2 py-0.5 rounded-[2px] text-xs uppercase font-mono font-bold tracking-widest bg-[#d4a745]/15 border border-[#d4a745]/40 text-[#d4a745] shrink-0 whitespace-nowrap tabular-nums">
                 {totalCount} PENDING
               </span>
             </div>
-            <p className="hidden sm:flex text-xs text-[#a6abbd] font-mono mt-1 items-center gap-2">
+            <p className="hidden sm:flex text-xs text-[#c5c9d6] font-mono mt-1 items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#8ab384] animate-pulse" />
               Pre-filtered feed opportunities awaiting on-demand AI Fit Scoring
             </p>
@@ -444,9 +419,10 @@ export function DiscoveryInbox({
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
-              onClick={() => fetchDiscoveryJobs(true)}
+              onClick={() => fetchDiscoveryJobs()}
               disabled={loading || isFetching}
-              className="px-2.5 sm:px-3 py-1.5 rounded-[2px] border border-[#2a2e38] bg-[#1f222a] hover:bg-[#2a2e38] text-[#f4f2ec] text-xs font-mono transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              aria-label="Refresh discovery staging buffer"
+              className="px-2.5 sm:px-3 py-1.5 min-h-11 sm:min-h-[36px] rounded-[2px] border border-[#2a2e38] bg-[#1f222a] hover:bg-[#2a2e38] text-[#f4f2ec] text-xs font-mono transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-[#d4a745]"
             >
               <RefreshCw className={`w-3.5 h-3.5 text-[#d4a745] ${(loading || isFetching) ? "animate-spin" : ""}`} />
               <span className="hidden sm:inline">Refresh</span>
@@ -456,7 +432,8 @@ export function DiscoveryInbox({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-2.5 sm:px-3 py-1.5 rounded-[2px] border border-[#2a2e38] bg-[#1f222a] hover:bg-[#2a2e38] text-[#a6abbd] hover:text-[#f4f2ec] text-xs font-mono transition-colors"
+                aria-label="Close discovery view"
+                className="px-2.5 sm:px-3 py-1.5 min-h-11 sm:min-h-[36px] rounded-[2px] border border-[#2a2e38] bg-[#1f222a] hover:bg-[#2a2e38] text-[#c5c9d6] hover:text-[#f4f2ec] text-xs font-mono transition-colors flex items-center justify-center focus-visible:outline-2 focus-visible:outline-[#d4a745]"
               >
                 Close
               </button>
@@ -468,19 +445,21 @@ export function DiscoveryInbox({
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 pt-3 mt-3 border-t border-[#2a2e38]">
           {/* Search input */}
           <div className="sm:col-span-6 relative">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-[#a6abbd]" />
+            <Search className="w-3.5 h-3.5 absolute left-3 top-3.5 text-[#c5c9d6]" />
             <input
               type="text"
+              aria-label="Search staged discovery jobs by role, company, or tech stack"
               placeholder="Search by role, company, or tech stack..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#0d0e12] border border-[#2a2e38] rounded-[2px] pl-9 pr-3 py-2 text-xs font-mono text-[#f4f2ec] placeholder-[#64697b] focus:border-[#d4a745] outline-none"
+              className="w-full min-h-11 sm:min-h-[36px] bg-[#0d0e12] border border-[#2a2e38] rounded-[2px] pl-9 pr-8 py-2 text-xs font-mono text-[#f4f2ec] placeholder-[#797f94] focus:border-[#d4a745] focus-visible:outline-2 focus-visible:outline-[#d4a745] outline-none"
             />
             {searchQuery && (
               <button
                 type="button"
+                aria-label="Clear search query"
                 onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-2.5 text-[#a6abbd] hover:text-[#f4f2ec]"
+                className="absolute right-2.5 top-3 min-h-[28px] min-w-[28px] flex items-center justify-center text-[#c5c9d6] hover:text-[#f4f2ec] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -490,11 +469,12 @@ export function DiscoveryInbox({
           {/* Source Platform Filter */}
           <div className="sm:col-span-3">
             <select
+              aria-label="Filter by source platform"
               value={selectedSource}
               onChange={(e) => setSelectedSource(e.target.value)}
-              className="w-full bg-[#0d0e12] border border-[#2a2e38] rounded-[2px] px-3 py-2 text-xs font-mono text-[#f4f2ec] focus:border-[#d4a745] outline-none"
+              className="w-full min-h-11 sm:min-h-[36px] bg-[#0d0e12] border border-[#2a2e38] rounded-[2px] px-3 py-2 text-xs font-mono text-[#f4f2ec] focus:border-[#d4a745] focus-visible:outline-2 focus-visible:outline-[#d4a745] outline-none"
             >
-              {sourceOptions.map((opt) => (
+              {SOURCE_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
@@ -505,9 +485,10 @@ export function DiscoveryInbox({
           {/* Sort Selector */}
           <div className="sm:col-span-3">
             <select
+              aria-label="Sort staged discovery jobs"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="w-full bg-[#0d0e12] border border-[#2a2e38] rounded-[2px] px-3 py-2 text-xs font-mono text-[#f4f2ec] focus:border-[#d4a745] outline-none"
+              className="w-full min-h-11 sm:min-h-[36px] bg-[#0d0e12] border border-[#2a2e38] rounded-[2px] px-3 py-2 text-xs font-mono text-[#f4f2ec] focus:border-[#d4a745] focus-visible:outline-2 focus-visible:outline-[#d4a745] outline-none"
             >
               <option value="discoveredAt:desc">Newest Discovered</option>
               <option value="postedAt:desc">Original Post Date</option>
@@ -524,15 +505,15 @@ export function DiscoveryInbox({
               <button
                 type="button"
                 onClick={handleSelectAllToggle}
-                className="flex items-center gap-1.5 text-[#d4a745] hover:underline font-bold"
+                className="min-h-11 sm:min-h-0 flex items-center gap-1.5 text-[#d4a745] hover:underline font-bold cursor-pointer focus-visible:outline-2 focus-visible:outline-[#d4a745]"
               >
                 <CheckSquare className="w-3.5 h-3.5" />
-                <span>{selectedJobIds.size} SELECTED</span>
+                <span className="tabular-nums">{selectedJobIds.size} SELECTED</span>
               </button>
-              <span className="text-[#64697b]">|</span>
+              <span className="text-[#3d4352]">|</span>
               {/* Token Usage Badge Preview */}
-              <span className="px-2 py-0.5 rounded-[2px] bg-[#d4a745]/15 border border-[#d4a745]/30 text-[#d4a745] text-[11px] font-mono flex items-center gap-1">
-                <Coins className="w-3 h-3 text-[#d4a745]" />
+              <span className="px-2 py-0.5 rounded-[2px] bg-[#d4a745]/15 border border-[#d4a745]/30 text-[#d4a745] text-xs font-mono flex items-center gap-1 tabular-nums">
+                <Coins className="w-3.5 h-3.5 text-[#d4a745]" />
                 ~{estimatedTokens.toLocaleString()} est. tokens
               </span>
             </div>
@@ -542,20 +523,20 @@ export function DiscoveryInbox({
                 type="button"
                 onClick={handleBatchDismiss}
                 disabled={batchDismissing || batchScoring}
-                className="flex-1 sm:flex-none justify-center px-3 py-1.5 min-h-[36px] rounded-[2px] border border-[#c4634e]/40 bg-[#c4634e]/10 hover:bg-[#c4634e]/20 text-[#c4634e] text-xs font-mono transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                className="flex-1 sm:flex-none justify-center px-3 py-1.5 min-h-11 sm:min-h-[36px] rounded-[2px] border border-[#c4634e]/40 bg-[#c4634e]/10 hover:bg-[#c4634e]/20 text-[#c4634e] text-xs font-mono transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-[#c4634e]"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>{batchDismissing ? "Dismissing..." : `Dismiss (${selectedJobIds.size})`}</span>
+                <span className="tabular-nums">{batchDismissing ? "Dismissing..." : `Dismiss (${selectedJobIds.size})`}</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleBatchScore}
                 disabled={batchScoring || batchDismissing}
-                className="flex-1 sm:flex-none justify-center px-3.5 py-1.5 min-h-[36px] rounded-[2px] bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] text-xs font-bold font-mono uppercase tracking-wider transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50 shadow-sm"
+                className="flex-1 sm:flex-none justify-center px-3.5 py-1.5 min-h-11 sm:min-h-[36px] rounded-[2px] bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] text-xs font-bold font-mono uppercase tracking-wider transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-[#d4a745]"
               >
                 <Sparkles className={`w-3.5 h-3.5 ${batchScoring ? "animate-spin" : ""}`} />
-                <span>{batchScoring ? "AI Scoring..." : `Score (${selectedJobIds.size})`}</span>
+                <span className="tabular-nums">{batchScoring ? "AI Scoring..." : `Score (${selectedJobIds.size})`}</span>
               </button>
             </div>
           </div>
@@ -565,6 +546,8 @@ export function DiscoveryInbox({
       {/* Status notification toast */}
       {statusNotification && (
         <div
+          role="status"
+          aria-live="polite"
           className={`m-3 p-3 rounded-[2px] border text-xs font-mono flex items-center justify-between transition-all shrink-0 ${
             statusNotification.type === "success"
               ? "bg-[#8ab384]/15 border-[#8ab384]/40 text-[#8ab384]"
@@ -580,8 +563,9 @@ export function DiscoveryInbox({
           </div>
           <button
             type="button"
+            aria-label="Dismiss notification"
             onClick={() => setStatusNotification(null)}
-            className="text-current opacity-70 hover:opacity-100"
+            className="text-current opacity-70 hover:opacity-100 min-h-[24px] min-w-[24px] flex items-center justify-center focus-visible:outline-2 focus-visible:outline-[#d4a745]"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -590,7 +574,11 @@ export function DiscoveryInbox({
 
       {/* Top Background Ingest/Fetch Bar */}
       {isFetching && (
-        <div className="h-0.5 w-full bg-[#1f222a] overflow-hidden shrink-0">
+        <div
+          role="status"
+          aria-label="Syncing discovery feed jobs"
+          className="h-0.5 w-full bg-[#1f222a] overflow-hidden shrink-0"
+        >
           <div className="h-full bg-[#d4a745] animate-pulse w-full" />
         </div>
       )}
@@ -598,7 +586,7 @@ export function DiscoveryInbox({
       {/* Main Staged Job Card Feed */}
       <div className={`flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-3 transition-opacity ${isFetching ? "opacity-80" : "opacity-100"}`}>
         {loading && jobs.length === 0 ? (
-          <div className="h-64 flex flex-col items-center justify-center text-xs font-mono text-[#a6abbd] gap-2">
+          <div className="h-64 flex flex-col items-center justify-center text-xs font-mono text-[#c5c9d6] gap-2">
             <RefreshCw className="w-5 h-5 animate-spin text-[#d4a745]" />
             <span>Scanning discovery buffer &amp; evaluating match criteria...</span>
           </div>
@@ -610,21 +598,21 @@ export function DiscoveryInbox({
         ) : jobs.length === 0 ? (
           /* Clean Empty Buffer State */
           <div className="h-96 flex flex-col items-center justify-center text-center p-8 bg-[#15171d] border border-[#2a2e38] rounded-[3px] space-y-3">
-            <div className="p-3 rounded-full bg-[#1f222a] border border-[#2a2e38] text-[#d4a745]">
+            <div className="p-3 rounded-[3px] bg-[#1f222a] border border-[#2a2e38] text-[#d4a745]">
               <Layers className="w-6 h-6" />
             </div>
             <div className="space-y-1">
               <h3 className="text-sm font-bold text-[#f4f2ec] uppercase tracking-wider font-mono">
                 Discovery Buffer Empty
               </h3>
-              <p className="text-xs text-[#a6abbd] max-w-md font-mono">
+              <p className="text-xs text-[#c5c9d6] max-w-md font-mono">
                 No staged job postings pending evaluation in this view. Trigger a feed sync from Settings or adjust search filters.
               </p>
             </div>
             <button
               type="button"
-              onClick={() => fetchDiscoveryJobs(true)}
-              className="mt-2 px-3.5 py-1.5 bg-[#1f222a] hover:bg-[#2a2e38] border border-[#2a2e38] text-[#f4f2ec] text-xs font-mono rounded-[2px] transition-colors flex items-center gap-1.5 cursor-pointer"
+              onClick={() => fetchDiscoveryJobs()}
+              className="mt-2 px-3.5 py-1.5 min-h-11 sm:min-h-[36px] bg-[#1f222a] hover:bg-[#2a2e38] border border-[#2a2e38] text-[#f4f2ec] text-xs font-mono rounded-[2px] transition-colors flex items-center justify-center gap-1.5 cursor-pointer focus-visible:outline-2 focus-visible:outline-[#d4a745]"
             >
               <RefreshCw className="w-3.5 h-3.5 text-[#d4a745]" />
               <span>Check for New Feed Jobs</span>
@@ -644,7 +632,7 @@ export function DiscoveryInbox({
                 data-testid={`discovery-card-${job.id}`}
                 className={`bg-[#15171d] border rounded-[3px] p-3.5 sm:p-4 transition-all ${
                   isSelected
-                    ? "border-[#d4a745]/60 bg-[#171922]"
+                    ? "border-[#d4a745]/60 bg-[#1f222a] border-l-[3px] border-l-[#d4a745]"
                     : "border-[#2a2e38] hover:border-[#3d4352]"
                 }`}
               >
@@ -654,7 +642,7 @@ export function DiscoveryInbox({
                     type="button"
                     aria-label={`Select ${job.title} at ${job.company}`}
                     onClick={() => toggleSelectJob(job.id)}
-                    className="pt-0.5 text-[#a6abbd] hover:text-[#d4a745] transition-colors shrink-0"
+                    className="min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 flex items-center justify-center -ml-2 -mt-2 sm:ml-0 sm:mt-0 text-[#c5c9d6] hover:text-[#d4a745] transition-colors shrink-0 focus-visible:outline-2 focus-visible:outline-[#d4a745]"
                   >
                     {isSelected ? (
                       <CheckSquare className="w-4 h-4 text-[#d4a745]" />
@@ -666,24 +654,24 @@ export function DiscoveryInbox({
                   {/* Main Job Information */}
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className="text-sm font-bold text-[#f4f2ec] tracking-tight">
+                      <div className="flex items-center gap-2 flex-wrap min-w-0">
+                        <h4 className="text-sm font-bold text-[#f4f2ec] tracking-tight break-words [overflow-wrap:anywhere]">
                           {job.title}
                         </h4>
-                        <span className="text-xs text-[#a6abbd] font-semibold flex items-center gap-1 font-mono">
-                          <Building2 className="w-3 h-3 text-[#d4a745]" />
+                        <span className="text-xs text-[#c5c9d6] font-semibold flex items-center gap-1 font-mono break-words">
+                          <Building2 className="w-3.5 h-3.5 text-[#d4a745] shrink-0" />
                           <span>{job.company}</span>
                         </span>
                       </div>
 
                       {/* Discovered timestamp badge */}
-                      <span className="text-[11px] font-mono text-[#a6abbd] shrink-0">
+                      <span className="text-xs font-mono text-[#c5c9d6] shrink-0 tabular-nums">
                         Discovered {new Date(job.discoveredAt).toLocaleDateString()}
                       </span>
                     </div>
 
                     {/* Metadata Badges Strip */}
-                    <div className="flex flex-wrap items-center gap-2 mt-2 font-mono text-[11px]">
+                    <div className="flex flex-wrap items-center gap-2 mt-2 font-mono text-xs">
                       {/* Platform / Adapter source badge */}
                       <span className="px-1.5 py-0.5 rounded-[2px] bg-[#1f222a] border border-[#2a2e38] text-[#d4a745] font-bold uppercase tracking-wider">
                         {job.source || "UNKNOWN"}
@@ -692,56 +680,56 @@ export function DiscoveryInbox({
                       {/* Remote Status Badge */}
                       {job.remoteStatus && (
                         <span className="px-1.5 py-0.5 rounded-[2px] bg-[#1f222a] border border-[#2a2e38] text-[#8ab384] flex items-center gap-1">
-                          <Globe className="w-3 h-3" />
+                          <Globe className="w-3.5 h-3.5" />
                           <span>{job.remoteStatus}</span>
                         </span>
                       )}
 
                       {/* Location Badge */}
                       {job.location && (
-                        <span className="px-1.5 py-0.5 rounded-[2px] bg-[#1f222a] border border-[#2a2e38] text-[#a6abbd] flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
-                          <span className="truncate max-w-[160px]">{job.location}</span>
+                        <span className="px-1.5 py-0.5 rounded-[2px] bg-[#1f222a] border border-[#2a2e38] text-[#c5c9d6] flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5" />
+                          <span className="truncate max-w-[200px]">{job.location}</span>
                         </span>
                       )}
 
                       {/* Salary / Comp Badge */}
                       {(job.salaryMin || job.salaryMax) && (
-                        <span className="px-1.5 py-0.5 rounded-[2px] bg-[#1f222a] border border-[#2a2e38] text-[#d4a745] flex items-center gap-1">
-                          <DollarSign className="w-3 h-3" />
-                          <span>
-                            {job.salaryMin && job.salaryMax
-                              ? `${job.currency || "$"} ${job.salaryMin.toLocaleString()} - ${job.salaryMax.toLocaleString()}`
-                              : job.salaryMin
-                              ? `${job.currency || "$"} ${job.salaryMin.toLocaleString()}+`
-                              : `${job.currency || "$"} Up to ${job.salaryMax?.toLocaleString()}`}
-                          </span>
+                        <span className="px-1.5 py-0.5 rounded-[2px] bg-[#1f222a] border border-[#2a2e38] text-[#d4a745] flex items-center gap-1 tabular-nums">
+                          <DollarSign className="w-3.5 h-3.5" />
+                          <span>{formatSalary(job)}</span>
                         </span>
                       )}
 
-                      {/* Deterministic Pre-filter Badges */}
+                      {/* Deterministic Pre-filter Badges (deduplicating source) */}
                       {job.matchBadges &&
-                        job.matchBadges.map((badge, bIdx) => (
-                          <span
-                            key={bIdx}
-                            className={`px-1.5 py-0.5 rounded-[2px] border text-[10px] font-bold flex items-center gap-1 ${
-                              badge.matched
-                                ? "bg-[#8ab384]/15 border-[#8ab384]/30 text-[#8ab384]"
-                                : "bg-[#c4634e]/15 border-[#c4634e]/30 text-[#c4634e]"
-                            }`}
-                          >
-                            <Check className="w-2.5 h-2.5" />
-                            <span>{badge.label}</span>
-                          </span>
-                        ))}
+                        job.matchBadges
+                          .filter((badge) => badge.type !== "source")
+                          .map((badge, bIdx) => (
+                            <span
+                              key={bIdx}
+                              className={`px-1.5 py-0.5 rounded-[2px] border text-xs font-bold flex items-center gap-1 ${
+                                badge.matched
+                                  ? "bg-[#8ab384]/15 border-[#8ab384]/30 text-[#8ab384]"
+                                  : "bg-[#c4634e]/15 border-[#c4634e]/30 text-[#c4634e]"
+                              }`}
+                            >
+                              {badge.matched ? (
+                                <Check className="w-3 h-3" />
+                              ) : (
+                                <X className="w-3 h-3" />
+                              )}
+                              <span>{badge.label}</span>
+                            </span>
+                          ))}
                     </div>
 
                     {/* Collapsible snippet / full job description view */}
                     {job.description && (
-                      <div className="mt-2.5 font-mono text-xs text-[#a6abbd] bg-[#0d0e12] p-2.5 rounded-[2px] border border-[#2a2e38]">
+                      <div className="mt-2.5 font-mono text-xs text-[#c5c9d6] bg-[#0d0e12] p-2.5 rounded-[2px] border border-[#2a2e38]">
                         <div
-                          className={`leading-relaxed whitespace-pre-wrap ${
-                            isExpanded ? "" : "line-clamp-2"
+                          className={`leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere] ${
+                            isExpanded ? "max-h-[480px] overflow-y-auto" : "line-clamp-2"
                           }`}
                         >
                           {job.description}
@@ -752,13 +740,13 @@ export function DiscoveryInbox({
                             onClick={() =>
                               setExpandedJobId(isExpanded ? null : job.id)
                             }
-                            className="mt-1 text-[11px] text-[#d4a745] hover:underline flex items-center gap-0.5 cursor-pointer font-bold"
+                            className="mt-1.5 text-xs text-[#d4a745] hover:underline flex items-center gap-1 cursor-pointer font-bold py-1 min-h-[32px] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
                           >
                             <span>{isExpanded ? "Collapse preview" : "Expand full listing preview"}</span>
                             {isExpanded ? (
-                              <ChevronUp className="w-3 h-3" />
+                              <ChevronUp className="w-3.5 h-3.5" />
                             ) : (
-                              <ChevronDown className="w-3 h-3" />
+                              <ChevronDown className="w-3.5 h-3.5" />
                             )}
                           </button>
                         )}
@@ -775,7 +763,7 @@ export function DiscoveryInbox({
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label="Open original job posting in new tab"
-                        className="p-1.5 rounded-[2px] border border-[#2a2e38] bg-[#1f222a] hover:bg-[#2a2e38] text-[#a6abbd] hover:text-[#f4f2ec] transition-colors"
+                        className="p-1.5 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-[2px] border border-[#2a2e38] bg-[#1f222a] hover:bg-[#2a2e38] text-[#c5c9d6] hover:text-[#f4f2ec] transition-colors focus-visible:outline-2 focus-visible:outline-[#d4a745]"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
                       </a>
@@ -787,7 +775,7 @@ export function DiscoveryInbox({
                       aria-label="Dismiss job from staging inbox"
                       onClick={() => handleDismissSingleJob(job)}
                       disabled={isDismissing || isScoring}
-                      className="px-2.5 py-1.5 rounded-[2px] border border-[#c4634e]/40 bg-[#c4634e]/10 hover:bg-[#c4634e]/20 text-[#c4634e] text-xs font-mono transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                      className="px-2.5 py-1.5 min-h-[36px] rounded-[2px] border border-[#c4634e]/40 bg-[#c4634e]/10 hover:bg-[#c4634e]/20 text-[#c4634e] text-xs font-mono transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-[#c4634e]"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>
@@ -801,7 +789,7 @@ export function DiscoveryInbox({
                       aria-label="Trigger AI scoring and promote to Priority Inbox"
                       onClick={() => handleScoreSingleJob(job)}
                       disabled={isScoring || isDismissing}
-                      className="px-3 py-1.5 rounded-[2px] bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] text-xs font-bold font-mono uppercase tracking-wider transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm"
+                      className="px-3 py-1.5 min-h-[36px] rounded-[2px] bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] text-xs font-bold font-mono uppercase tracking-wider transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-[#d4a745]"
                     >
                       <Sparkles className={`w-3.5 h-3.5 ${isScoring ? "animate-spin" : ""}`} />
                       <span>{isScoring ? "Scoring..." : "Score with AI"}</span>
@@ -818,9 +806,9 @@ export function DiscoveryInbox({
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label="Open original job posting in new tab"
-                        className="p-2 min-h-[36px] min-w-[36px] rounded-[2px] border border-[#2a2e38] bg-[#1f222a] text-[#a6abbd] hover:text-[#f4f2ec] transition-colors flex items-center justify-center focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                        className="p-2 min-h-11 min-w-11 rounded-[2px] border border-[#2a2e38] bg-[#1f222a] text-[#c5c9d6] hover:text-[#f4f2ec] transition-colors flex items-center justify-center focus-visible:outline-2 focus-visible:outline-[#d4a745]"
                       >
-                        <ExternalLink className="w-3.5 h-3.5" />
+                        <ExternalLink className="w-4 h-4" />
                       </a>
                     )}
                     <button
@@ -828,9 +816,9 @@ export function DiscoveryInbox({
                       aria-label="Dismiss job from staging inbox"
                       onClick={() => handleDismissSingleJob(job)}
                       disabled={isDismissing || isScoring}
-                      className="px-2.5 py-1.5 min-h-[36px] rounded-[2px] border border-[#c4634e]/40 bg-[#c4634e]/10 text-[#c4634e] text-xs font-mono transition-colors flex items-center gap-1.5 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-[#c4634e]"
+                      className="px-3 py-2 min-h-11 rounded-[2px] border border-[#c4634e]/40 bg-[#c4634e]/10 text-[#c4634e] text-xs font-mono transition-colors flex items-center gap-1.5 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-[#c4634e]"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-4 h-4" />
                       <span>{isDismissing ? "Dismissing..." : "Dismiss"}</span>
                     </button>
                   </div>
@@ -840,9 +828,9 @@ export function DiscoveryInbox({
                     aria-label="Score job fit with AI and move to priority inbox"
                     onClick={() => handleScoreSingleJob(job)}
                     disabled={isScoring || isDismissing}
-                    className="px-3 py-1.5 min-h-[36px] rounded-[2px] bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] text-xs font-bold font-mono uppercase tracking-wider transition-colors flex items-center gap-1.5 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                    className="px-4 py-2 min-h-11 rounded-[2px] bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] text-xs font-bold font-mono uppercase tracking-wider transition-colors flex items-center gap-1.5 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-[#d4a745]"
                   >
-                    <Sparkles className={`w-3.5 h-3.5 ${isScoring ? "animate-spin" : ""}`} />
+                    <Sparkles className={`w-4 h-4 ${isScoring ? "animate-spin" : ""}`} />
                     <span>{isScoring ? "Scoring..." : "+ Ingest"}</span>
                   </button>
                 </div>
@@ -854,12 +842,12 @@ export function DiscoveryInbox({
 
       {/* Pagination Footer */}
       {totalPages > 1 && (
-        <div className="shrink-0 bg-[#15171d] border-t border-[#2a2e38] p-3 flex items-center justify-between font-mono text-xs text-[#a6abbd]">
-          <div>
-            Page {currentPage} of {totalPages} ({totalCount} total opportunities)
+        <div className="shrink-0 bg-[#15171d] border-t border-[#2a2e38] p-3 flex flex-col sm:flex-row items-center justify-between gap-2 font-mono text-xs text-[#c5c9d6]">
+          <div className="tabular-nums">
+            Page {currentPage} of {totalPages} <span className="hidden sm:inline">({totalCount} total opportunities)</span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
             <button
               type="button"
               disabled={currentPage <= 1 || loading}
@@ -867,7 +855,7 @@ export function DiscoveryInbox({
                 const prev = Math.max(1, currentPage - 1);
                 setPage(prev);
               }}
-              className="px-3 py-1 rounded-[2px] border border-[#2a2e38] bg-[#1f222a] hover:bg-[#2a2e38] text-[#f4f2ec] disabled:opacity-40 cursor-pointer"
+              className="flex-1 sm:flex-none justify-center px-3 py-1.5 min-h-11 sm:min-h-[32px] rounded-[2px] border border-[#2a2e38] bg-[#1f222a] hover:bg-[#2a2e38] text-[#f4f2ec] disabled:opacity-40 cursor-pointer flex items-center gap-1 focus-visible:outline-2 focus-visible:outline-[#d4a745]"
             >
               Previous
             </button>
@@ -878,7 +866,7 @@ export function DiscoveryInbox({
                 const next = Math.min(totalPages, currentPage + 1);
                 setPage(next);
               }}
-              className="px-3 py-1 rounded-[2px] border border-[#2a2e38] bg-[#1f222a] hover:bg-[#2a2e38] text-[#f4f2ec] disabled:opacity-40 cursor-pointer"
+              className="flex-1 sm:flex-none justify-center px-3 py-1.5 min-h-11 sm:min-h-[32px] rounded-[2px] border border-[#2a2e38] bg-[#1f222a] hover:bg-[#2a2e38] text-[#f4f2ec] disabled:opacity-40 cursor-pointer flex items-center gap-1 focus-visible:outline-2 focus-visible:outline-[#d4a745]"
             >
               Next
             </button>

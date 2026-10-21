@@ -283,7 +283,7 @@ export function JobListTable({
                     onSelectJob(job);
                   }
                 }}
-                className={`w-full text-left p-3.5 transition-colors cursor-pointer flex items-start gap-3.5 select-none scroll-my-3.5 ${
+                className={`w-full text-left p-3.5 min-h-[86px] transition-colors cursor-pointer flex items-start gap-3.5 select-none scroll-my-3.5 ${
                   isSelected
                     ? "bg-[#1f222a] border-l-[3px] border-l-[#d4a745]"
                     : "bg-[#15171d] hover:bg-[#1b1e25] border-l-[3px] border-l-transparent"
@@ -308,31 +308,45 @@ export function JobListTable({
                       {job.title}
                     </h3>
                     <span
-                      className={`text-xs font-mono uppercase tracking-wider shrink-0 px-2 py-0.5 rounded-[2px] border ${
+                      className={`text-[11px] font-mono uppercase tracking-wider shrink-0 px-2 py-0.5 rounded-[2px] border inline-flex items-center gap-1.5 ${
                         isDropped
                           ? "bg-[#c4634e]/15 border-[#c4634e]/40 text-[#c4634e]"
+                          : statusUpper === "APPLIED"
+                          ? "bg-[#8ab384]/15 border-[#8ab384]/40 text-[#8ab384] font-semibold"
+                          : statusUpper === "INTERVIEW" || statusUpper === "INTERVIEWING" || statusUpper === "OFFER"
+                          ? "bg-[#d4a745]/15 border-[#d4a745]/40 text-[#d4a745] font-semibold"
+                          : statusUpper === "SCREENING" || statusUpper === "ASSESSMENT"
+                          ? "bg-[#d4a745]/10 border-[#d4a745]/30 text-[#d4a745]"
+                          : statusUpper === "REJECTED" || statusUpper === "GHOSTED"
+                          ? "bg-[#c4634e]/10 border-[#c4634e]/30 text-[#c4634e]"
                           : "bg-[#0d0e12] border-[#2a2e38] text-[#a6abbd]"
                       }`}
                     >
-                      {job.status}
+                      {statusUpper === "APPLIED" && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#8ab384] animate-pulse" />
+                      )}
+                      <span>{job.status}</span>
                     </span>
                   </div>
 
-                  {/* Dot-delimited metadata line */}
-                  <div className="mt-1 flex items-center gap-2 text-xs text-[#a6abbd] truncate font-sans">
-                    <span className="font-semibold text-[#f4f2ec] truncate">{job.company}</span>
-                    <span>·</span>
-                    <span className="font-mono text-xs text-[#a6abbd] uppercase">{sourceName}</span>
+                  {/* Company Name on dedicated line to prevent mobile truncation */}
+                  <div className="mt-0.5 text-xs font-semibold text-[#d4a745] font-sans truncate">
+                    {job.company}
+                  </div>
+
+                  {/* Single-line metadata with strict truncation to guarantee uniform card height */}
+                  <div className="mt-1 flex items-center gap-1.5 text-[11px] text-[#a6abbd] font-mono whitespace-nowrap overflow-hidden">
+                    <span className="text-[#a6abbd] uppercase shrink-0">{sourceName}</span>
                     {job.location && (
                       <>
-                        <span>·</span>
-                        <span className="truncate text-[#a6abbd]">{job.location}</span>
+                        <span className="text-[#64697b] shrink-0">·</span>
+                        <span className="truncate max-w-[100px] sm:max-w-[140px] text-[#a6abbd] shrink">{job.location}</span>
                       </>
                     )}
                     {salary && (
                       <>
-                        <span>·</span>
-                        <span className="font-mono text-xs font-semibold text-[#d4a745]">{salary}</span>
+                        <span className="text-[#64697b] shrink-0">·</span>
+                        <span className="font-semibold text-[#d4a745] shrink-0">{salary}</span>
                       </>
                     )}
                   </div>

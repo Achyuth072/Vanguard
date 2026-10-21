@@ -240,7 +240,7 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
   }
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 space-y-3 font-sans pb-[calc(4.5rem+env(safe-area-inset-bottom))] sm:pb-0">
+    <div className="flex flex-col flex-1 min-h-0 space-y-3 font-sans pb-[calc(3.5rem+env(safe-area-inset-bottom))] sm:pb-0">
       {/* Header telemetry strip and quick ingest */}
       <div className="shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="flex-1">
@@ -285,14 +285,14 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
 
         {/* Kanban Application Tracker */}
         <div className={`col-span-12 h-full min-h-0 bg-[#15171d] border border-[#2a2e38] rounded-[3px] p-3.5 overflow-hidden flex flex-col ${activeTab === "pipeline" ? "flex" : "hidden"}`}>
-          <div className="px-2 py-2 border-b border-[#2a2e38] text-xs font-mono uppercase tracking-wider text-[#a6abbd] flex items-center justify-between shrink-0 mb-3 font-semibold">
+          <div className="hidden sm:flex px-2 py-2 border-b border-[#2a2e38] text-xs font-mono uppercase tracking-wider text-[#a6abbd] items-center justify-between shrink-0 mb-3 font-semibold">
             <span>Active Application Pipeline · Interactive Kanban</span>
-            <span className="text-[#d4a745] hidden sm:inline">DRAG &amp; DROP READY</span>
-            <span className="text-[#8ab384] sm:hidden">TOUCH STAGE SWITCHER</span>
+            <span className="text-[#d4a745]">DRAG &amp; DROP READY</span>
           </div>
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
             <ApplicationTracker
               jobs={initialJobs}
+              isVisible={activeTab === "pipeline"}
               onStatusUpdated={handleDataRefreshed}
               onOpenPreparation={handleDeploy}
             />
@@ -313,7 +313,9 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
                   setAutoScrollTargetId(null);
                   setSelectedJobId(job.id);
                   setSelectedJobIdByTab((prev) => ({ ...prev, [activeTab]: job.id }));
-                  setIsMobileDetailOpen(true);
+                  if (typeof window !== "undefined" && window.innerWidth < 1024) {
+                    setIsMobileDetailOpen(true);
+                  }
                 }}
               />
             </div>
@@ -337,36 +339,38 @@ export function VanguardCockpit({ initialJobs }: VanguardCockpitProps) {
         )}
       </div>
 
-      {/* Mobile Job Intelligence Detail Sheet */}
+      {/* Mobile Job Intelligence Detail Sheet (Rendered only on mobile viewports <lg) */}
       {selectedJob && isMobileDetailOpen && (
-        <BottomSheet
-          open={isMobileDetailOpen}
-          onOpenChange={setIsMobileDetailOpen}
-          desktopClassName="hidden"
-          mobileClassName="bg-[#15171d] border-t border-[#2a2e38] max-h-[92dvh] flex flex-col"
-        >
-          <div className="flex-1 overflow-y-auto min-h-0">
-            <JobIntelligenceView
-              job={selectedJob}
-              onDeployApplication={(j) => {
-                setIsMobileDetailOpen(false);
-                handleDeploy(j);
-              }}
-              onStatusChange={handleStatusChange}
-              onRescore={handleRescore}
-              onEdit={(j) => {
-                setIsMobileDetailOpen(false);
-                setSelectedEditJob(j);
-                setIsEditModalOpen(true);
-              }}
-              onDelete={(j) => {
-                setIsMobileDetailOpen(false);
-                handleDeleteJob(j);
-              }}
-              onOverrideFilter={handleOverrideFilter}
-            />
-          </div>
-        </BottomSheet>
+        <div className="block lg:hidden">
+          <BottomSheet
+            open={isMobileDetailOpen}
+            onOpenChange={setIsMobileDetailOpen}
+            desktopClassName="hidden"
+            mobileClassName="bg-[#15171d] border-t border-[#2a2e38] max-h-[92dvh] flex flex-col"
+          >
+            <div className="flex-1 overflow-y-auto min-h-0">
+              <JobIntelligenceView
+                job={selectedJob}
+                onDeployApplication={(j) => {
+                  setIsMobileDetailOpen(false);
+                  handleDeploy(j);
+                }}
+                onStatusChange={handleStatusChange}
+                onRescore={handleRescore}
+                onEdit={(j) => {
+                  setIsMobileDetailOpen(false);
+                  setSelectedEditJob(j);
+                  setIsEditModalOpen(true);
+                }}
+                onDelete={(j) => {
+                  setIsMobileDetailOpen(false);
+                  handleDeleteJob(j);
+                }}
+                onOverrideFilter={handleOverrideFilter}
+              />
+            </div>
+          </BottomSheet>
+        </div>
       )}
 
       {/* Modals & Drawers */}

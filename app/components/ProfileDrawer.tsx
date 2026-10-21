@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Loader2,
   Check,
@@ -77,6 +77,7 @@ const CATEGORY_STYLES: Record<MasterSkillCategory, string> = {
 interface ProfileNavTab {
   id: TabType;
   label: string;
+  shortLabel?: string;
   icon: React.ComponentType<{ className?: string }>;
   countKey?: "skills" | "experiences" | "projects";
 }
@@ -86,7 +87,7 @@ const PROFILE_NAV_TABS: ProfileNavTab[] = [
   { id: "skills", label: "02 · SKILLS", icon: Wrench, countKey: "skills" },
   { id: "experiences", label: "03 · EXPERIENCE", icon: Briefcase, countKey: "experiences" },
   { id: "projects", label: "04 · PROJECTS", icon: FolderGit2, countKey: "projects" },
-  { id: "resume", label: "05 · MASTER RESUME", icon: FileText },
+  { id: "resume", label: "05 · MASTER RESUME", shortLabel: "05 · RESUME", icon: FileText },
 ];
 
 export default function ProfileDrawer({
@@ -102,6 +103,16 @@ export default function ProfileDrawer({
   const [isParsingResume, setIsParsingResume] = useState(false);
   const [isReadingLocalResume, setIsReadingLocalResume] = useState(false);
   const [parseSummary, setParseSummary] = useState<string | null>(null);
+
+  const tabRailRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!tabRailRef.current) return;
+    const activeEl = tabRailRef.current.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (activeEl && typeof activeEl.scrollIntoView === "function") {
+      activeEl.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    }
+  }, [activeTab]);
 
   // Form State
   const [profile, setProfile] = useState<CandidateProfile>({
@@ -443,7 +454,7 @@ export default function ProfileDrawer({
       mobileClassName="bg-[#15171d] border-t border-[#2a2e38]"
     >
         {/* Drawer Header */}
-        <SheetHeader className="p-6 border-b border-[#2a2e38] bg-[#15171d] shrink-0 space-y-4 text-left">
+        <SheetHeader className="p-3.5 sm:p-6 border-b border-[#2a2e38] bg-[#15171d] shrink-0 space-y-3 sm:space-y-4 text-left">
           <div>
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-2">
@@ -479,7 +490,12 @@ export default function ProfileDrawer({
           )}
 
           {/* Navigation Tabs with 12px monospace indicators */}
-          <div className="flex rounded-[2px] bg-[#0d0e12] p-1 border border-[#2a2e38] text-xs font-mono font-semibold overflow-x-auto no-scrollbar gap-1.5 select-none">
+          <div
+            ref={tabRailRef}
+            role="tablist"
+            aria-label="Profile Sections"
+            className="flex rounded-[2px] bg-[#0d0e12] p-1 border border-[#2a2e38] text-xs font-mono font-semibold overflow-x-auto no-scrollbar gap-1 sm:gap-1.5 select-none"
+          >
             {PROFILE_NAV_TABS.map((tab) => {
               const Icon = tab.icon;
               const isSelected = activeTab === tab.id;
@@ -488,16 +504,27 @@ export default function ProfileDrawer({
                 <button
                   key={tab.id}
                   type="button"
+                  role="tab"
+                  aria-selected={isSelected}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    "shrink-0 whitespace-nowrap py-1.5 px-3 rounded-[2px] flex items-center justify-center gap-1.5 border transition-colors text-xs focus-visible:outline-2 focus-visible:outline-[#d4a745]",
+                    "shrink-0 whitespace-nowrap py-1.5 px-2.5 sm:px-3 rounded-[2px] flex items-center justify-center gap-1.5 border transition-colors text-xs focus-visible:outline-2 focus-visible:outline-[#d4a745]",
                     isSelected
                       ? "bg-[#1f222a] text-[#f4f2ec] border-[#3d4352]"
                       : "border-transparent text-[#a6abbd] hover:text-[#f4f2ec] hover:bg-[#15171d]"
                   )}
                 >
-                  <Icon className="w-3.5 h-3.5 text-[#d4a745]" />
-                  <span>{tab.label}</span>
+                  <Icon className="w-3.5 h-3.5 text-[#d4a745] shrink-0" />
+                  <span>
+                    {tab.shortLabel ? (
+                      <>
+                        <span className="xl:hidden">{tab.shortLabel}</span>
+                        <span className="hidden xl:inline">{tab.label}</span>
+                      </>
+                    ) : (
+                      tab.label
+                    )}
+                  </span>
                   {count !== null && (
                     <span className="px-1.5 py-0.5 rounded-[2px] bg-[#15171d] border border-[#2a2e38] text-[#a6abbd] font-mono text-[10px]">
                       {count}
@@ -510,7 +537,7 @@ export default function ProfileDrawer({
         </SheetHeader>
 
         {/* Drawer Body Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-[#0d0e12]">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 sm:space-y-6 bg-[#0d0e12]">
           {isLoading ? (
             <div className="h-64 flex items-center justify-center text-[#a6abbd] text-xs">
               <div className="flex items-center gap-2">
@@ -522,8 +549,8 @@ export default function ProfileDrawer({
             <>
               {/* 1. PREFERENCES & SCALAR FILTERS TAB */}
               {activeTab === "preferences" && (
-                <div className="space-y-6">
-                  <div className="bg-[#15171d] p-5 rounded-[3px] border border-[#2a2e38] space-y-4">
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="bg-[#15171d] p-3.5 sm:p-5 rounded-[3px] border border-[#2a2e38] space-y-3 sm:space-y-4">
                     <h3 className="text-sm font-semibold text-[#f4f2ec] tracking-tight flex items-center gap-2 font-mono">
                       <Sliders className="w-4 h-4 text-[#d4a745]" />
                       <span>PRIMARY CANDIDATE PROFILE</span>
@@ -661,7 +688,7 @@ export default function ProfileDrawer({
                   </div>
 
                   {/* Preferred Locations */}
-                  <div className="bg-[#15171d] p-5 rounded-[3px] border border-[#2a2e38] space-y-4">
+                  <div className="bg-[#15171d] p-3.5 sm:p-5 rounded-[3px] border border-[#2a2e38] space-y-3 sm:space-y-4">
                     <div className="space-y-1">
                       <h3 className="text-sm font-semibold text-[#f4f2ec] tracking-tight flex items-center gap-2 font-mono">
                         <span className="w-2 h-2 rounded-full bg-[#d4a745]" />
@@ -852,7 +879,7 @@ export default function ProfileDrawer({
                   </div>
 
                   {/* Skills Grid */}
-                  <div className="bg-[#15171d] p-5 rounded-[3px] border border-[#2a2e38]">
+                  <div className="bg-[#15171d] p-3.5 sm:p-5 rounded-[3px] border border-[#2a2e38]">
                     {filteredSkills.length === 0 ? (
                       <p className="text-xs text-[#a6abbd] font-mono italic text-center py-4">
                         No skills found in this category.
@@ -992,7 +1019,7 @@ export default function ProfileDrawer({
                             </div>
 
                             {isExpanded && (
-                              <div className="p-5 border-t border-[#2a2e38] bg-[#0d0e12] space-y-4">
+                              <div className="p-3.5 sm:p-5 border-t border-[#2a2e38] bg-[#0d0e12] space-y-3 sm:space-y-4">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                   <div className="space-y-1">
                                     <label className="block text-xs font-semibold text-[#a6abbd]">
@@ -1254,7 +1281,7 @@ export default function ProfileDrawer({
                             </div>
 
                             {isExpanded && (
-                              <div className="p-5 border-t border-[#2a2e38] bg-[#0d0e12] space-y-4">
+                              <div className="p-3.5 sm:p-5 border-t border-[#2a2e38] bg-[#0d0e12] space-y-3 sm:space-y-4">
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                   <div className="space-y-1">
                                     <label className="block text-xs font-semibold text-[#a6abbd]">
@@ -1529,7 +1556,7 @@ export default function ProfileDrawer({
         </div>
 
         {/* Drawer Footer */}
-        <SheetFooter className="p-4 border-t border-[#2a2e38] bg-[#15171d] flex flex-row items-center justify-between shrink-0 text-xs text-[#a6abbd]">
+        <SheetFooter className="p-3 sm:p-4 border-t border-[#2a2e38] bg-[#15171d] flex flex-row items-center justify-between shrink-0 text-xs text-[#a6abbd]">
           <span className="font-mono text-xs">Profile ID: {profile.id}</span>
           <div className="flex items-center gap-2">
             <Button

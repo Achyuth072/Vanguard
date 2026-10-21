@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { ingestJob, overrideJobFilterAction } from "../actions";
 import BottomSheet from "@/components/ui/bottom-sheet";
 import {
@@ -108,6 +108,21 @@ export default function IngestModal({
       compensation: compStr,
     };
   }, [title, company, mode, rawText, effectiveSource, location, remoteStatus, salaryMin, salaryMax, currency]);
+
+  const tabRailRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!tabRailRef.current) return;
+    const activeEl = tabRailRef.current.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (activeEl && tabRailRef.current.scrollWidth > tabRailRef.current.clientWidth) {
+      const rail = tabRailRef.current;
+      const railRect = rail.getBoundingClientRect();
+      const elRect = activeEl.getBoundingClientRect();
+      if (elRect.left < railRect.left || elRect.right > railRect.right) {
+        rail.scrollLeft += (elRect.left - railRect.left) - (railRect.width / 2) + (elRect.width / 2);
+      }
+    }
+  }, [mode]);
 
   const resetFormAndClose = (target?: IngestSuccessTarget) => {
     setRawText("");
@@ -226,7 +241,7 @@ export default function IngestModal({
       desktopClassName="sm:max-w-2xl border-[#2a2e38] bg-[#15171d] text-[#f4f2ec] p-6 gap-5"
       mobileClassName="bg-[#15171d] px-4 pt-1 pb-[calc(1rem+env(safe-area-inset-bottom))]"
     >
-        <SheetHeader className="shrink-0 space-y-1.5 pb-3 pr-8 border-b border-[#2a2e38] text-left">
+        <SheetHeader className="shrink-0 space-y-2 pb-3 pr-8 border-b border-[#2a2e38] text-left">
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-[2px] bg-[#0d0e12] border border-[#2a2e38] text-[#d4a745]">
               JOB INGESTION CONSOLE
@@ -238,51 +253,69 @@ export default function IngestModal({
           <SheetDescription className="text-xs text-[#a6abbd]">
             Extract role metadata, normalize telemetry, and trigger AI fit scoring into your priority inbox.
           </SheetDescription>
+
+          {/* Tabbed Mode Selector - Fixed in Header to prevent scroll reflow and flashing */}
+          <div
+            ref={tabRailRef}
+            role="tablist"
+            aria-label="Ingestion Modes"
+            className="flex overflow-x-auto no-scrollbar rounded-[2px] bg-[#0d0e12] p-1 border border-[#2a2e38] text-xs font-mono font-semibold gap-1 select-none pt-1"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === "paste"}
+              onClick={() => setMode("paste")}
+              className={cn(
+                "flex-1 min-h-10 shrink-0 whitespace-nowrap py-2 px-3 rounded-[2px] flex items-center justify-center gap-1.5 transition-none text-xs focus-visible:outline-2 focus-visible:outline-[#d4a745]",
+                mode === "paste"
+                  ? "bg-[#1f222a] text-[#f4f2ec] border border-[#3d4352]"
+                  : "border border-transparent text-[#a6abbd] hover:text-[#f4f2ec] hover:bg-[#15171d]"
+              )}
+            >
+              <FileText className="w-3.5 h-3.5 text-[#d4a745] shrink-0" />
+              <span>
+                01 · PASTE<span className="hidden sm:inline"> TEXT</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === "url"}
+              onClick={() => setMode("url")}
+              className={cn(
+                "flex-1 min-h-10 shrink-0 whitespace-nowrap py-2 px-3 rounded-[2px] flex items-center justify-center gap-1.5 transition-none text-xs focus-visible:outline-2 focus-visible:outline-[#d4a745]",
+                mode === "url"
+                  ? "bg-[#1f222a] text-[#f4f2ec] border border-[#3d4352]"
+                  : "border border-transparent text-[#a6abbd] hover:text-[#f4f2ec] hover:bg-[#15171d]"
+              )}
+            >
+              <Link2 className="w-3.5 h-3.5 text-[#d4a745] shrink-0" />
+              <span>
+                02 · <span className="hidden sm:inline">DIRECT </span>URL
+              </span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === "manual"}
+              onClick={() => setMode("manual")}
+              className={cn(
+                "flex-1 min-h-10 shrink-0 whitespace-nowrap py-2 px-3 rounded-[2px] flex items-center justify-center gap-1.5 transition-none text-xs focus-visible:outline-2 focus-visible:outline-[#d4a745]",
+                mode === "manual"
+                  ? "bg-[#1f222a] text-[#f4f2ec] border border-[#3d4352]"
+                  : "border border-transparent text-[#a6abbd] hover:text-[#f4f2ec] hover:bg-[#15171d]"
+              )}
+            >
+              <PlusCircle className="w-3.5 h-3.5 text-[#d4a745] shrink-0" />
+              <span>
+                03 · MANUAL<span className="hidden sm:inline"> ENTRY</span>
+              </span>
+            </button>
+          </div>
         </SheetHeader>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
-        {/* Tabbed Mode Selector */}
-        <div className="flex rounded-[2px] bg-[#0d0e12] p-1 border border-[#2a2e38] text-xs font-mono font-semibold gap-1">
-          <button
-            type="button"
-            onClick={() => setMode("paste")}
-            className={cn(
-              "flex-1 py-1.5 px-3 rounded-[2px] flex items-center justify-center gap-1.5 transition-all text-xs focus-visible:outline-2 focus-visible:outline-[#d4a745]",
-              mode === "paste"
-                ? "bg-[#1f222a] text-[#f4f2ec] border border-[#3d4352]"
-                : "text-[#a6abbd] hover:text-[#f4f2ec]"
-            )}
-          >
-            <FileText className="w-3.5 h-3.5 text-[#d4a745]" />
-            <span>01 · PASTE TEXT</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("url")}
-            className={cn(
-              "flex-1 py-1.5 px-3 rounded-[2px] flex items-center justify-center gap-1.5 transition-all text-xs focus-visible:outline-2 focus-visible:outline-[#d4a745]",
-              mode === "url"
-                ? "bg-[#1f222a] text-[#f4f2ec] border border-[#3d4352]"
-                : "text-[#a6abbd] hover:text-[#f4f2ec]"
-            )}
-          >
-            <Link2 className="w-3.5 h-3.5 text-[#d4a745]" />
-            <span>02 · DIRECT URL</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("manual")}
-            className={cn(
-              "flex-1 py-1.5 px-3 rounded-[2px] flex items-center justify-center gap-1.5 transition-all text-xs focus-visible:outline-2 focus-visible:outline-[#d4a745]",
-              mode === "manual"
-                ? "bg-[#1f222a] text-[#f4f2ec] border border-[#3d4352]"
-                : "text-[#a6abbd] hover:text-[#f4f2ec]"
-            )}
-          >
-            <PlusCircle className="w-3.5 h-3.5 text-[#d4a745]" />
-            <span>03 · MANUAL ENTRY</span>
-          </button>
-        </div>
 
         {/* Real-time Extraction Preview Card */}
         <div className="bg-[#0d0e12] border border-[#2a2e38] p-3.5 rounded-[2px] space-y-2">

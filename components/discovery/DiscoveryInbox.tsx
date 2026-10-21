@@ -391,42 +391,42 @@ export function DiscoveryInbox({
       data-testid="discovery-inbox-view"
     >
       {/* Top Header & Telemetry Bar */}
-      <div className="shrink-0 bg-[#15171d] border-b border-[#2a2e38] p-3.5 sm:p-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2.5">
-              <div className="p-1.5 rounded-[2px] bg-[#d4a745]/15 border border-[#d4a745]/30">
+      <div className="shrink-0 bg-[#15171d] border-b border-[#2a2e38] p-3 sm:p-4">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-[2px] bg-[#d4a745]/15 border border-[#d4a745]/30 shrink-0">
                 <Sparkles className="w-4 h-4 text-[#d4a745]" />
               </div>
-              <h2 className="text-lg font-bold text-[#f4f2ec] tracking-tight">
-                Discovery Staging Inbox
+              <h2 className="text-base sm:text-lg font-bold text-[#f4f2ec] tracking-tight truncate">
+                Discovery<span className="hidden sm:inline"> Staging</span> Inbox
               </h2>
-              <span className="px-2 py-0.5 rounded-[2px] text-[10px] uppercase font-mono font-bold tracking-widest bg-[#d4a745]/15 border border-[#d4a745]/40 text-[#d4a745]">
+              <span className="px-2 py-0.5 rounded-[2px] text-[10px] uppercase font-mono font-bold tracking-widest bg-[#d4a745]/15 border border-[#d4a745]/40 text-[#d4a745] shrink-0 whitespace-nowrap">
                 {totalCount} PENDING
               </span>
             </div>
-            <p className="text-xs text-[#a6abbd] font-mono mt-1 flex items-center gap-2">
+            <p className="hidden sm:flex text-xs text-[#a6abbd] font-mono mt-1 items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#8ab384] animate-pulse" />
               Pre-filtered feed opportunities awaiting on-demand AI Fit Scoring
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={() => fetchDiscoveryJobs(true)}
               disabled={loading || isFetching}
-              className="px-3 py-1.5 rounded-[2px] border border-[#2a2e38] bg-[#1f222a] hover:bg-[#2a2e38] text-[#f4f2ec] text-xs font-mono transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              className="px-2.5 sm:px-3 py-1.5 rounded-[2px] border border-[#2a2e38] bg-[#1f222a] hover:bg-[#2a2e38] text-[#f4f2ec] text-xs font-mono transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 text-[#d4a745] ${(loading || isFetching) ? "animate-spin" : ""}`} />
-              <span>Refresh</span>
+              <span className="hidden sm:inline">Refresh</span>
             </button>
 
             {onClose && (
               <button
                 type="button"
                 onClick={onClose}
-                className="px-3 py-1.5 rounded-[2px] border border-[#2a2e38] bg-[#1f222a] hover:bg-[#2a2e38] text-[#a6abbd] hover:text-[#f4f2ec] text-xs font-mono transition-colors"
+                className="px-2.5 sm:px-3 py-1.5 rounded-[2px] border border-[#2a2e38] bg-[#1f222a] hover:bg-[#2a2e38] text-[#a6abbd] hover:text-[#f4f2ec] text-xs font-mono transition-colors"
               >
                 Close
               </button>
@@ -489,8 +489,8 @@ export function DiscoveryInbox({
 
         {/* Batch Actions Strip (Appears when items are selected) */}
         {selectedJobIds.size > 0 && (
-          <div className="mt-3 p-2.5 bg-[#1f222a] border border-[#d4a745]/40 rounded-[2px] flex flex-wrap items-center justify-between gap-3 animate-in fade-in">
-            <div className="flex items-center gap-2 text-xs font-mono">
+          <div className="mt-3 p-2.5 bg-[#1f222a] border border-[#d4a745]/40 rounded-[2px] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 animate-in fade-in">
+            <div className="flex items-center justify-between sm:justify-start gap-2 text-xs font-mono">
               <button
                 type="button"
                 onClick={handleSelectAllToggle}
@@ -512,7 +512,7 @@ export function DiscoveryInbox({
                 type="button"
                 onClick={handleBatchDismiss}
                 disabled={batchDismissing || batchScoring}
-                className="px-3 py-1.5 rounded-[2px] border border-[#c4634e]/40 bg-[#c4634e]/10 hover:bg-[#c4634e]/20 text-[#c4634e] text-xs font-mono transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                className="flex-1 sm:flex-none justify-center px-3 py-1.5 min-h-[36px] rounded-[2px] border border-[#c4634e]/40 bg-[#c4634e]/10 hover:bg-[#c4634e]/20 text-[#c4634e] text-xs font-mono transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>{batchDismissing ? "Dismissing..." : `Dismiss (${selectedJobIds.size})`}</span>
@@ -522,10 +522,10 @@ export function DiscoveryInbox({
                 type="button"
                 onClick={handleBatchScore}
                 disabled={batchScoring || batchDismissing}
-                className="px-3.5 py-1.5 rounded-[2px] bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] text-xs font-bold font-mono uppercase tracking-wider transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50 shadow-sm"
+                className="flex-1 sm:flex-none justify-center px-3.5 py-1.5 min-h-[36px] rounded-[2px] bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] text-xs font-bold font-mono uppercase tracking-wider transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50 shadow-sm"
               >
                 <Sparkles className={`w-3.5 h-3.5 ${batchScoring ? "animate-spin" : ""}`} />
-                <span>{batchScoring ? "AI Scoring..." : `Score Selected (${selectedJobIds.size})`}</span>
+                <span>{batchScoring ? "AI Scoring..." : `Score (${selectedJobIds.size})`}</span>
               </button>
             </div>
           </div>
@@ -736,8 +736,8 @@ export function DiscoveryInbox({
                     )}
                   </div>
 
-                  {/* Right Action Trigger Buttons */}
-                  <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 shrink-0 self-start">
+                  {/* Right Action Trigger Buttons (Desktop) */}
+                  <div className="hidden sm:flex sm:flex-row items-center gap-2 shrink-0 self-start">
                     {/* View Original External Posting URL */}
                     {job.url && (
                       <a
@@ -760,7 +760,7 @@ export function DiscoveryInbox({
                       className="px-2.5 py-1.5 rounded-[2px] border border-[#c4634e]/40 bg-[#c4634e]/10 hover:bg-[#c4634e]/20 text-[#c4634e] text-xs font-mono transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">
+                      <span>
                         {isDismissing ? "Dismissing..." : "Dismiss"}
                       </span>
                     </button>
@@ -777,6 +777,44 @@ export function DiscoveryInbox({
                       <span>{isScoring ? "Scoring..." : "Score with AI"}</span>
                     </button>
                   </div>
+                </div>
+
+                {/* Mobile Bottom Action Bar */}
+                <div className="flex sm:hidden items-center justify-between gap-2 pt-2.5 mt-2.5 border-t border-[#2a2e38]">
+                  <div className="flex items-center gap-2">
+                    {job.url && (
+                      <a
+                        href={job.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="Open original job posting in new tab"
+                        className="p-2 min-h-[36px] min-w-[36px] rounded-[2px] border border-[#2a2e38] bg-[#1f222a] text-[#a6abbd] hover:text-[#f4f2ec] transition-colors flex items-center justify-center focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      aria-label="Dismiss job from staging inbox"
+                      onClick={() => handleDismissSingleJob(job)}
+                      disabled={isDismissing || isScoring}
+                      className="px-2.5 py-1.5 min-h-[36px] rounded-[2px] border border-[#c4634e]/40 bg-[#c4634e]/10 text-[#c4634e] text-xs font-mono transition-colors flex items-center gap-1.5 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-[#c4634e]"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>{isDismissing ? "Dismissing..." : "Dismiss"}</span>
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    aria-label="Score job fit with AI and move to priority inbox"
+                    onClick={() => handleScoreSingleJob(job)}
+                    disabled={isScoring || isDismissing}
+                    className="px-3 py-1.5 min-h-[36px] rounded-[2px] bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] text-xs font-bold font-mono uppercase tracking-wider transition-colors flex items-center gap-1.5 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                  >
+                    <Sparkles className={`w-3.5 h-3.5 ${isScoring ? "animate-spin" : ""}`} />
+                    <span>{isScoring ? "Scoring..." : "+ Ingest"}</span>
+                  </button>
                 </div>
               </div>
             );

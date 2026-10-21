@@ -9,7 +9,7 @@ export const COMPACT_VIEWPORT_QUERY = "(max-width: 639px)";
 export const SWIPE_DISMISS_DISTANCE_RATIO = 0.25;
 export const SWIPE_DISMISS_VELOCITY_PX_PER_MS = 0.5;
 export const TACTICAL_DRAWER_CLASS =
-  "w-full sm:max-w-2xl lg:max-w-4xl p-0 flex flex-col h-full bg-[#0d0e12] border-l border-[#2a2e38] text-[#f4f2ec] shadow-none gap-0 overflow-hidden";
+  "w-full sm:max-w-3xl lg:max-w-4xl p-0 flex flex-col h-full bg-[#0d0e12] border-l border-[#2a2e38] text-[#f4f2ec] shadow-none gap-0 overflow-hidden";
 
 export type SheetVariant = "bottom-sheet" | "drawer";
 
@@ -85,6 +85,10 @@ export default function BottomSheet({
 }: BottomSheetProps) {
   const isCompact = useIsCompactViewport();
   const variant = resolveSheetVariant(isCompact);
+  const isDesktopHidden = Boolean(
+    desktopClassName && desktopClassName.split(/\s+/).includes("hidden")
+  );
+
   const contentRef = React.useRef<HTMLDivElement>(null);
   const dragStateRef = React.useRef<DragState | null>(null);
   const dragOffsetRef = React.useRef(0);
@@ -183,11 +187,20 @@ export default function BottomSheet({
   }
 
   const closeButton = (
-    <DialogPrimitive.Close className="absolute right-4 top-4 z-10 rounded-[2px] text-[#a6abbd] opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4a745]">
-      <X className="h-4 w-4" />
+    <DialogPrimitive.Close
+      aria-label="Close drawer"
+      className="absolute right-3.5 top-3.5 z-20 min-h-[36px] min-w-[36px] p-2 rounded-[2px] border border-[#2a2e38] bg-[#1f222a] text-[#f4f2ec] hover:text-[#d4a745] hover:border-[#3d4352] transition-colors flex items-center justify-center focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4a745]"
+    >
+      <X className="h-4 w-4 shrink-0" />
       <span className="sr-only">Close</span>
     </DialogPrimitive.Close>
   );
+
+  // If this bottom sheet is marked hidden on desktop and the viewport is non-compact,
+  // do not mount the Radix Dialog at all to prevent focus trapping or pointer-event interception.
+  if (!isCompact && isDesktopHidden) {
+    return null;
+  }
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={handleOpenChange}>
@@ -195,7 +208,8 @@ export default function BottomSheet({
         <DialogPrimitive.Overlay
           className={cn(
             "fixed inset-0 z-50 bg-[#0d0e12]/70 data-[state=open]:animate-[vanguard-fade-in_200ms_ease-out] data-[state=closed]:animate-[vanguard-fade-out_150ms_ease-in]",
-            isCompact && "backdrop-blur-sm"
+            isCompact && "backdrop-blur-sm",
+            !isCompact && isDesktopHidden && "hidden"
           )}
         />
         {variant === "bottom-sheet" ? (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { getCandidateProfile, updateCandidateProfile } from "@/app/actions/candidate";
 import ProfileDrawer from "@/app/components/ProfileDrawer";
@@ -14,7 +14,6 @@ import {
   Sliders,
   Database,
   ArrowLeft,
-  Sparkles,
   ExternalLink,
   ShieldCheck,
   Cpu,
@@ -73,6 +72,15 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState<CandidateProfile | null>(null);
   const [resumeText, setResumeText] = useState("");
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const mobileTabRailRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!mobileTabRailRef.current) return;
+    const activeEl = mobileTabRailRef.current.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (activeEl && typeof activeEl.scrollIntoView === "function") {
+      activeEl.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     async function load() {
@@ -117,46 +125,73 @@ export default function SettingsPage() {
     <main className="h-screen bg-[#0d0e12] text-[#f4f2ec] p-3 sm:p-4 lg:p-5 font-sans overflow-hidden flex flex-col">
       <div className="w-full max-w-[1800px] mx-auto flex flex-col flex-1 min-h-0 space-y-3">
         {/* HEADER: Minimalist & Clean Tactical Command Header matching Cockpit */}
-        <header className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2.5 border-b border-[#2a2e38]">
+        <header className="shrink-0 flex items-center justify-between gap-3 pb-2.5 border-b border-[#2a2e38]">
           <div>
-            <div className="flex items-center gap-2.5 mb-0.5">
-              <VanguardIcon size={26} className="shrink-0" />
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#f4f2ec] font-sans">
+            <div className="flex items-center gap-2 sm:gap-2.5 mb-0.5">
+              <VanguardIcon size={24} className="shrink-0" />
+              <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-[#f4f2ec] font-sans">
                 Vanguard
               </h1>
               <span className="px-2 py-0.5 rounded-[2px] text-[10px] uppercase font-mono font-bold tracking-widest bg-[#1f222a] border border-[#2a2e38] text-[#a6abbd]">
-                SETTINGS · OPS CONSOLE
+                SETTINGS
               </span>
             </div>
-            <p className="text-[#a6abbd] text-xs flex items-center gap-2 font-mono">
+            <p className="hidden sm:flex text-[#a6abbd] text-xs items-center gap-2 font-mono">
               <span className="w-2 h-2 rounded-full bg-[#8ab384] animate-pulse" />
               Operational Configuration &amp; Telemetry Calibration
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             <Link
               href="/"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] border border-[#2a2e38] bg-[#15171d] hover:bg-[#1f222a] hover:border-[#3d4352] text-[#a6abbd] hover:text-[#f4f2ec] transition-colors text-xs font-mono group"
+              aria-label="Back to Cockpit"
+              className="inline-flex items-center justify-center gap-1.5 p-2 sm:px-3 sm:py-1.5 min-h-[36px] min-w-[36px] rounded-[2px] border border-[#2a2e38] bg-[#15171d] hover:bg-[#1f222a] hover:border-[#3d4352] text-[#a6abbd] hover:text-[#f4f2ec] transition-colors text-xs font-mono font-semibold group focus-visible:outline-2 focus-visible:outline-[#d4a745]"
             >
-              <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
-              <span>Cockpit Dashboard</span>
-            </Link>
-
-            <Link
-              href="/"
-              className="px-3 py-1.5 rounded-[2px] bg-[#d4a745]/15 border border-[#d4a745]/40 text-[#d4a745] hover:bg-[#d4a745]/25 text-xs font-mono transition-colors flex items-center gap-1.5"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Discovery Buffer &rarr;</span>
+              <ArrowLeft className="w-4 h-4 sm:w-3.5 sm:h-3.5 group-hover:-translate-x-0.5 transition-transform text-[#d4a745] shrink-0" />
+              <span className="sr-only sm:not-sr-only sm:inline">Back to Cockpit</span>
             </Link>
           </div>
         </header>
 
+        {/* Mobile Horizontal Tab Rail (<md) */}
+        <div
+          ref={mobileTabRailRef}
+          role="tablist"
+          aria-label="Settings Sections"
+          className="flex md:hidden items-center gap-1.5 overflow-x-auto no-scrollbar p-1.5 bg-[#15171d] border border-[#2a2e38] rounded-[3px] select-none text-xs font-mono shrink-0"
+        >
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                aria-controls={`panel-${tab.id}`}
+                onClick={() => setActiveTab(tab.id)}
+                className={`shrink-0 min-h-10 px-3 py-1.5 rounded-[2px] flex items-center gap-2 transition-colors border focus-visible:outline-2 focus-visible:outline-[#d4a745] ${
+                  isActive
+                    ? "bg-[#1f222a] text-[#f4f2ec] border-[#d4a745] font-bold"
+                    : "bg-[#0d0e12] text-[#a6abbd] border-[#2a2e38] hover:text-[#f4f2ec]"
+                }`}
+              >
+                <Icon
+                  className="w-3.5 h-3.5 shrink-0"
+                  style={{ color: isActive ? tab.accentColor : "#a6abbd" }}
+                />
+                <span className="whitespace-nowrap font-mono text-xs">{tab.code} · {tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
         {/* 2-COLUMN TACTICAL COCKPIT LAYOUT */}
         <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] lg:grid-cols-[300px_1fr] gap-4 items-stretch flex-1 min-h-0">
-          {/* LEFT SIDEBAR: Navigation Rail & System Telemetry */}
-          <aside className="space-y-3 shrink-0 flex flex-col min-h-0 overflow-y-auto pr-1">
+          {/* LEFT SIDEBAR: Navigation Rail & System Telemetry (Desktop only) */}
+          <aside className="hidden md:flex space-y-3 shrink-0 flex-col min-h-0 overflow-y-auto pr-1">
             {/* Navigation Tabs */}
             <div
               role="tablist"
@@ -274,13 +309,6 @@ export default function SettingsPage() {
                           Master Facts Repository
                         </h2>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setIsDrawerOpen(true)}
-                        className="text-xs text-[#d4a745] hover:underline font-mono font-semibold cursor-pointer"
-                      >
-                        Manage Drawer &rarr;
-                      </button>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 font-mono">
@@ -313,7 +341,7 @@ export default function SettingsPage() {
                         onClick={() => setIsDrawerOpen(true)}
                         className="w-full py-2.5 bg-[#1f222a] hover:bg-[#2a2e38] border border-[#2a2e38] hover:border-[#3d4352] text-[#f4f2ec] text-xs font-mono rounded-[2px] transition-colors flex items-center justify-center gap-1.5 cursor-pointer font-bold focus-visible:outline-2 focus-visible:outline-[#d4a745]"
                       >
-                        <span>Open Full Master Profile Drawer</span>
+                        <span>Edit Master Profile &rarr;</span>
                       </button>
                     </div>
                   </div>

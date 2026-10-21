@@ -29,7 +29,7 @@ export default function CandidateProfileButton({
         data-testid="candidate-profile-button"
         onClick={() => setIsOpen(true)}
         className={cn(
-          "group text-xs font-mono font-semibold text-[#f4f2ec] border-[#2a2e38] bg-[#15171d] hover:bg-[#1f222a] hover:border-[#3d4352] rounded-[2px] transition-colors focus-visible:outline-2 focus-visible:outline-[#d4a745]",
+          "group min-h-[36px] text-xs font-mono font-semibold text-[#f4f2ec] border-[#2a2e38] bg-[#15171d] hover:bg-[#1f222a] hover:border-[#3d4352] rounded-[2px] transition-colors focus-visible:outline-2 focus-visible:outline-[#d4a745]",
           className
         )}
       >

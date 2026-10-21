@@ -94,35 +94,42 @@ export function JobIntelligenceView({
       <div className="p-4 sm:p-5 border-b border-[#2a2e38] bg-[#101114] shrink-0">
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
-            {/* Metadata eyebrows */}
-            <div className="flex flex-wrap items-center gap-2 text-xs font-mono uppercase tracking-wide text-[#a6abbd] mb-2">
-              <span className="text-[#d4a745] font-bold text-sm">{job.company}</span>
-              <span>·</span>
-              <span className="text-[#f4f2ec]">{sourceName}</span>
+            {/* Target Title */}
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#f4f2ec] font-sans">
+              {job.title}
+            </h1>
+
+            {/* Prominent Company Label */}
+            <div className="mt-1 flex items-center gap-2">
+              <span className="text-[#d4a745] font-bold text-base sm:text-lg tracking-tight font-sans">
+                {job.company}
+              </span>
+            </div>
+
+            {/* Metadata tags */}
+            <div className="flex flex-wrap items-center gap-2 text-xs font-mono uppercase tracking-wide text-[#a6abbd] mt-2">
+              <span className="px-1.5 py-0.5 rounded-[2px] bg-[#1f222a] border border-[#2a2e38] text-[#f4f2ec] text-[11px]">
+                {sourceName}
+              </span>
               {job.location && (
                 <>
-                  <span>·</span>
+                  <span className="text-[#64697b]">·</span>
                   <span>{job.location}</span>
                 </>
               )}
               {job.remoteStatus && (
                 <>
-                  <span>·</span>
+                  <span className="text-[#64697b]">·</span>
                   <span className="text-[#8ab384] font-semibold">{job.remoteStatus}</span>
                 </>
               )}
               {salary && (
                 <>
-                  <span>·</span>
+                  <span className="text-[#64697b]">·</span>
                   <span className="text-[#d4a745] font-bold">{salary}</span>
                 </>
               )}
             </div>
-
-            {/* Target Title */}
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#f4f2ec] font-sans">
-              {job.title}
-            </h1>
           </div>
 
           {/* Quick Action Buttons */}

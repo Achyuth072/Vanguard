@@ -1,6 +1,5 @@
 import { getJobs } from "@/lib/data";
 import VanguardCockpit from "./components/VanguardCockpit";
-import ExportMenu from "./components/ExportMenu";
 import CandidateProfileButton from "./components/CandidateProfileButton";
 import VanguardIcon from "./components/VanguardIcon";
 import { Settings } from "lucide-react";
@@ -36,15 +35,14 @@ export default async function Home() {
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2.5">
-            <ExportMenu />
             <CandidateProfileButton className="hidden sm:inline-flex" />
 
             <a
               href="/settings"
               aria-label="Settings & Feed Sources"
-              className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-[2px] border border-[#2a2e38] bg-[#15171d] text-[#a6abbd] hover:text-[#f4f2ec] hover:border-[#3d4352] text-xs font-mono transition-colors"
+              className="inline-flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 min-h-[36px] min-w-[36px] rounded-[2px] border border-[#2a2e38] bg-[#15171d] text-[#a6abbd] hover:text-[#f4f2ec] hover:bg-[#1f222a] hover:border-[#3d4352] text-xs font-mono font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-[#d4a745]"
             >
-              <Settings className="w-3.5 h-3.5 sm:hidden" />
+              <Settings className="w-3.5 h-3.5 shrink-0" />
               <span className="hidden sm:inline">Settings</span>
             </a>
 

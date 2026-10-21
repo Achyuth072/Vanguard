@@ -35,6 +35,7 @@ export interface ApplicationTrackerProps {
   jobs: EnrichedJob[];
   onStatusUpdated?: () => void;
   onOpenPreparation?: (job: EnrichedJob) => void;
+  isVisible?: boolean;
 }
 
 export const TOUCH_PRIMARY_QUERY = "(hover: none) and (pointer: coarse)";
@@ -71,6 +72,7 @@ export default function ApplicationTracker({
   jobs,
   onStatusUpdated,
   onOpenPreparation,
+  isVisible,
 }: ApplicationTrackerProps) {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [draggedJobId, setDraggedJobId] = useState<string | null>(null);
@@ -90,7 +92,61 @@ export default function ApplicationTracker({
   const isTouchDevice = useIsTouchDevice();
   const isCompactViewport = useIsCompactViewport();
   const railRef = React.useRef<HTMLDivElement>(null);
+  const mobileStageSelectorRef = React.useRef<HTMLDivElement>(null);
   const panStartRef = React.useRef<{ startX: number; scrollLeft: number } | null>(null);
+
+  const scrollToActiveStage = React.useCallback((behavior: ScrollBehavior = "smooth") => {
+    if (!mobileStageSelectorRef.current) return;
+    const container = mobileStageSelectorRef.current;
+    const activeEl = container.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (!activeEl) return;
+
+    if (typeof activeEl.scrollIntoView === "function") {
+      activeEl.scrollIntoView({ behavior, inline: "center", block: "nearest" });
+    }
+
+    const containerRect = container.getBoundingClientRect();
+    const activeRect = activeEl.getBoundingClientRect();
+    if (containerRect.width > 0 && activeRect.width > 0) {
+      const currentScrollLeft = container.scrollLeft;
+      const relativeLeft = activeRect.left - containerRect.left + currentScrollLeft;
+      const targetScrollLeft = relativeLeft - (containerRect.width / 2) + (activeRect.width / 2);
+      container.scrollTo({ left: Math.max(0, targetScrollLeft), behavior });
+    }
+  }, []);
+
+  // Scroll to active stage when activeStageId changes
+  React.useEffect(() => {
+    scrollToActiveStage("smooth");
+  }, [activeStageId, scrollToActiveStage]);
+
+  // Scroll to active stage when pipeline tab becomes visible
+  React.useEffect(() => {
+    if (isVisible !== false) {
+      const timer = setTimeout(() => {
+        scrollToActiveStage("smooth");
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isVisible, scrollToActiveStage]);
+
+  // Also listen for mobile navigation event switching to pipeline
+  React.useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    const handleCockpitFilter = (event: Event) => {
+      const tab = (event as CustomEvent<{ tab?: string }>).detail?.tab;
+      if (tab === "pipeline") {
+        timer = setTimeout(() => {
+          scrollToActiveStage("smooth");
+        }, 50);
+      }
+    };
+    window.addEventListener("set-cockpit-filter", handleCockpitFilter);
+    return () => {
+      if (timer) clearTimeout(timer);
+      window.removeEventListener("set-cockpit-filter", handleCockpitFilter);
+    };
+  }, [scrollToActiveStage]);
 
   // Global mouse up to clean up panning outside rail
   React.useEffect(() => {
@@ -380,14 +436,14 @@ export default function ApplicationTracker({
         </div>
 
         {/* Middle-dot Metadata: Company · Location · Source */}
-        <div className="flex items-center flex-wrap gap-1 text-[11px] text-[#a6abbd] font-mono leading-tight">
-          <span className="text-[#f4f2ec] font-semibold truncate max-w-[130px]">
+        <div className="flex items-center gap-1 text-[11px] text-[#a6abbd] font-mono leading-tight whitespace-nowrap overflow-hidden">
+          <span className="text-[#f4f2ec] font-semibold truncate max-w-[120px] shrink-0">
             {job.company}
           </span>
           {job.location && (
             <>
-              <span className="text-[#797f94]">·</span>
-              <span className="text-[#797f94] truncate max-w-[100px] flex items-center gap-0.5">
+              <span className="text-[#797f94] shrink-0">·</span>
+              <span className="text-[#797f94] truncate max-w-[90px] flex items-center gap-0.5 shrink">
                 <MapPin className="w-2.5 h-2.5 inline shrink-0" />
                 {job.location}
               </span>
@@ -395,7 +451,7 @@ export default function ApplicationTracker({
           )}
           {job.source && (
             <>
-              <span className="text-[#797f94]">·</span>
+              <span className="text-[#797f94] shrink-0">·</span>
               {(() => {
                 const sourceInfo = getSourceBadgeStyle(job.source);
                 return (
@@ -438,24 +494,24 @@ export default function ApplicationTracker({
         )}
 
         {/* Badges: Compensation, Response Time & Rejection */}
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex items-center gap-1.5 whitespace-nowrap overflow-hidden">
           {salary && (
             <span
               data-testid="compensation-pill"
-              className="bg-[#1f222a] text-[#8ab384] border border-[#2a2e38] text-[9px] font-mono tabular-nums px-1.5 py-0.5 rounded-[2px]"
+              className="bg-[#1f222a] text-[#8ab384] border border-[#2a2e38] text-[9px] font-mono tabular-nums px-1.5 py-0.5 rounded-[2px] shrink-0"
             >
               COMP {salary}
             </span>
           )}
 
           {job.application?.responseTimeDays !== null && job.application?.responseTimeDays !== undefined && (
-            <span className="bg-[#1f222a] text-[#d4a745] border border-[#2a2e38] text-[9px] font-mono tabular-nums px-1.5 py-0.5 rounded-[2px]">
+            <span className="bg-[#1f222a] text-[#d4a745] border border-[#2a2e38] text-[9px] font-mono tabular-nums px-1.5 py-0.5 rounded-[2px] shrink-0">
               ⚡ {job.application.responseTimeDays}d response
             </span>
           )}
 
           {job.application?.rejectionStage && (
-            <span className="bg-[#c4634e]/15 text-[#c4634e] border border-[#c4634e]/40 text-[9px] font-mono px-1.5 py-0.5 rounded-[2px] truncate">
+            <span className="bg-[#c4634e]/15 text-[#c4634e] border border-[#c4634e]/40 text-[9px] font-mono px-1.5 py-0.5 rounded-[2px] truncate shrink-0">
               🛑 {job.application.rejectionStage.replace(/_/g, " ")}
             </span>
           )}
@@ -631,6 +687,7 @@ export default function ApplicationTracker({
 
       {/* Mobile: horizontal segmented stage selector with live count badges */}
       <div
+        ref={mobileStageSelectorRef}
         data-testid="mobile-stage-selector"
         role="tablist"
         aria-label="Pipeline stages"

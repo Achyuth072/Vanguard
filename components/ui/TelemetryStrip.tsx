@@ -13,6 +13,8 @@ export interface TelemetryStripProps {
   discoveryCount?: number;
 }
 
+const TARGET_QUEUE_IDS: ReadonlySet<TelemetryTab> = new Set(["inbox", "review", "filtered", "all"]);
+
 export function TelemetryStrip({
   jobs,
   activeTab,
@@ -74,7 +76,7 @@ export function TelemetryStrip({
   const metrics = [
     {
       id: "inbox" as const,
-      mobileTitle: "01 · Priority",
+      mobileTitle: "Priority",
       desktopTitle: "01 · Priority",
       mobileBadge: "≥80",
       desktopBadge: "≥ 80 FIT",
@@ -89,7 +91,7 @@ export function TelemetryStrip({
     },
     {
       id: "review" as const,
-      mobileTitle: "02 · Assessment",
+      mobileTitle: "Assessment",
       desktopTitle: "02 · Assessment",
       mobileBadge: "60–79",
       desktopBadge: "60–79 FIT",
@@ -104,7 +106,7 @@ export function TelemetryStrip({
     },
     {
       id: "pipeline" as const,
-      mobileTitle: "03 · Pipeline",
+      mobileTitle: "Pipeline",
       desktopTitle: "03 · Pipeline",
       mobileBadge: "ACTIVE",
       desktopBadge: "ACTIVE OPS",
@@ -119,7 +121,7 @@ export function TelemetryStrip({
     },
     {
       id: "discovery" as const,
-      mobileTitle: "04 · Discovery",
+      mobileTitle: "Discovery",
       desktopTitle: "04 · Discovery",
       mobileBadge: "FEEDS",
       desktopBadge: "FEEDS",
@@ -134,7 +136,7 @@ export function TelemetryStrip({
     },
     {
       id: "filtered" as const,
-      mobileTitle: "05 · Filtered",
+      mobileTitle: "Filtered",
       desktopTitle: "05 · Filtered",
       mobileBadge: "DROPPED",
       desktopBadge: "DROPPED",
@@ -149,7 +151,7 @@ export function TelemetryStrip({
     },
     {
       id: "all" as const,
-      mobileTitle: "06 · Fleet",
+      mobileTitle: "Fleet",
       desktopTitle: "06 · Fleet Index",
       mobileBadge: "/100",
       desktopBadge: `${totalActive} TOTAL`,
@@ -164,38 +166,54 @@ export function TelemetryStrip({
     },
   ];
 
+  const mobileRailRef = React.useRef<HTMLDivElement>(null);
+  const mobileMetrics = metrics.filter((m) => TARGET_QUEUE_IDS.has(m.id));
+
+  React.useEffect(() => {
+    if (!mobileRailRef.current) return;
+    const activeEl = mobileRailRef.current.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (activeEl && typeof activeEl.scrollIntoView === "function") {
+      activeEl.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    }
+  }, [activeTab]);
+
   return (
     <div className={className}>
-      {/* Mobile Compact Strip (<md): Horizontal scrolling pill rail */}
-      <div
-        role="tablist"
-        aria-label="Target Queue & Fleet Telemetry Views"
-        className="flex md:hidden items-center gap-1.5 overflow-x-auto no-scrollbar p-1.5 bg-[#15171d] border border-[#2a2e38] rounded-[3px] select-none text-xs font-mono"
-      >
-        {metrics.map((m) => {
-          const isSelected = activeTab === m.id;
-          return (
-            <button
-              key={m.id}
-              type="button"
-              role="tab"
-              aria-selected={isSelected}
-              onClick={() => onTabSelect(m.id)}
-              className={`shrink-0 px-2.5 py-1.5 rounded-[2px] flex items-center gap-1.5 transition-colors border focus-visible:outline-2 focus-visible:outline-[#d4a745] ${
-                isSelected
-                  ? m.activePillClass
-                  : "bg-[#0d0e12] text-[#a6abbd] border-[#2a2e38] hover:text-[#f4f2ec]"
-              }`}
-            >
-              <span className="font-semibold text-[#f4f2ec]">{m.mobileTitle}</span>
-              <span className={`px-1.5 py-0.5 rounded-[2px] font-bold text-[10px] tabular-nums ${m.mobileBadgeClass}`}>
-                {m.value}
-              </span>
-              <span className={`text-[10px] ${m.mobileSubtextClass}`}>{m.mobileBadge}</span>
-            </button>
-          );
-        })}
-      </div>
+      {/* Mobile Compact Strip (<md): Horizontal scrolling pill rail for Target queues */}
+      {activeTab !== "pipeline" && activeTab !== "discovery" && (
+        <div
+          ref={mobileRailRef}
+          role="tablist"
+          aria-label="Target Queue & Fleet Telemetry Views"
+          className="flex md:hidden items-center gap-1.5 overflow-x-auto no-scrollbar p-1.5 bg-[#15171d] border border-[#2a2e38] rounded-[3px] select-none text-xs font-mono"
+        >
+          {mobileMetrics.map((m) => {
+            const isSelected = activeTab === m.id;
+            return (
+              <button
+                key={m.id}
+                type="button"
+                role="tab"
+                aria-selected={isSelected}
+                onClick={() => onTabSelect(m.id)}
+                className={`shrink-0 px-2.5 py-1.5 rounded-[2px] flex items-center gap-1.5 transition-colors border focus-visible:outline-2 focus-visible:outline-[#d4a745] ${
+                  isSelected
+                    ? m.activePillClass
+                    : "bg-[#0d0e12] text-[#a6abbd] border-[#2a2e38] hover:text-[#f4f2ec]"
+                }`}
+              >
+                <span className="font-semibold text-[#f4f2ec] whitespace-nowrap">{m.mobileTitle}</span>
+                <span className={`px-1.5 py-0.5 rounded-[2px] font-bold text-[10px] tabular-nums whitespace-nowrap shrink-0 ${m.mobileBadgeClass}`}>
+                  {m.value}
+                </span>
+                <span className={`text-[10px] whitespace-nowrap shrink-0 font-medium ${m.mobileSubtextClass}`}>
+                  ({m.mobileBadge})
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Desktop Grid View (md+) */}
       <div
@@ -219,9 +237,9 @@ export function TelemetryStrip({
               {isSelected && (
                 <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#d4a745]" />
               )}
-              <div className="flex items-center justify-between text-xs font-mono tracking-wide text-[#a6abbd] uppercase">
-                <span className="font-semibold text-[#f4f2ec]">{m.desktopTitle}</span>
-                <span className={`text-[11px] ${m.desktopBadgeClass}`}>{m.desktopBadge}</span>
+              <div className="flex items-center justify-between gap-1.5 text-xs font-mono tracking-wide text-[#a6abbd] uppercase">
+                <span className="font-semibold text-[#f4f2ec] truncate">{m.desktopTitle}</span>
+                <span className={`text-[11px] shrink-0 font-medium ${m.desktopBadgeClass}`}>{m.desktopBadge}</span>
               </div>
               <div className="mt-1.5 flex items-baseline gap-2">
                 <span className={`text-2xl sm:text-3xl font-bold font-mono tabular-nums ${m.desktopValueClass}`}>

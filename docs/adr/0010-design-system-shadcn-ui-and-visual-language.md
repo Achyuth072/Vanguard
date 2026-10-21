@@ -16,3 +16,4 @@ We adopt shadcn/ui (Radix UI primitives + Tailwind v4 CSS variables) as the comp
 - **Typography:** shadcn defaults (text-sm base, text-xs metadata, font-mono tabular-nums for numeric values). Inter font retained.
 - **Animations:** CSS transitions only (Radix built-in data-state animations). No Framer Motion dependency in this phase.
 - **Single animate-pulse retained** on the header status dot (functional "system live" indicator). Removed from all badges.
+- **Mobile Overlays Addendum:** Compact mobile overlays (`<sm`) and fixed bottom navigation action bars (`MobileActionBar`, `BottomSheet`) are permitted subtle `backdrop-blur` to prevent background bleed-through and ensure contrast against underlying dense tables on small phone viewports. Desktop surfaces remain strictly opaque zinc.

@@ -1,10 +1,11 @@
-import type {
-  FeedAdapter,
-  FeedPollResult,
-  FeedSource,
-  FeedSourceConfig,
-  RawFeedJob,
-  AdapterPollOptions,
+import {
+  type FeedAdapter,
+  type FeedPollResult,
+  type FeedSource,
+  type FeedSourceConfig,
+  type RawFeedJob,
+  type AdapterPollOptions,
+  parseNumeric,
 } from "./types";
 import { parseFeedSourceConfig } from "../../feed-sources";
 import { extractTextFromHtml } from "../pipeline";
@@ -78,15 +79,6 @@ interface WellfoundApiResponse {
   hasMore?: boolean;
 }
 
-function parseNumeric(val: unknown): number | null {
-  if (typeof val === "number") return val;
-  if (typeof val === "string") {
-    const parsed = parseFloat(val);
-    if (!isNaN(parsed)) return parsed;
-  }
-  return null;
-}
-
 export class WellfoundAdapter implements FeedAdapter {
   readonly sourceType = "WELLFOUND";
 
@@ -105,8 +97,7 @@ export class WellfoundAdapter implements FeedAdapter {
     const currentPage = source.lastCursor ? parseInt(source.lastCursor, 10) || 1 : 1;
 
     // Injected session payload (CDP bridge / session cookie) takes precedence
-    const injectedPayload = (rawConfig as Record<string, unknown>)?.sessionPayload ||
-      (options as Record<string, unknown> | undefined)?.sessionPayload;
+    const injectedPayload = (rawConfig as Record<string, unknown>)?.sessionPayload || options?.sessionPayload;
 
     let payload: WellfoundApiResponse;
 

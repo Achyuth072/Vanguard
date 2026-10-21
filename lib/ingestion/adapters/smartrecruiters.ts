@@ -67,9 +67,11 @@ export class SmartRecruitersAdapter implements FeedAdapter {
     const fetchFn = options?.fetchFn ?? fetch;
     const config = parseFeedSourceConfig(source.config);
 
-    const slugs = (config.boardSlugs && config.boardSlugs.length > 0)
-      ? config.boardSlugs
-      : ["BoschGroup", "Canonical"];
+    const slugs = options?.boardSlugOverride
+      ? [options.boardSlugOverride]
+      : (config.boardSlugs && config.boardSlugs.length > 0)
+        ? config.boardSlugs
+        : ["BoschGroup", "Canonical"];
 
     const limit = options?.limit ?? config.count ?? 50;
     const allJobs: RawFeedJob[] = [];
@@ -78,10 +80,6 @@ export class SmartRecruitersAdapter implements FeedAdapter {
       : "https://api.smartrecruiters.com/v1/companies";
 
     for (const slug of slugs) {
-      if (options?.boardSlugOverride && slug !== options.boardSlugOverride) {
-        continue;
-      }
-
       const endpointUrl = `${baseApi}/${encodeURIComponent(slug)}/postings?limit=${limit}`;
 
       try {

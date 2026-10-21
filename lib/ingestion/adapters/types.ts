@@ -16,6 +16,16 @@ export interface AdapterPollOptions {
   limit?: number;
   abortSignal?: AbortSignal;
   boardSlugOverride?: string;
+  sessionPayload?: unknown;
+}
+
+export function parseNumeric(val: unknown): number | null {
+  if (typeof val === "number") return val;
+  if (typeof val === "string") {
+    const parsed = parseFloat(val);
+    if (!isNaN(parsed)) return parsed;
+  }
+  return null;
 }
 
 export interface FeedAdapter {

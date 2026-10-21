@@ -1,10 +1,11 @@
-import type {
-  FeedAdapter,
-  FeedPollResult,
-  FeedSource,
-  FeedSourceConfig,
-  RawFeedJob,
-  AdapterPollOptions,
+import {
+  type FeedAdapter,
+  type FeedPollResult,
+  type FeedSource,
+  type FeedSourceConfig,
+  type RawFeedJob,
+  type AdapterPollOptions,
+  parseNumeric,
 } from "./types";
 import { parseFeedSourceConfig } from "../../feed-sources";
 import { extractTextFromHtml } from "../pipeline";
@@ -58,15 +59,6 @@ interface HiringCafeApiResponse {
 function extractBullet(section: string, field: string): string {
   const match = section.match(new RegExp(`-\\s+\\*\\*${field}:\\*\\*\\s*([^\\n]+)`, "i"));
   return match ? match[1].trim() : "";
-}
-
-function parseNumeric(val: unknown): number | null {
-  if (typeof val === "number") return val;
-  if (typeof val === "string") {
-    const parsed = parseFloat(val);
-    if (!isNaN(parsed)) return parsed;
-  }
-  return null;
 }
 
 export class HiringCafeAdapter implements FeedAdapter {
@@ -183,7 +175,9 @@ export class HiringCafeAdapter implements FeedAdapter {
       const company = companyMatch ? companyMatch[1].trim() : "HiringCafe Employer";
       const location = extractBullet(section, "Location") || "Remote";
       const workplace = extractBullet(section, "Workplace");
-      const rawId = extractBullet(section, "Job ID") || url.split("/").pop()?.split("?")[0] || Math.random().toString(36).substring(2);
+      const rawId = extractBullet(section, "Job ID")
+        || url.split("/").pop()?.split("?")[0]
+        || Buffer.from(`${company}:${title}:${url}`).toString("base64").slice(0, 16);
 
       const postedRaw = extractBullet(section, "Posted");
       let postedAt: Date | null = null;

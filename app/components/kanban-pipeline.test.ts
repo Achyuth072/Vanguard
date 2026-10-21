@@ -2,6 +2,13 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import {
+  ARCHIVED_STAGE,
+  PIPELINE_STAGES,
+  buildStageFilterEvents,
+  normalizePipelineStatus,
+  resolveStageSelection,
+} from "@/lib/pipeline/stages";
 
 describe("Tactical Application Pipeline Kanban (Issue 04)", () => {
   const applicationTrackerPath = path.join(process.cwd(), "app/components/ApplicationTracker.tsx");
@@ -129,6 +136,141 @@ describe("Tactical Application Pipeline Kanban (Issue 04)", () => {
       assert.ok(content.includes("handleDeleteJob"), "Should define handleDeleteJob handler");
       assert.ok(content.includes("Trash2"), "Should render Trash2 icon for deletion");
       assert.ok(content.includes("title=\"Delete Job\""), "Should provide accessible title for delete button");
+    });
+  });
+
+  describe("Mobile Pipeline Adaptation (Issue 04)", () => {
+    const mobileActionBarPath = path.join(process.cwd(), "app/components/MobileActionBar.tsx");
+    const vanguardCockpitPath = path.join(process.cwd(), "app/components/VanguardCockpit.tsx");
+
+    describe("Shared pipeline stage model", () => {
+      it("defines the tactical pipeline stages and normalizes legacy status aliases", () => {
+        assert.ok(PIPELINE_STAGES.length >= 6, "Pipeline should expose the full stage sequence");
+        assert.ok(PIPELINE_STAGES.some((stage) => stage.id === "APPLIED"));
+        assert.ok(PIPELINE_STAGES.some((stage) => stage.id === "OFFER"));
+        assert.equal(ARCHIVED_STAGE.id, "ARCHIVED");
+        assert.equal(normalizePipelineStatus("interviewing"), "INTERVIEW");
+        assert.equal(normalizePipelineStatus("take_home"), "ASSESSMENT");
+        assert.equal(normalizePipelineStatus("applied"), "APPLIED");
+      });
+
+      it("applies quick-stage requests and ignores unknown stages", () => {
+        assert.equal(resolveStageSelection(true, "NOT_A_STAGE"), null);
+        assert.deepEqual(resolveStageSelection(false, "OFFER"), {
+          activeStageId: "OFFER",
+          showArchived: false,
+        });
+        assert.deepEqual(resolveStageSelection(false, ARCHIVED_STAGE.id), {
+          activeStageId: "ARCHIVED",
+          showArchived: true,
+        });
+      });
+
+      it("builds the cockpit tab and stage-selection events for the action bar", () => {
+        assert.deepEqual(buildStageFilterEvents("APPLIED"), [
+          { name: "set-cockpit-filter", detail: { tab: "pipeline" } },
+          { name: "set-pipeline-stage", detail: { stageId: "APPLIED" } },
+        ]);
+      });
+    });
+
+    describe("MobileActionBar", () => {
+      it("app/components/MobileActionBar.tsx exists", () => {
+        assert.ok(fs.existsSync(mobileActionBarPath), "MobileActionBar should exist");
+      });
+
+      it("renders a floating tactical action bar visible only below the sm breakpoint", () => {
+        const content = fs.readFileSync(mobileActionBarPath, "utf-8");
+
+        assert.ok(content.includes("fixed"), "Should float above the viewport");
+        assert.ok(content.includes("bottom-0"), "Should anchor to the bottom edge");
+        assert.ok(content.includes("block sm:hidden"), "Should only render on mobile viewports");
+        assert.ok(content.includes("bg-[#15171d]/95"), "Should use the tactical surface treatment");
+        assert.ok(content.includes("backdrop-blur"), "Should blur content behind the bar");
+        assert.ok(content.includes("border-t border-[#2a2e38]"), "Should use a hairline top border");
+        assert.ok(
+          content.includes("pb-[env(safe-area-inset-bottom)]"),
+          "Should clear the iOS home indicator"
+        );
+      });
+
+      it("exposes primary view navigation (Targets, Pipeline, Ingest, Discovery, Profile) triggers", () => {
+        const content = fs.readFileSync(mobileActionBarPath, "utf-8");
+
+        assert.ok(content.includes("Targets"), "Should include Targets trigger");
+        assert.ok(content.includes("Pipeline"), "Should include Pipeline trigger");
+        assert.ok(content.includes("Ingest"), "Should include Ingest trigger");
+        assert.ok(content.includes("Discovery"), "Should include Discovery trigger");
+        assert.ok(content.includes("Profile"), "Should include Profile trigger");
+        assert.ok(content.includes("open-ingest-modal"));
+        assert.ok(content.includes("open-profile-drawer"));
+        assert.ok(content.includes("set-cockpit-filter"));
+        assert.ok(content.includes("min-h-11"), "Touch targets should be at least 44px tall");
+      });
+
+      it("is mounted by the Vanguard cockpit", () => {
+        const content = fs.readFileSync(vanguardCockpitPath, "utf-8");
+        assert.ok(content.includes("MobileActionBar"));
+        assert.ok(content.includes("<MobileActionBar"));
+      });
+    });
+
+    describe("Mobile segmented stage switcher", () => {
+      it("replaces the desktop kanban rail with a horizontally scrollable stage selector on mobile", () => {
+        const content = fs.readFileSync(applicationTrackerPath, "utf-8");
+
+        assert.ok(
+          content.includes("flex overflow-x-auto no-scrollbar gap-2"),
+          "Should render the horizontal segmented selector"
+        );
+        assert.ok(content.includes("sm:hidden"), "Mobile selector should hide on sm+ viewports");
+        assert.ok(
+          content.includes("hidden sm:flex"),
+          "Desktop kanban rail should hide on mobile viewports"
+        );
+        assert.ok(content.includes('data-testid="mobile-stage-selector"'));
+        assert.ok(content.includes('data-testid="mobile-stage-panel"'));
+        assert.ok(content.includes('role="tablist"'));
+        assert.ok(content.includes("aria-selected"));
+        assert.ok(content.includes("min-h-11"), "Stage buttons should be touch friendly");
+      });
+
+      it("shows live stage count badges and reacts to quick-stage events", () => {
+        const content = fs.readFileSync(applicationTrackerPath, "utf-8");
+
+        assert.ok(content.includes("stageCounts"), "Should derive live per-stage counts");
+        assert.ok(content.includes('"set-pipeline-stage"'), "Should listen for action bar stage requests");
+        assert.ok(content.includes("setActiveStageId"), "Should update the active mobile stage");
+        assert.ok(content.includes("PIPELINE_STAGES"), "Should render the shared stage sequence");
+      });
+
+      it("renders full-width mobile cards with score and compensation pills", () => {
+        const content = fs.readFileSync(applicationTrackerPath, "utf-8");
+
+        assert.ok(content.includes("formatSalaryRange"), "Should surface compensation pills");
+        assert.ok(content.includes('data-testid="compensation-pill"'));
+        assert.ok(content.includes('"stage-advance-menu"'));
+        assert.ok(content.includes('data-testid={mobile ? "stage-advance-menu"'), "Stage advance menu should only be tagged on the mobile card");
+        assert.ok(content.includes("w-full"), "Mobile cards should span the viewport width");
+      });
+    });
+
+    describe("Touch-safe drag and drop", () => {
+      it("disables drag handles for coarse-pointer devices to protect touch scrolling", () => {
+        const content = fs.readFileSync(applicationTrackerPath, "utf-8");
+
+        assert.ok(content.includes("TOUCH_PRIMARY_QUERY"), "Should define a touch-primary media query");
+        assert.ok(content.includes("pointer: coarse"), "Should detect coarse pointers");
+        assert.ok(content.includes("useIsTouchDevice"), "Should expose touch capability state");
+        assert.ok(
+          content.includes("draggable={!isUpdating && !(isTouchDevice && isCompactViewport)}"),
+          "Drag handles must be disabled for touch inside the compact viewport"
+        );
+        assert.ok(
+          content.includes("useIsCompactViewport"),
+          "Should limit the touch drag override to phones, keeping DnD on larger touch screens"
+        );
+      });
     });
   });
 });

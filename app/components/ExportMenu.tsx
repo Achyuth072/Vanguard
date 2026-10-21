@@ -139,13 +139,13 @@ export default function ExportMenu({ className }: ExportMenuProps) {
         aria-haspopup="menu"
         aria-controls={isOpen ? "export-menu-dropdown" : undefined}
         aria-label="Export datastore"
-        className="group inline-flex items-center gap-2 px-3 py-1.5 min-h-[36px] rounded-[2px] border border-[#2a2e38] bg-[#15171d] hover:bg-[#1f222a] hover:border-[#3d4352] text-xs font-mono font-semibold text-[#f4f2ec] transition-colors focus-visible:outline-2 focus-visible:outline-[#d4a745] focus-visible:outline-offset-2 cursor-pointer select-none"
+        className="group inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 min-h-[36px] rounded-[2px] border border-[#2a2e38] bg-[#15171d] hover:bg-[#1f222a] hover:border-[#3d4352] text-xs font-mono font-semibold text-[#f4f2ec] transition-colors focus-visible:outline-2 focus-visible:outline-[#d4a745] focus-visible:outline-offset-2 cursor-pointer select-none"
       >
         <Download className="w-3.5 h-3.5 text-[#d4a745] transition-colors shrink-0" />
-        <span>Export</span>
+        <span className="hidden sm:inline">Export</span>
         <ChevronDown
           className={cn(
-            "w-3 h-3 text-[#c5c9d6] transition-transform duration-150 ease-out shrink-0",
+            "w-3 h-3 text-[#c5c9d6] transition-transform duration-150 ease-out shrink-0 hidden sm:inline-block",
             isOpen && "rotate-180"
           )}
         />

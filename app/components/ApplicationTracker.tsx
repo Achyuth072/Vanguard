@@ -3,10 +3,18 @@
 import React, { useState, useMemo } from "react";
 import type { EnrichedJob } from "@/lib/data";
 import { updateJobStatusAction, autoGhostStaleApplicationsAction, deleteJobAction } from "../actions";
-import { calculateDaysSinceApplied, identifyGhostableJobs } from "@/lib/lifecycle/auto-ghost";
+import { calculateDaysSinceApplied, identifyGhostableJobs } from "@/lib/lifecycle/staleness";
+import { formatSalaryRange } from "@/lib/utils/currency";
+import {
+  ARCHIVED_STAGE,
+  PIPELINE_STAGES,
+  normalizePipelineStatus,
+  resolvePipelineStages,
+  resolveStageSelection,
+} from "@/lib/pipeline/stages";
 import DraftButton from "./DraftButton";
 import EditJobModal from "./EditJobModal";
-import { Button } from "@/components/ui/button";
+import { useIsCompactViewport } from "@/components/ui/bottom-sheet";
 import { getSourceBadgeStyle } from "@/lib/utils/source";
 import { compareJobsByScore, compareJobsByRecent } from "@/lib/utils/sorting";
 import {
@@ -18,7 +26,6 @@ import {
   Trash2,
   Clock,
   MapPin,
-  Building2,
   AlertTriangle,
   ArrowUpDown,
   GripVertical,
@@ -30,31 +37,35 @@ export interface ApplicationTrackerProps {
   onOpenPreparation?: (job: EnrichedJob) => void;
 }
 
-interface PipelineStage {
-  id: string;
-  code: string;
-  label: string;
-  accentColor: string;
+export const TOUCH_PRIMARY_QUERY = "(hover: none) and (pointer: coarse)";
+
+function subscribeToTouchPrimary(callback: () => void): () => void {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return () => {};
+  }
+  const mediaQueryList = window.matchMedia(TOUCH_PRIMARY_QUERY);
+  mediaQueryList.addEventListener("change", callback);
+  return () => mediaQueryList.removeEventListener("change", callback);
 }
 
-const PIPELINE_STAGES: PipelineStage[] = [
-  { id: "SHORTLISTED", code: "01", label: "Shortlisted", accentColor: "#d4a745" },
-  { id: "PREPARED", code: "02", label: "Prepared", accentColor: "#d4a745" },
-  { id: "APPLIED", code: "03", label: "Applied", accentColor: "#d4a745" },
-  { id: "SCREENING", code: "04", label: "Screening", accentColor: "#8ab384" },
-  { id: "ASSESSMENT", code: "05", label: "Take-home / OA", accentColor: "#8ab384" },
-  { id: "INTERVIEW", code: "06", label: "Interview", accentColor: "#8ab384" },
-  { id: "OFFER", code: "07", label: "Offer", accentColor: "#8ab384" },
-  { id: "REJECTED", code: "08", label: "Rejected", accentColor: "#c4634e" },
-  { id: "GHOSTED", code: "09", label: "Ghosted", accentColor: "#a6abbd" },
-];
+function getTouchPrimarySnapshot(): boolean {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return false;
+  }
+  return window.matchMedia(TOUCH_PRIMARY_QUERY).matches;
+}
 
-const ARCHIVED_STAGE: PipelineStage = {
-  id: "ARCHIVED",
-  code: "10",
-  label: "Archived",
-  accentColor: "#797f94",
-};
+function getTouchPrimaryServerSnapshot(): boolean {
+  return false;
+}
+
+export function useIsTouchDevice(): boolean {
+  return React.useSyncExternalStore(
+    subscribeToTouchPrimary,
+    getTouchPrimarySnapshot,
+    getTouchPrimaryServerSnapshot
+  );
+}
 
 export default function ApplicationTracker({
   jobs,
@@ -70,6 +81,14 @@ export default function ApplicationTracker({
   const [isAutoGhosting, setIsAutoGhosting] = useState(false);
   const [sortMode, setSortMode] = useState<"score" | "recent">("score");
   const [isPanning, setIsPanning] = useState(false);
+  const [activeStageId, setActiveStageId] = useState<string>(() => {
+    const firstPopulatedStage = PIPELINE_STAGES.find((stage) =>
+      jobs.some((job) => normalizePipelineStatus(job.status) === stage.id)
+    );
+    return firstPopulatedStage?.id ?? PIPELINE_STAGES[0].id;
+  });
+  const isTouchDevice = useIsTouchDevice();
+  const isCompactViewport = useIsCompactViewport();
   const railRef = React.useRef<HTMLDivElement>(null);
   const panStartRef = React.useRef<{ startX: number; scrollLeft: number } | null>(null);
 
@@ -85,27 +104,29 @@ export default function ApplicationTracker({
     return () => window.removeEventListener("mouseup", handleGlobalMouseUp);
   }, []);
 
-  // Normalize status for grouping (handles INTERVIEW / INTERVIEWING, ASSESSMENT / TAKE_HOME)
-  const normalizeStatus = (status: string) => {
-    const s = status.toUpperCase();
-    if (s === "INTERVIEWING") return "INTERVIEW";
-    if (s === "TAKE_HOME" || s === "TAKE_HOME_OA" || s === "OA") return "ASSESSMENT";
-    return s;
-  };
+  React.useEffect(() => {
+    const handleSetPipelineStage = (event: Event) => {
+      const stageId = (event as CustomEvent<{ stageId?: string }>).detail?.stageId;
+      if (!stageId) return;
+      const selection = resolveStageSelection(false, stageId);
+      if (!selection) return;
+      setActiveStageId(selection.activeStageId);
+      if (selection.showArchived) setShowArchived(true);
+    };
+    window.addEventListener("set-pipeline-stage", handleSetPipelineStage);
+    return () => window.removeEventListener("set-pipeline-stage", handleSetPipelineStage);
+  }, []);
 
   const archivedCount = useMemo(
-    () => jobs.filter((j) => normalizeStatus(j.status) === "ARCHIVED").length,
+    () => jobs.filter((j) => normalizePipelineStatus(j.status) === "ARCHIVED").length,
     [jobs]
   );
 
-  const displayedStages = useMemo(
-    () => (showArchived ? [...PIPELINE_STAGES, ARCHIVED_STAGE] : PIPELINE_STAGES),
-    [showArchived]
-  );
+  const displayedStages = useMemo(() => resolvePipelineStages(showArchived), [showArchived]);
 
   const pipelineJobs = useMemo(() => {
     return jobs.filter((job) => {
-      const s = normalizeStatus(job.status);
+      const s = normalizePipelineStatus(job.status);
       if (s === "IGNORED" || s === "FILTERED_OUT") return false;
       if (s === "ARCHIVED") return showArchived;
       return PIPELINE_STAGES.some((stage) => stage.id === s) || job.application !== null;
@@ -120,8 +141,24 @@ export default function ApplicationTracker({
     return list.sort(compareJobsByRecent);
   }, [pipelineJobs, sortMode]);
 
+  const stageCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const stage of PIPELINE_STAGES) counts[stage.id] = 0;
+    counts[ARCHIVED_STAGE.id] = 0;
+    for (const job of pipelineJobs) {
+      const stageId = normalizePipelineStatus(job.status);
+      if (counts[stageId] !== undefined) counts[stageId] += 1;
+    }
+    return counts;
+  }, [pipelineJobs]);
+
+  const activeStage =
+    displayedStages.find((stage) => stage.id === activeStageId) ?? displayedStages[0];
+  const activeStageJobs = sortedPipelineJobs.filter(
+    (job) => normalizePipelineStatus(job.status) === activeStage.id
+  );
+
   const ghostableList = useMemo(() => identifyGhostableJobs(pipelineJobs, 21), [pipelineJobs]);
-  const staleList = useMemo(() => identifyGhostableJobs(pipelineJobs, 14), [pipelineJobs]);
 
   async function handleAutoGhostAll() {
     if (ghostableList.length === 0 || isAutoGhosting) return;
@@ -205,7 +242,7 @@ export default function ApplicationTracker({
     if (!jobId) return;
 
     const targetJob = jobs.find((j) => j.id === jobId);
-    if (targetJob && normalizeStatus(targetJob.status) !== stageId) {
+    if (targetJob && normalizePipelineStatus(targetJob.status) !== stageId) {
       handleMoveStage(jobId, stageId);
     }
   }
@@ -270,8 +307,255 @@ export default function ApplicationTracker({
     }
   };
 
+  const renderJobCard = (job: EnrichedJob, mobile: boolean) => {
+    const isUpdating = updatingId === job.id;
+    const isDragging = draggedJobId === job.id;
+    const score = job.fitScore?.score;
+    const salary = formatSalaryRange(job.salaryMin, job.salaryMax, job.currency);
+
+    const daysApplied = job.application?.appliedAt
+      ? calculateDaysSinceApplied(job.application.appliedAt)
+      : null;
+    const isAppliedStatus = normalizePipelineStatus(job.status) === "APPLIED";
+    const isGhostable = isAppliedStatus && daysApplied !== null && daysApplied >= 21;
+    const isStale = isAppliedStatus && daysApplied !== null && daysApplied >= 14 && daysApplied < 21;
+
+    const touchButtonSize = mobile ? "min-h-11 min-w-11" : "h-6 w-6";
+    const touchPrimaryControl = mobile ? "min-h-11 text-xs px-2.5" : "h-6 text-[10px]";
+
+    return (
+      <div
+        key={job.id}
+        data-card-id={job.id}
+        data-mobile-card={mobile ? "true" : undefined}
+        className={`bg-[#0d0e12] border rounded-[3px] transition-all text-xs group ${
+          mobile ? "w-full p-3 space-y-2.5" : "p-2.5 space-y-2"
+        } ${
+          isDragging
+            ? "opacity-30 border-[#d4a745] bg-[#1f222a]"
+            : isUpdating
+            ? "opacity-50 pointer-events-none border-[#2a2e38]"
+            : "border-[#2a2e38] hover:border-[#3d4352] hover:bg-[#15171d]/90 shadow-sm"
+        }`}
+      >
+        {/* Card Header: Drag Grip Handle, Title & Score Anchor Box */}
+        <div className="flex items-start gap-1.5 justify-between">
+          {!mobile && (
+            <div
+              draggable={!isUpdating && !(isTouchDevice && isCompactViewport)}
+              onDragStart={(e) => handleDragStart(e, job.id)}
+              onDragEnd={handleDragEnd}
+              data-drag-enabled={!isUpdating && !(isTouchDevice && isCompactViewport)}
+              className="cursor-grab active:cursor-grabbing p-0.5 -ml-1 text-[#797f94] hover:text-[#d4a745] transition-colors rounded-[2px] hover:bg-[#1f222a] shrink-0"
+              title={
+                isTouchDevice
+                  ? "Touch scrolling enabled — use the stage menu to move candidates"
+                  : "Drag handle to move candidate across pipeline stages"
+              }
+              aria-label={`Drag handle for ${job.title}`}
+            >
+              <GripVertical className="w-3.5 h-3.5" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0 pt-0.5">
+            <h3 className="font-sans font-bold text-[#f4f2ec] text-xs leading-snug line-clamp-2 group-hover:text-[#d4a745] transition-colors">
+              {job.title}
+            </h3>
+          </div>
+          {score !== undefined && score !== null && (
+            <div
+              className={`${
+                mobile ? "w-10 h-8 text-sm" : "w-9 h-7 text-xs"
+              } rounded-[2px] flex items-center justify-center font-mono font-bold tabular-nums border shrink-0 ${
+                score >= 80
+                  ? "bg-[#d4a745]/15 text-[#d4a745] border-[#d4a745]/40"
+                  : score >= 60
+                  ? "bg-[#8ab384]/15 text-[#8ab384] border-[#8ab384]/40"
+                  : "bg-[#c4634e]/15 text-[#c4634e] border-[#c4634e]/40"
+              }`}
+            >
+              {score}
+            </div>
+          )}
+        </div>
+
+        {/* Middle-dot Metadata: Company · Location · Source */}
+        <div className="flex items-center flex-wrap gap-1 text-[11px] text-[#a6abbd] font-mono leading-tight">
+          <span className="text-[#f4f2ec] font-semibold truncate max-w-[130px]">
+            {job.company}
+          </span>
+          {job.location && (
+            <>
+              <span className="text-[#797f94]">·</span>
+              <span className="text-[#797f94] truncate max-w-[100px] flex items-center gap-0.5">
+                <MapPin className="w-2.5 h-2.5 inline shrink-0" />
+                {job.location}
+              </span>
+            </>
+          )}
+          {job.source && (
+            <>
+              <span className="text-[#797f94]">·</span>
+              {(() => {
+                const sourceInfo = getSourceBadgeStyle(job.source);
+                return (
+                  <span className={`inline-flex items-center gap-1 px-1 py-0.2 rounded-[2px] text-[9px] font-semibold border shrink-0 ${sourceInfo.colorClass}`}>
+                    <span className={`w-1 h-1 rounded-full ${sourceInfo.dotColorClass}`} />
+                    <span>{sourceInfo.label}</span>
+                  </span>
+                );
+              })()}
+            </>
+          )}
+        </div>
+
+        {/* Days Since Applied & Application Telemetry Chips */}
+        {job.application?.appliedAt && (
+          <div className="flex items-center justify-between gap-1 text-[10px] font-mono bg-[#15171d] p-1.5 rounded-[2px] border border-[#2a2e38]">
+            <span className="text-[#797f94] flex items-center gap-1">
+              <Clock className="w-2.5 h-2.5" />
+              <span className="tabular-nums" suppressHydrationWarning>
+                {new Date(job.application.appliedAt).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                })}
+              </span>
+            </span>
+            {daysApplied !== null && (
+              <span
+                className={`px-1.5 py-0.5 rounded-[2px] text-[9px] font-bold border tabular-nums ${
+                  isGhostable
+                    ? "bg-[#c4634e]/20 text-[#c4634e] border-[#c4634e]/50"
+                    : isStale
+                    ? "bg-[#d4a745]/20 text-[#d4a745] border-[#d4a745]/50"
+                    : "bg-[#1f222a] text-[#a6abbd] border-[#2a2e38]"
+                }`}
+              >
+                {isGhostable ? `👻 ${daysApplied}d Ghosted?` : isStale ? `⏳ ${daysApplied}d Pending` : `${daysApplied}d ago`}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Badges: Compensation, Response Time & Rejection */}
+        <div className="flex flex-wrap gap-1.5">
+          {salary && (
+            <span
+              data-testid="compensation-pill"
+              className="bg-[#1f222a] text-[#8ab384] border border-[#2a2e38] text-[9px] font-mono tabular-nums px-1.5 py-0.5 rounded-[2px]"
+            >
+              COMP {salary}
+            </span>
+          )}
+
+          {job.application?.responseTimeDays !== null && job.application?.responseTimeDays !== undefined && (
+            <span className="bg-[#1f222a] text-[#d4a745] border border-[#2a2e38] text-[9px] font-mono tabular-nums px-1.5 py-0.5 rounded-[2px]">
+              ⚡ {job.application.responseTimeDays}d response
+            </span>
+          )}
+
+          {job.application?.rejectionStage && (
+            <span className="bg-[#c4634e]/15 text-[#c4634e] border border-[#c4634e]/40 text-[9px] font-mono px-1.5 py-0.5 rounded-[2px] truncate">
+              🛑 {job.application.rejectionStage.replace(/_/g, " ")}
+            </span>
+          )}
+        </div>
+
+        {/* Tactical Action Bar & Accessible Keyboard Stage Selector */}
+        <div className="pt-2 border-t border-[#2a2e38] space-y-1.5">
+          {normalizePipelineStatus(job.status) === "ARCHIVED" && (
+            <button
+              type="button"
+              onClick={() => handleMoveStage(job.id, "DISCOVERED")}
+              disabled={isUpdating}
+              className={`w-full ${touchPrimaryControl} font-mono font-semibold text-[#8ab384] border border-[#8ab384]/40 bg-[#8ab384]/15 hover:bg-[#8ab384]/25 rounded-[2px] cursor-pointer flex items-center justify-center gap-1 transition-colors`}
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Restore to Discovered Inbox</span>
+            </button>
+          )}
+
+          {normalizePipelineStatus(job.status) === "APPLIED" && isGhostable && (
+            <button
+              type="button"
+              onClick={() => handleMoveStage(job.id, "GHOSTED")}
+              disabled={isUpdating}
+              className={`w-full ${touchPrimaryControl} font-mono font-semibold text-[#c4634e] border border-[#c4634e]/50 bg-[#c4634e]/20 hover:bg-[#c4634e]/30 rounded-[2px] cursor-pointer flex items-center justify-center gap-1 transition-colors`}
+            >
+              <Ghost className="w-3 h-3 text-[#c4634e]" />
+              <span>Mark Ghosted (&gt;3 wks)</span>
+            </button>
+          )}
+
+          {/* Accessible Keyboard Stage Changer */}
+          <div className="flex items-center gap-1.5">
+            <select
+              data-testid={mobile ? "stage-advance-menu" : undefined}
+              value={normalizePipelineStatus(job.status)}
+              onChange={(e) => handleMoveStage(job.id, e.target.value)}
+              aria-label={`Move stage for ${job.title} at ${job.company}`}
+              className={`flex-1 bg-[#15171d] border border-[#2a2e38] text-[#f4f2ec] ${
+                mobile ? "min-h-11 text-xs px-2.5" : "text-[10px] px-2 py-1"
+              } font-mono rounded-[2px] outline-none cursor-pointer hover:border-[#3d4352] focus-visible:border-[#d4a745] focus-visible:ring-1 focus-visible:ring-[#d4a745] transition-colors`}
+            >
+              <option value="DISCOVERED">Move: Discovered Inbox</option>
+              {PIPELINE_STAGES.map((s) => (
+                <option key={s.id} value={s.id}>
+                  Stage: {s.code} {"//"} {s.label}
+                </option>
+              ))}
+              <option value="ARCHIVED">Stage: 10 {"//"} Archived</option>
+            </select>
+
+            {onOpenPreparation && (
+              <button
+                type="button"
+                onClick={() => onOpenPreparation(job)}
+                className={`${touchButtonSize} rounded-[2px] text-[#d4a745] bg-[#1f222a] hover:bg-[#d4a745]/20 border border-[#2a2e38] hover:border-[#d4a745] flex items-center justify-center shrink-0 cursor-pointer transition-colors`}
+                title="Deploy Application Dossier & Tailor Resume"
+                aria-label={`Prepare application for ${job.title}`}
+              >
+                <Sparkles className="w-3 h-3 text-[#d4a745]" />
+              </button>
+            )}
+          </div>
+
+          {/* Bottom controls: Edit Job Modal trigger, Delete trigger & Draft Button */}
+          <div className="flex items-center justify-between gap-1.5">
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedEditJob(job);
+                  setIsEditModalOpen(true);
+                }}
+                disabled={isUpdating}
+                className={`${touchButtonSize} rounded-[2px] text-[#a6abbd] hover:text-[#f4f2ec] bg-[#15171d] hover:bg-[#1f222a] border border-[#2a2e38] flex items-center justify-center shrink-0 cursor-pointer transition-colors`}
+                title="Edit Job Details"
+                aria-label={`Edit ${job.title} details`}
+              >
+                <Edit2 className="w-2.5 h-2.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteJob(job)}
+                disabled={isUpdating}
+                className={`${touchButtonSize} rounded-[2px] text-[#c4634e]/80 hover:text-[#c4634e] bg-[#15171d] hover:bg-[#c4634e]/15 border border-[#2a2e38] hover:border-[#c4634e]/40 flex items-center justify-center shrink-0 cursor-pointer transition-colors`}
+                title="Delete Job"
+                aria-label={`Delete ${job.title} at ${job.company}`}
+              >
+                <Trash2 className="w-2.5 h-2.5" />
+              </button>
+            </div>
+            <DraftButton company={job.company} role={job.title} />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="space-y-3 flex flex-col h-full min-h-0 select-none">
+    <div className="space-y-3 flex flex-col h-full min-h-0 min-w-0 w-full select-none">
       {/* Tactical Sub-Header & Bulk Action Strip */}
       <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#0d0e12] p-2.5 rounded-[3px] border border-[#2a2e38]">
         <div className="flex items-center gap-3 flex-wrap text-xs">
@@ -284,7 +568,7 @@ export default function ApplicationTracker({
             <span>
               TRACKED:{" "}
               <strong className="text-[#f4f2ec] tabular-nums font-bold">
-                {pipelineJobs.filter((j) => normalizeStatus(j.status) !== "ARCHIVED").length}
+                {pipelineJobs.filter((j) => normalizePipelineStatus(j.status) !== "ARCHIVED").length}
               </strong>
             </span>
             {ghostableList.length > 0 && (
@@ -301,7 +585,7 @@ export default function ApplicationTracker({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Pipeline Sort Control (Score by default, Date toggle option) */}
           <button
             type="button"
@@ -345,7 +629,73 @@ export default function ApplicationTracker({
         </div>
       </div>
 
-      {/* Horizontally Scrollable Kanban Rail with Tactical Scrollbar & Mouse Drag-to-Pan */}
+      {/* Mobile: horizontal segmented stage selector with live count badges */}
+      <div
+        data-testid="mobile-stage-selector"
+        role="tablist"
+        aria-label="Pipeline stages"
+        className="sm:hidden flex overflow-x-auto no-scrollbar gap-2 shrink-0 -mx-0.5 px-0.5"
+      >
+        {displayedStages.map((stage) => {
+          const isActive = stage.id === activeStage.id;
+          return (
+            <button
+              key={stage.id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              data-stage-id={stage.id}
+              onClick={() => setActiveStageId(stage.id)}
+              className={`min-h-11 shrink-0 rounded-[2px] border px-3 py-1.5 flex items-center gap-2 font-mono text-[11px] transition-colors ${
+                isActive
+                  ? "border-[#d4a745] bg-[#d4a745]/15 text-[#f4f2ec]"
+                  : "border-[#2a2e38] bg-[#15171d] text-[#a6abbd] hover:border-[#3d4352] hover:text-[#f4f2ec]"
+              }`}
+            >
+              <span className="text-[9px] font-bold" style={{ color: stage.accentColor }}>
+                {stage.code}
+              </span>
+              <span className="whitespace-nowrap">{stage.label}</span>
+              <span className="min-w-5 rounded-[2px] border border-[#2a2e38] bg-[#0d0e12] px-1.5 py-0.5 text-center text-[10px] font-bold tabular-nums text-[#f4f2ec]">
+                {stageCounts[stage.id] ?? 0}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Mobile: full-width active stage feed for single-thumb scanning */}
+      <div
+        data-testid="mobile-stage-panel"
+        className="sm:hidden flex flex-1 min-h-0 flex-col rounded-[3px] border border-[#2a2e38] bg-[#15171d] p-3"
+      >
+        <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-[#2a2e38] shrink-0">
+          <span
+            className="font-mono text-xs font-bold tracking-wider"
+            style={{ color: activeStage.accentColor }}
+          >
+            {activeStage.code} {"//"} {activeStage.label.toUpperCase()}
+          </span>
+          <span className="text-[11px] font-mono text-[#f4f2ec] font-bold bg-[#0d0e12] px-2 py-0.5 rounded-[2px] border border-[#2a2e38] tabular-nums">
+            {activeStageJobs.length}
+          </span>
+        </div>
+
+        <div className="flex-1 min-h-0 space-y-2.5 overflow-y-auto pr-0.5">
+          {activeStageJobs.length === 0 ? (
+            <div className="h-36 flex flex-col items-center justify-center gap-1 text-xs font-mono italic border border-dashed border-[#2a2e38] text-[#797f94] rounded-[2px]">
+              <span>Stage Empty</span>
+              <span className="text-[10px] not-italic text-[#a6abbd]">
+                Tap another stage above to review candidates
+              </span>
+            </div>
+          ) : (
+            activeStageJobs.map((job) => renderJobCard(job, true))
+          )}
+        </div>
+      </div>
+
+      {/* Desktop: horizontally scrollable Kanban rail with tactical scrollbar & drag-to-pan */}
       <div
         ref={railRef}
         onMouseDown={handleRailMouseDown}
@@ -353,12 +703,12 @@ export default function ApplicationTracker({
         onMouseUp={handleRailMouseUp}
         onWheel={handleRailWheel}
         onDragOver={handleRailDragOver}
-        className={`flex gap-3 overflow-x-auto pb-3 pt-1 flex-1 min-h-0 ${
+        className={`hidden sm:flex gap-3 overflow-x-auto pb-3 pt-1 flex-1 min-h-0 ${
           isPanning ? "cursor-grabbing select-none" : "cursor-grab snap-x"
         }`}
       >
         {displayedStages.map((stage) => {
-          const stageJobs = sortedPipelineJobs.filter((j) => normalizeStatus(j.status) === stage.id);
+          const stageJobs = sortedPipelineJobs.filter((j) => normalizePipelineStatus(j.status) === stage.id);
           const isTargeted = dragOverStageId === stage.id;
 
           return (
@@ -383,7 +733,7 @@ export default function ApplicationTracker({
                     className="font-mono text-xs font-bold tracking-wider"
                     style={{ color: stage.accentColor }}
                   >
-                    {stage.code} // {stage.label.toUpperCase()}
+                    {stage.code} {"//"} {stage.label.toUpperCase()}
                   </span>
                 </div>
                 <span className="text-[11px] font-mono text-[#f4f2ec] font-bold bg-[#0d0e12] px-2 py-0.5 rounded-[2px] border border-[#2a2e38] tabular-nums">
@@ -404,224 +754,7 @@ export default function ApplicationTracker({
                     <span>{isTargeted ? "Drop candidate here" : "Stage Empty"}</span>
                   </div>
                 ) : (
-                  stageJobs.map((job) => {
-                    const isUpdating = updatingId === job.id;
-                    const isDragging = draggedJobId === job.id;
-                    const score = job.fitScore?.score;
-
-                    const daysApplied = job.application?.appliedAt
-                      ? calculateDaysSinceApplied(job.application.appliedAt)
-                      : null;
-                    const isAppliedStatus = normalizeStatus(job.status) === "APPLIED";
-                    const isGhostable = isAppliedStatus && daysApplied !== null && daysApplied >= 21;
-                    const isStale = isAppliedStatus && daysApplied !== null && daysApplied >= 14 && daysApplied < 21;
-
-                    return (
-                      <div
-                        key={job.id}
-                        data-card-id={job.id}
-                        className={`bg-[#0d0e12] border rounded-[3px] p-2.5 space-y-2 transition-all text-xs group ${
-                          isDragging
-                            ? "opacity-30 border-[#d4a745] bg-[#1f222a]"
-                            : isUpdating
-                            ? "opacity-50 pointer-events-none border-[#2a2e38]"
-                            : "border-[#2a2e38] hover:border-[#3d4352] hover:bg-[#15171d]/90 shadow-sm"
-                        }`}
-                      >
-                        {/* Card Header: Drag Grip Handle, Title & Score Anchor Box */}
-                        <div className="flex items-start gap-1.5 justify-between">
-                          <div
-                            draggable={!isUpdating}
-                            onDragStart={(e) => handleDragStart(e, job.id)}
-                            onDragEnd={handleDragEnd}
-                            className="cursor-grab active:cursor-grabbing p-0.5 -ml-1 text-[#797f94] hover:text-[#d4a745] transition-colors rounded-[2px] hover:bg-[#1f222a] shrink-0"
-                            title="Drag handle to move candidate across pipeline stages"
-                            aria-label={`Drag handle for ${job.title}`}
-                          >
-                            <GripVertical className="w-3.5 h-3.5" />
-                          </div>
-                          <div className="flex-1 min-w-0 pt-0.5">
-                            <h3 className="font-sans font-bold text-[#f4f2ec] text-xs leading-snug line-clamp-2 group-hover:text-[#d4a745] transition-colors">
-                              {job.title}
-                            </h3>
-                          </div>
-                          {score !== undefined && score !== null && (
-                            <div
-                              className={`w-9 h-7 rounded-[2px] flex items-center justify-center font-mono font-bold text-xs tabular-nums border shrink-0 ${
-                                score >= 80
-                                  ? "bg-[#d4a745]/15 text-[#d4a745] border-[#d4a745]/40"
-                                  : score >= 60
-                                  ? "bg-[#8ab384]/15 text-[#8ab384] border-[#8ab384]/40"
-                                  : "bg-[#c4634e]/15 text-[#c4634e] border-[#c4634e]/40"
-                              }`}
-                            >
-                              {score}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Middle-dot Metadata: Company · Location · Source */}
-                        <div className="flex items-center flex-wrap gap-1 text-[11px] text-[#a6abbd] font-mono leading-tight">
-                          <span className="text-[#f4f2ec] font-semibold truncate max-w-[130px]">
-                            {job.company}
-                          </span>
-                          {job.location && (
-                            <>
-                              <span className="text-[#797f94]">·</span>
-                              <span className="text-[#797f94] truncate max-w-[100px] flex items-center gap-0.5">
-                                <MapPin className="w-2.5 h-2.5 inline shrink-0" />
-                                {job.location}
-                              </span>
-                            </>
-                          )}
-                          {job.source && (
-                            <>
-                              <span className="text-[#797f94]">·</span>
-                              {(() => {
-                                const sourceInfo = getSourceBadgeStyle(job.source);
-                                return (
-                                  <span className={`inline-flex items-center gap-1 px-1 py-0.2 rounded-[2px] text-[9px] font-semibold border shrink-0 ${sourceInfo.colorClass}`}>
-                                    <span className={`w-1 h-1 rounded-full ${sourceInfo.dotColorClass}`} />
-                                    <span>{sourceInfo.label}</span>
-                                  </span>
-                                );
-                              })()}
-                            </>
-                          )}
-                        </div>
-
-                        {/* Days Since Applied & Application Telemetry Chips */}
-                        {job.application?.appliedAt && (
-                          <div className="flex items-center justify-between gap-1 text-[10px] font-mono bg-[#15171d] p-1.5 rounded-[2px] border border-[#2a2e38]">
-                            <span className="text-[#797f94] flex items-center gap-1">
-                              <Clock className="w-2.5 h-2.5" />
-                              <span className="tabular-nums" suppressHydrationWarning>
-                                {new Date(job.application.appliedAt).toLocaleDateString("en-US", {
-                                  month: "short",
-                                  day: "numeric",
-                                })}
-                              </span>
-                            </span>
-                            {daysApplied !== null && (
-                              <span
-                                className={`px-1.5 py-0.5 rounded-[2px] text-[9px] font-bold border tabular-nums ${
-                                  isGhostable
-                                    ? "bg-[#c4634e]/20 text-[#c4634e] border-[#c4634e]/50"
-                                    : isStale
-                                    ? "bg-[#d4a745]/20 text-[#d4a745] border-[#d4a745]/50"
-                                    : "bg-[#1f222a] text-[#a6abbd] border-[#2a2e38]"
-                                }`}
-                              >
-                                {isGhostable ? `👻 ${daysApplied}d Ghosted?` : isStale ? `⏳ ${daysApplied}d Pending` : `${daysApplied}d ago`}
-                              </span>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Badges: Response Time & Rejection */}
-                        <div className="flex flex-wrap gap-1.5">
-                          {job.application?.responseTimeDays !== null && job.application?.responseTimeDays !== undefined && (
-                            <span className="bg-[#1f222a] text-[#d4a745] border border-[#2a2e38] text-[9px] font-mono tabular-nums px-1.5 py-0.5 rounded-[2px]">
-                              ⚡ {job.application.responseTimeDays}d response
-                            </span>
-                          )}
-
-                          {job.application?.rejectionStage && (
-                            <span className="bg-[#c4634e]/15 text-[#c4634e] border border-[#c4634e]/40 text-[9px] font-mono px-1.5 py-0.5 rounded-[2px] truncate">
-                              🛑 {job.application.rejectionStage.replace(/_/g, " ")}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Tactical Action Bar & Accessible Keyboard Stage Selector */}
-                        <div className="pt-2 border-t border-[#2a2e38] space-y-1.5">
-                          {normalizeStatus(job.status) === "ARCHIVED" && (
-                            <button
-                              type="button"
-                              onClick={() => handleMoveStage(job.id, "DISCOVERED")}
-                              disabled={isUpdating}
-                              className="w-full h-6 text-[10px] font-mono font-semibold text-[#8ab384] border border-[#8ab384]/40 bg-[#8ab384]/15 hover:bg-[#8ab384]/25 rounded-[2px] cursor-pointer flex items-center justify-center gap-1 transition-colors"
-                            >
-                              <RotateCcw className="w-3 h-3" />
-                              <span>Restore to Discovered Inbox</span>
-                            </button>
-                          )}
-
-                          {normalizeStatus(job.status) === "APPLIED" && isGhostable && (
-                            <button
-                              type="button"
-                              onClick={() => handleMoveStage(job.id, "GHOSTED")}
-                              disabled={isUpdating}
-                              className="w-full h-6 text-[10px] font-mono font-semibold text-[#c4634e] border border-[#c4634e]/50 bg-[#c4634e]/20 hover:bg-[#c4634e]/30 rounded-[2px] cursor-pointer flex items-center justify-center gap-1 transition-colors"
-                            >
-                              <Ghost className="w-3 h-3 text-[#c4634e]" />
-                              <span>Mark Ghosted (&gt;3 wks)</span>
-                            </button>
-                          )}
-
-                          {/* Accessible Keyboard Stage Changer */}
-                          <div className="flex items-center gap-1.5">
-                            <select
-                              value={normalizeStatus(job.status)}
-                              onChange={(e) => handleMoveStage(job.id, e.target.value)}
-                              aria-label={`Move stage for ${job.title} at ${job.company}`}
-                              className="flex-1 bg-[#15171d] border border-[#2a2e38] text-[#f4f2ec] text-[10px] font-mono rounded-[2px] px-2 py-1 outline-none cursor-pointer hover:border-[#3d4352] focus-visible:border-[#d4a745] focus-visible:ring-1 focus-visible:ring-[#d4a745] transition-colors"
-                            >
-                              <option value="DISCOVERED">Move: Discovered Inbox</option>
-                              {PIPELINE_STAGES.map((s) => (
-                                <option key={s.id} value={s.id}>
-                                  Stage: {s.code} // {s.label}
-                                </option>
-                              ))}
-                              <option value="ARCHIVED">Stage: 10 // Archived</option>
-                            </select>
-
-                            {onOpenPreparation && (
-                              <button
-                                type="button"
-                                onClick={() => onOpenPreparation(job)}
-                                className="h-6 w-6 rounded-[2px] text-[#d4a745] bg-[#1f222a] hover:bg-[#d4a745]/20 border border-[#2a2e38] hover:border-[#d4a745] flex items-center justify-center shrink-0 cursor-pointer transition-colors"
-                                title="Deploy Application Dossier & Tailor Resume"
-                                aria-label={`Prepare application for ${job.title}`}
-                              >
-                                <Sparkles className="w-3 h-3 text-[#d4a745]" />
-                              </button>
-                            )}
-                          </div>
-
-                          {/* Bottom controls: Edit Job Modal trigger, Delete trigger & Draft Button */}
-                          <div className="flex items-center justify-between gap-1.5">
-                            <div className="flex items-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSelectedEditJob(job);
-                                  setIsEditModalOpen(true);
-                                }}
-                                disabled={isUpdating}
-                                className="h-6 w-6 rounded-[2px] text-[#a6abbd] hover:text-[#f4f2ec] bg-[#15171d] hover:bg-[#1f222a] border border-[#2a2e38] flex items-center justify-center shrink-0 cursor-pointer transition-colors"
-                                title="Edit Job Details"
-                                aria-label={`Edit ${job.title} details`}
-                              >
-                                <Edit2 className="w-2.5 h-2.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteJob(job)}
-                                disabled={isUpdating}
-                                className="h-6 w-6 rounded-[2px] text-[#c4634e]/80 hover:text-[#c4634e] bg-[#15171d] hover:bg-[#c4634e]/15 border border-[#2a2e38] hover:border-[#c4634e]/40 flex items-center justify-center shrink-0 cursor-pointer transition-colors"
-                                title="Delete Job"
-                                aria-label={`Delete ${job.title} at ${job.company}`}
-                              >
-                                <Trash2 className="w-2.5 h-2.5" />
-                              </button>
-                            </div>
-                            <DraftButton company={job.company} role={job.title} />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
+                  stageJobs.map((job) => renderJobCard(job, false))
                 )}
               </div>
             </div>

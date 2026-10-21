@@ -71,163 +71,170 @@ export function TelemetryStrip({
     return s === "FILTERED_OUT" || s === "IGNORED";
   }).length;
 
+  const metrics = [
+    {
+      id: "inbox" as const,
+      mobileTitle: "01 · Priority",
+      desktopTitle: "01 · Priority",
+      mobileBadge: "≥80",
+      desktopBadge: "≥ 80 FIT",
+      value: priorityCount,
+      desktopValue: priorityCount,
+      subtext: `targets ${totalActive > 0 ? `(${priorityPercentage}%)` : ""}`,
+      activePillClass: "bg-[#1f222a] text-[#d4a745] border-[#d4a745]",
+      mobileBadgeClass: "bg-[#d4a745]/20 text-[#d4a745]",
+      mobileSubtextClass: "text-[#d4a745] font-bold",
+      desktopBadgeClass: "text-[#d4a745] font-bold",
+      desktopValueClass: "text-[#d4a745]",
+    },
+    {
+      id: "review" as const,
+      mobileTitle: "02 · Assessment",
+      desktopTitle: "02 · Assessment",
+      mobileBadge: "60–79",
+      desktopBadge: "60–79 FIT",
+      value: reviewCount,
+      desktopValue: reviewCount,
+      subtext: "pending",
+      activePillClass: "bg-[#1f222a] text-[#d4a745] border-[#d4a745]",
+      mobileBadgeClass: "bg-[#1f222a] border border-[#2a2e38] text-[#f4f2ec]",
+      mobileSubtextClass: "text-[#a6abbd]",
+      desktopBadgeClass: "text-[#a6abbd]",
+      desktopValueClass: "text-[#f4f2ec]",
+    },
+    {
+      id: "pipeline" as const,
+      mobileTitle: "03 · Pipeline",
+      desktopTitle: "03 · Pipeline",
+      mobileBadge: "ACTIVE",
+      desktopBadge: "ACTIVE OPS",
+      value: pipelineCount,
+      desktopValue: pipelineCount,
+      subtext: "in flight",
+      activePillClass: "bg-[#1f222a] text-[#8ab384] border-[#8ab384]",
+      mobileBadgeClass: "bg-[#8ab384]/20 text-[#8ab384]",
+      mobileSubtextClass: "text-[#8ab384] font-bold",
+      desktopBadgeClass: "text-[#8ab384] font-bold",
+      desktopValueClass: "text-[#8ab384]",
+    },
+    {
+      id: "discovery" as const,
+      mobileTitle: "04 · Discovery",
+      desktopTitle: "04 · Discovery",
+      mobileBadge: "FEEDS",
+      desktopBadge: "FEEDS",
+      value: discoveryCount !== undefined ? discoveryCount : 0,
+      desktopValue: discoveryCount !== undefined ? discoveryCount : "—",
+      subtext: "staged",
+      activePillClass: "bg-[#1f222a] text-[#d4a745] border-[#d4a745]",
+      mobileBadgeClass: "bg-[#d4a745]/20 text-[#d4a745]",
+      mobileSubtextClass: "text-[#d4a745] font-bold",
+      desktopBadgeClass: "text-[#d4a745] font-bold",
+      desktopValueClass: "text-[#d4a745]",
+    },
+    {
+      id: "filtered" as const,
+      mobileTitle: "05 · Filtered",
+      desktopTitle: "05 · Filtered",
+      mobileBadge: "DROPPED",
+      desktopBadge: "DROPPED",
+      value: droppedCount,
+      desktopValue: droppedCount,
+      subtext: "dropped",
+      activePillClass: "bg-[#1f222a] text-[#c4634e] border-[#c4634e]",
+      mobileBadgeClass: "bg-[#c4634e]/20 text-[#c4634e]",
+      mobileSubtextClass: "text-[#c4634e]",
+      desktopBadgeClass: "text-[#c4634e] font-bold",
+      desktopValueClass: "text-[#c4634e]",
+    },
+    {
+      id: "all" as const,
+      mobileTitle: "06 · Fleet",
+      desktopTitle: "06 · Fleet Index",
+      mobileBadge: "/100",
+      desktopBadge: `${totalActive} TOTAL`,
+      value: avgFit,
+      desktopValue: avgFit,
+      subtext: "/100 avg fit",
+      activePillClass: "bg-[#1f222a] text-[#d4a745] border-[#d4a745]",
+      mobileBadgeClass: "bg-[#1f222a] border border-[#2a2e38] text-[#f4f2ec]",
+      mobileSubtextClass: "text-[#a6abbd]",
+      desktopBadgeClass: "text-[#a6abbd]",
+      desktopValueClass: "text-[#f4f2ec]",
+    },
+  ];
+
   return (
-    <div
-      role="tablist"
-      aria-label="Target Queue & Fleet Telemetry Views"
-      className={`w-full bg-[#15171d] border border-[#2a2e38] rounded-[3px] grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 divide-y md:divide-y-0 md:divide-x divide-[#2a2e38] text-left select-none ${className}`}
-    >
-      {/* 1. Priority Targets (>= 80 Fit) */}
-      <button
-        type="button"
-        role="tab"
-        aria-selected={activeTab === "inbox"}
-        onClick={() => onTabSelect("inbox")}
-        className={`p-3.5 sm:py-3 sm:px-4 text-left transition-colors relative group hover:bg-[#1f222a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4a745] ${
-          activeTab === "inbox" ? "bg-[#1f222a]" : ""
-        }`}
+    <div className={className}>
+      {/* Mobile Compact Strip (<md): Horizontal scrolling pill rail */}
+      <div
+        role="tablist"
+        aria-label="Target Queue & Fleet Telemetry Views"
+        className="flex md:hidden items-center gap-1.5 overflow-x-auto no-scrollbar p-1.5 bg-[#15171d] border border-[#2a2e38] rounded-[3px] select-none text-xs font-mono"
       >
-        {activeTab === "inbox" && (
-          <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#d4a745]" />
-        )}
-        <div className="flex items-center justify-between text-xs font-mono tracking-wide text-[#a6abbd] uppercase">
-          <span className="font-semibold text-[#f4f2ec]">01 · Priority</span>
-          <span className="text-[11px] text-[#d4a745] font-bold">≥ 80 FIT</span>
-        </div>
-        <div className="mt-1.5 flex items-baseline gap-2">
-          <span className="text-2xl sm:text-3xl font-bold font-mono text-[#d4a745] tabular-nums">
-            {priorityCount}
-          </span>
-          <span className="text-xs font-mono text-[#a6abbd]">
-            targets {totalActive > 0 ? `(${priorityPercentage}%)` : ""}
-          </span>
-        </div>
-      </button>
+        {metrics.map((m) => {
+          const isSelected = activeTab === m.id;
+          return (
+            <button
+              key={m.id}
+              type="button"
+              role="tab"
+              aria-selected={isSelected}
+              onClick={() => onTabSelect(m.id)}
+              className={`shrink-0 px-2.5 py-1.5 rounded-[2px] flex items-center gap-1.5 transition-colors border focus-visible:outline-2 focus-visible:outline-[#d4a745] ${
+                isSelected
+                  ? m.activePillClass
+                  : "bg-[#0d0e12] text-[#a6abbd] border-[#2a2e38] hover:text-[#f4f2ec]"
+              }`}
+            >
+              <span className="font-semibold text-[#f4f2ec]">{m.mobileTitle}</span>
+              <span className={`px-1.5 py-0.5 rounded-[2px] font-bold text-[10px] tabular-nums ${m.mobileBadgeClass}`}>
+                {m.value}
+              </span>
+              <span className={`text-[10px] ${m.mobileSubtextClass}`}>{m.mobileBadge}</span>
+            </button>
+          );
+        })}
+      </div>
 
-      {/* 2. Assessment / Review (60–79 Fit) */}
-      <button
-        type="button"
-        role="tab"
-        aria-selected={activeTab === "review"}
-        onClick={() => onTabSelect("review")}
-        className={`p-3.5 sm:py-3 sm:px-4 text-left transition-colors relative group hover:bg-[#1f222a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4a745] ${
-          activeTab === "review" ? "bg-[#1f222a]" : ""
-        }`}
+      {/* Desktop Grid View (md+) */}
+      <div
+        role="tablist"
+        aria-label="Target Queue & Fleet Telemetry Views"
+        className="hidden md:grid w-full bg-[#15171d] border border-[#2a2e38] rounded-[3px] md:grid-cols-3 lg:grid-cols-6 divide-y md:divide-y-0 md:divide-x divide-[#2a2e38] text-left select-none"
       >
-        {activeTab === "review" && (
-          <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#d4a745]" />
-        )}
-        <div className="flex items-center justify-between text-xs font-mono tracking-wide text-[#a6abbd] uppercase">
-          <span className="font-semibold text-[#f4f2ec]">02 · Assessment</span>
-          <span className="text-[11px] text-[#a6abbd]">60–79 FIT</span>
-        </div>
-        <div className="mt-1.5 flex items-baseline gap-2">
-          <span className="text-2xl sm:text-3xl font-bold font-mono text-[#f4f2ec] tabular-nums">
-            {reviewCount}
-          </span>
-          <span className="text-xs font-mono text-[#a6abbd]">pending</span>
-        </div>
-      </button>
-
-      {/* 3. Active Operations / Pipeline */}
-      <button
-        type="button"
-        role="tab"
-        aria-selected={activeTab === "pipeline"}
-        onClick={() => onTabSelect("pipeline")}
-        className={`p-3.5 sm:py-3 sm:px-4 text-left transition-colors relative group hover:bg-[#1f222a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4a745] ${
-          activeTab === "pipeline" ? "bg-[#1f222a]" : ""
-        }`}
-      >
-        {activeTab === "pipeline" && (
-          <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#d4a745]" />
-        )}
-        <div className="flex items-center justify-between text-xs font-mono tracking-wide text-[#a6abbd] uppercase">
-          <span className="font-semibold text-[#f4f2ec]">03 · Pipeline</span>
-          <span className="text-[11px] text-[#8ab384] font-bold">ACTIVE OPS</span>
-        </div>
-        <div className="mt-1.5 flex items-baseline gap-2">
-          <span className="text-2xl sm:text-3xl font-bold font-mono text-[#8ab384] tabular-nums">
-            {pipelineCount}
-          </span>
-          <span className="text-xs font-mono text-[#a6abbd]">in flight</span>
-        </div>
-      </button>
-
-      {/* 4. Discovery Staging Buffer */}
-      <button
-        type="button"
-        role="tab"
-        aria-selected={activeTab === "discovery"}
-        onClick={() => onTabSelect("discovery")}
-        className={`p-3.5 sm:py-3 sm:px-4 text-left transition-colors relative group hover:bg-[#1f222a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4a745] ${
-          activeTab === "discovery" ? "bg-[#1f222a]" : ""
-        }`}
-      >
-        {activeTab === "discovery" && (
-          <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#d4a745]" />
-        )}
-        <div className="flex items-center justify-between text-xs font-mono tracking-wide text-[#a6abbd] uppercase">
-          <span className="font-semibold text-[#f4f2ec]">04 · Discovery</span>
-          <span className="text-[11px] text-[#d4a745] font-bold">FEEDS</span>
-        </div>
-        <div className="mt-1.5 flex items-baseline gap-2">
-          <span className="text-2xl sm:text-3xl font-bold font-mono text-[#d4a745] tabular-nums">
-            {discoveryCount !== undefined ? discoveryCount : "—"}
-          </span>
-          <span className="text-xs font-mono text-[#a6abbd]">staged</span>
-        </div>
-      </button>
-
-      {/* 5. Filtered Out / Dropped Opportunities */}
-      <button
-        type="button"
-        role="tab"
-        aria-selected={activeTab === "filtered"}
-        onClick={() => onTabSelect("filtered")}
-        className={`p-3.5 sm:py-3 sm:px-4 text-left transition-colors relative group hover:bg-[#1f222a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4a745] ${
-          activeTab === "filtered" ? "bg-[#1f222a]" : ""
-        }`}
-      >
-        {activeTab === "filtered" && (
-          <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#d4a745]" />
-        )}
-        <div className="flex items-center justify-between text-xs font-mono tracking-wide text-[#a6abbd] uppercase">
-          <span className="font-semibold text-[#f4f2ec]">05 · Filtered</span>
-          <span className="text-[11px] text-[#c4634e] font-bold">DROPPED</span>
-        </div>
-        <div className="mt-1.5 flex items-baseline gap-2">
-          <span className="text-2xl sm:text-3xl font-bold font-mono text-[#c4634e] tabular-nums">
-            {droppedCount}
-          </span>
-          <span className="text-xs font-mono text-[#a6abbd]">dropped</span>
-        </div>
-      </button>
-
-      {/* 6. Fleet Telemetry Index (Avg Fit & Total Pool) */}
-      <button
-        type="button"
-        role="tab"
-        aria-selected={activeTab === "all"}
-        onClick={() => onTabSelect("all")}
-        className={`p-3.5 sm:py-3 sm:px-4 text-left transition-colors relative group hover:bg-[#1f222a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4a745] ${
-          activeTab === "all" ? "bg-[#1f222a]" : ""
-        }`}
-      >
-        {activeTab === "all" && (
-          <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#d4a745]" />
-        )}
-        <div className="flex items-center justify-between text-xs font-mono tracking-wide text-[#a6abbd] uppercase">
-          <span className="font-semibold text-[#f4f2ec]">06 · Fleet Index</span>
-          <span className="text-[11px] text-[#a6abbd]">{totalActive} TOTAL</span>
-        </div>
-        <div className="mt-1.5 flex items-baseline gap-2">
-          <span className="text-2xl sm:text-3xl font-bold font-mono text-[#f4f2ec] tabular-nums">
-            {avgFit}
-          </span>
-          <span className="text-xs font-mono text-[#a6abbd]">/100 avg fit</span>
-        </div>
-      </button>
+        {metrics.map((m) => {
+          const isSelected = activeTab === m.id;
+          return (
+            <button
+              key={m.id}
+              type="button"
+              role="tab"
+              aria-selected={isSelected}
+              onClick={() => onTabSelect(m.id)}
+              className={`p-3.5 sm:py-3 sm:px-4 text-left transition-colors relative group hover:bg-[#1f222a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4a745] ${
+                isSelected ? "bg-[#1f222a]" : ""
+              }`}
+            >
+              {isSelected && (
+                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#d4a745]" />
+              )}
+              <div className="flex items-center justify-between text-xs font-mono tracking-wide text-[#a6abbd] uppercase">
+                <span className="font-semibold text-[#f4f2ec]">{m.desktopTitle}</span>
+                <span className={`text-[11px] ${m.desktopBadgeClass}`}>{m.desktopBadge}</span>
+              </div>
+              <div className="mt-1.5 flex items-baseline gap-2">
+                <span className={`text-2xl sm:text-3xl font-bold font-mono tabular-nums ${m.desktopValueClass}`}>
+                  {m.desktopValue}
+                </span>
+                <span className="text-xs font-mono text-[#a6abbd]">
+                  {m.subtext}
+                </span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

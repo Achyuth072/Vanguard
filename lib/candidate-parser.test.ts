@@ -67,7 +67,7 @@ describe("Candidate Resume Markdown Parser", () => {
     assert.strictEqual(profile.projects.length, 2);
     assert.strictEqual(profile.projects[0].title, "Kagelin");
     assert.ok(profile.projects[0].technologies.includes("Next.js 16"));
-    assert.strictEqual(profile.projects[1].title, "Agentic Career CRM");
+    assert.strictEqual(profile.projects[1].title, "Vanguard");
 
     assert.ok(profile.skills.length >= 8);
     const jsSkill = profile.skills.find((s) => s.name === "JavaScript");

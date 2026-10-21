@@ -33,9 +33,10 @@ import type {
   MasterSkillCategory,
   RemoteStatus,
 } from "@/types/candidate";
+import BottomSheet, {
+  TACTICAL_DRAWER_CLASS,
+} from "@/components/ui/bottom-sheet";
 import {
-  Sheet,
-  SheetContent,
   SheetHeader,
   SheetTitle,
   SheetDescription,
@@ -72,6 +73,21 @@ const CATEGORY_STYLES: Record<MasterSkillCategory, string> = {
   TOOL: "bg-[#15171d] text-[#a6abbd] border-[#2a2e38]",
   DOMAIN: "bg-[#1f222a] text-[#8ab384] border-[#8ab384]/40",
 };
+
+interface ProfileNavTab {
+  id: TabType;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  countKey?: "skills" | "experiences" | "projects";
+}
+
+const PROFILE_NAV_TABS: ProfileNavTab[] = [
+  { id: "preferences", label: "01 · PREFERENCES", icon: Sliders },
+  { id: "skills", label: "02 · SKILLS", icon: Wrench, countKey: "skills" },
+  { id: "experiences", label: "03 · EXPERIENCE", icon: Briefcase, countKey: "experiences" },
+  { id: "projects", label: "04 · PROJECTS", icon: FolderGit2, countKey: "projects" },
+  { id: "resume", label: "05 · MASTER RESUME", icon: FileText },
+];
 
 export default function ProfileDrawer({
   isOpen,
@@ -420,11 +436,12 @@ export default function ProfileDrawer({
       : profile.skills.filter((s) => s.category === selectedSkillCategory);
 
   return (
-    <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <SheetContent
-        side="right"
-        className="w-full sm:max-w-2xl lg:max-w-4xl p-0 flex flex-col h-full bg-[#0d0e12] border-l border-[#2a2e38] text-[#f4f2ec] shadow-none gap-0 overflow-hidden"
-      >
+    <BottomSheet
+      open={isOpen}
+      onOpenChange={(open) => { if (!open) onClose(); }}
+      desktopClassName={TACTICAL_DRAWER_CLASS}
+      mobileClassName="bg-[#15171d] border-t border-[#2a2e38]"
+    >
         {/* Drawer Header */}
         <SheetHeader className="p-6 border-b border-[#2a2e38] bg-[#15171d] shrink-0 space-y-4 text-left">
           <div>
@@ -462,85 +479,33 @@ export default function ProfileDrawer({
           )}
 
           {/* Navigation Tabs with 12px monospace indicators */}
-          <div className="flex rounded-[2px] bg-[#0d0e12] p-1 border border-[#2a2e38] text-xs font-mono font-semibold overflow-x-auto gap-1">
-            <button
-              type="button"
-              onClick={() => setActiveTab("preferences")}
-              className={cn(
-                "flex-1 min-w-[120px] py-1.5 px-2.5 rounded-[2px] flex items-center justify-center gap-1.5 border transition-colors text-xs focus-visible:outline-2 focus-visible:outline-[#d4a745]",
-                activeTab === "preferences"
-                  ? "bg-[#1f222a] text-[#f4f2ec] border-[#3d4352]"
-                  : "border-transparent text-[#a6abbd] hover:text-[#f4f2ec] hover:bg-[#15171d]"
-              )}
-            >
-              <Sliders className="w-3.5 h-3.5 text-[#d4a745]" />
-              <span>01 · PREFERENCES</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("skills")}
-              className={cn(
-                "flex-1 min-w-[120px] py-1.5 px-2.5 rounded-[2px] flex items-center justify-center gap-1.5 border transition-colors text-xs focus-visible:outline-2 focus-visible:outline-[#d4a745]",
-                activeTab === "skills"
-                  ? "bg-[#1f222a] text-[#f4f2ec] border-[#3d4352]"
-                  : "border-transparent text-[#a6abbd] hover:text-[#f4f2ec] hover:bg-[#15171d]"
-              )}
-            >
-              <Wrench className="w-3.5 h-3.5 text-[#d4a745]" />
-              <span>02 · VERIFIED SKILLS</span>
-              <span className="px-1.5 py-0.2 rounded-[2px] bg-[#15171d] border border-[#2a2e38] text-[#a6abbd] font-mono text-[10px]">
-                {profile.skills.length}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("experiences")}
-              className={cn(
-                "flex-1 min-w-[120px] py-1.5 px-2.5 rounded-[2px] flex items-center justify-center gap-1.5 border transition-colors text-xs focus-visible:outline-2 focus-visible:outline-[#d4a745]",
-                activeTab === "experiences"
-                  ? "bg-[#1f222a] text-[#f4f2ec] border-[#3d4352]"
-                  : "border-transparent text-[#a6abbd] hover:text-[#f4f2ec] hover:bg-[#15171d]"
-              )}
-            >
-              <Briefcase className="w-3.5 h-3.5 text-[#d4a745]" />
-              <span>03 · EXPERIENCE</span>
-              <span className="px-1.5 py-0.2 rounded-[2px] bg-[#15171d] border border-[#2a2e38] text-[#a6abbd] font-mono text-[10px]">
-                {profile.experiences.length}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("projects")}
-              className={cn(
-                "flex-1 min-w-[120px] py-1.5 px-2.5 rounded-[2px] flex items-center justify-center gap-1.5 border transition-colors text-xs focus-visible:outline-2 focus-visible:outline-[#d4a745]",
-                activeTab === "projects"
-                  ? "bg-[#1f222a] text-[#f4f2ec] border-[#3d4352]"
-                  : "border-transparent text-[#a6abbd] hover:text-[#f4f2ec] hover:bg-[#15171d]"
-              )}
-            >
-              <FolderGit2 className="w-3.5 h-3.5 text-[#d4a745]" />
-              <span>04 · PROJECTS</span>
-              <span className="px-1.5 py-0.2 rounded-[2px] bg-[#15171d] border border-[#2a2e38] text-[#a6abbd] font-mono text-[10px]">
-                {profile.projects.length}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("resume")}
-              className={cn(
-                "flex-1 min-w-[120px] py-1.5 px-2.5 rounded-[2px] flex items-center justify-center gap-1.5 border transition-colors text-xs focus-visible:outline-2 focus-visible:outline-[#d4a745]",
-                activeTab === "resume"
-                  ? "bg-[#1f222a] text-[#f4f2ec] border-[#3d4352]"
-                  : "border-transparent text-[#a6abbd] hover:text-[#f4f2ec] hover:bg-[#15171d]"
-              )}
-            >
-              <FileText className="w-3.5 h-3.5 text-[#d4a745]" />
-              <span>05 · MASTER RESUME</span>
-            </button>
+          <div className="flex rounded-[2px] bg-[#0d0e12] p-1 border border-[#2a2e38] text-xs font-mono font-semibold overflow-x-auto no-scrollbar gap-1.5 select-none">
+            {PROFILE_NAV_TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isSelected = activeTab === tab.id;
+              const count = tab.countKey ? profile[tab.countKey].length : null;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    "shrink-0 whitespace-nowrap py-1.5 px-3 rounded-[2px] flex items-center justify-center gap-1.5 border transition-colors text-xs focus-visible:outline-2 focus-visible:outline-[#d4a745]",
+                    isSelected
+                      ? "bg-[#1f222a] text-[#f4f2ec] border-[#3d4352]"
+                      : "border-transparent text-[#a6abbd] hover:text-[#f4f2ec] hover:bg-[#15171d]"
+                  )}
+                >
+                  <Icon className="w-3.5 h-3.5 text-[#d4a745]" />
+                  <span>{tab.label}</span>
+                  {count !== null && (
+                    <span className="px-1.5 py-0.5 rounded-[2px] bg-[#15171d] border border-[#2a2e38] text-[#a6abbd] font-mono text-[10px]">
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </SheetHeader>
 
@@ -1597,7 +1562,6 @@ export default function ProfileDrawer({
             </Button>
           </div>
         </SheetFooter>
-      </SheetContent>
-    </Sheet>
+    </BottomSheet>
   );
 }

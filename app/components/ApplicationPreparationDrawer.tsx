@@ -29,9 +29,10 @@ import type {
   RunnerProgressEvent,
   RunnerState,
 } from "@/lib/automation/types";
+import BottomSheet, {
+  TACTICAL_DRAWER_CLASS,
+} from "@/components/ui/bottom-sheet";
 import {
-  Sheet,
-  SheetContent,
   SheetHeader,
   SheetTitle,
   SheetDescription,
@@ -364,11 +365,12 @@ export default function ApplicationPreparationDrawer({
 
   return (
     <>
-      <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-        <SheetContent
-          side="right"
-          className="w-full sm:max-w-2xl lg:max-w-4xl p-0 flex flex-col h-full bg-[#0d0e12] border-l border-[#2a2e38] text-[#f4f2ec] shadow-none gap-0 overflow-hidden"
-        >
+      <BottomSheet
+        open={isOpen}
+        onOpenChange={(open) => { if (!open) onClose(); }}
+        desktopClassName={TACTICAL_DRAWER_CLASS}
+        mobileClassName="bg-[#15171d] border-t border-[#2a2e38]"
+      >
           <Tabs
             value={activeTab}
             onValueChange={(val) => setActiveTab(val as DrawerTab)}
@@ -1113,8 +1115,7 @@ export default function ApplicationPreparationDrawer({
               </div>
             </SheetFooter>
           </Tabs>
-        </SheetContent>
-      </Sheet>
+      </BottomSheet>
 
       {/* Rejection Modal Dialog */}
       <Dialog open={showRejectionModal} onOpenChange={setShowRejectionModal}>

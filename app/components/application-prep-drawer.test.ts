@@ -13,11 +13,15 @@ describe("Application Preparation Drawer & Cited Q&A (Issue 05)", () => {
       assert.ok(fs.existsSync(drawerPath), "app/components/ApplicationPreparationDrawer.tsx should exist");
     });
 
-    it("renders Radix Sheet with backdrop, Escape dismissal, and Ink & Brass surface", () => {
+    it("renders the responsive Radix sheet with backdrop, Escape dismissal, and Ink & Brass surface", () => {
       const content = fs.readFileSync(drawerPath, "utf-8");
 
-      // Radix sheet components
-      assert.ok(content.includes("Sheet") && content.includes("SheetContent"));
+      // Responsive Radix sheet surface (bottom sheet on mobile, drawer on sm+)
+      assert.ok(content.includes("<BottomSheet"));
+      assert.ok(content.includes("desktopClassName={TACTICAL_DRAWER_CLASS}"));
+      assert.ok(content.includes("SheetHeader"));
+      // Radix drives Escape/overlay dismissal through the open-state callback
+      assert.ok(content.includes("onOpenChange"));
       // Surface and hairline tokens
       assert.ok(content.includes("#15171d") || content.includes("#15171D") || content.includes("var(--ink-900)"));
       assert.ok(content.includes("#2a2e38") || content.includes("#2A2E38") || content.includes("var(--hairline)"));

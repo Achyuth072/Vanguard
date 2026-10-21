@@ -2,14 +2,13 @@
 
 import { useState, useMemo } from "react";
 import { ingestJob, overrideJobFilterAction } from "../actions";
+import BottomSheet from "@/components/ui/bottom-sheet";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -221,22 +220,27 @@ export default function IngestModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="sm:max-w-2xl border-[#2a2e38] bg-[#15171d] text-[#f4f2ec] p-6 max-h-[90vh] overflow-y-auto rounded-[3px] shadow-none gap-5">
-        <DialogHeader className="space-y-1.5 pb-3 border-b border-[#2a2e38] text-left">
+    <BottomSheet
+      open={isOpen}
+      onOpenChange={(open) => { if (!open) onClose(); }}
+      desktopClassName="sm:max-w-2xl border-[#2a2e38] bg-[#15171d] text-[#f4f2ec] p-6 gap-5"
+      mobileClassName="bg-[#15171d] px-4 pt-1 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+    >
+        <SheetHeader className="shrink-0 space-y-1.5 pb-3 pr-8 border-b border-[#2a2e38] text-left">
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-[2px] bg-[#0d0e12] border border-[#2a2e38] text-[#d4a745]">
               JOB INGESTION CONSOLE
             </span>
           </div>
-          <DialogTitle className="text-lg font-bold tracking-tight text-[#f4f2ec]">
+          <SheetTitle className="text-lg font-bold tracking-tight text-[#f4f2ec]">
             Ingest Target Opportunity
-          </DialogTitle>
-          <DialogDescription className="text-xs text-[#a6abbd]">
+          </SheetTitle>
+          <SheetDescription className="text-xs text-[#a6abbd]">
             Extract role metadata, normalize telemetry, and trigger AI fit scoring into your priority inbox.
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
         {/* Tabbed Mode Selector */}
         <div className="flex rounded-[2px] bg-[#0d0e12] p-1 border border-[#2a2e38] text-xs font-mono font-semibold gap-1">
           <button
@@ -699,7 +703,7 @@ export default function IngestModal({
             </div>
           )}
 
-          <DialogFooter className="pt-2 border-t border-[#2a2e38]">
+          <SheetFooter className="pt-2 border-t border-[#2a2e38]">
             <Button
               type="button"
               variant="outline"
@@ -728,9 +732,9 @@ export default function IngestModal({
                 </>
               )}
             </Button>
-          </DialogFooter>
+          </SheetFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+        </div>
+    </BottomSheet>
   );
 }

@@ -178,6 +178,20 @@ describe("self-hosted deployment contract", () => {
       assert.match(compose, /http:\/\/127\.0\.0\.1:3000/);
     });
 
+    it("publishes the cockpit on host port 3001 by default", () => {
+      // Port 3000 stays free for other projects; only the host mapping moves.
+      assert.match(
+        compose,
+        /\$\{VANGUARD_BIND_ADDRESS:-127\.0\.0\.1\}:\$\{VANGUARD_HOST_PORT:-3001\}:3000/,
+        "compose must publish VANGUARD_HOST_PORT (default 3001) to container port 3000",
+      );
+      assert.doesNotMatch(
+        compose,
+        /VANGUARD_HOST_PORT:-3000/,
+        "the host-port default must stay 3001",
+      );
+    });
+
     it("maps the host Chrome CDP endpoint and persists the fallback browser profile", () => {
       assert.match(compose, /PLAYWRIGHT_CDP_ENDPOINT:\s*\$\{PLAYWRIGHT_CDP_ENDPOINT:-?\}/);
       assert.match(compose, /host\.docker\.internal:host-gateway/);
@@ -205,6 +219,22 @@ describe("self-hosted deployment contract", () => {
     });
   });
 
+  describe("local npm scripts", () => {
+    const pkg = JSON.parse(read("package.json")) as {
+      scripts: Record<string, string>;
+    };
+
+    it("keeps dev and start off the Docker host port", () => {
+      for (const script of ["dev", "start"]) {
+        assert.match(
+          pkg.scripts[script],
+          /-p 3002/,
+          `package.json ${script} must run on 3002 so it never collides with the container on 3001`,
+        );
+      }
+    });
+  });
+
   describe("tailscale-serve.json", () => {
     const serve = JSON.parse(read("tailscale-serve.json")) as {
       TCP: Record<string, { HTTPS: boolean }>;
@@ -229,6 +259,7 @@ describe("self-hosted deployment contract", () => {
         "PLAYWRIGHT_CDP_ENDPOINT",
         "BROWSER_PROFILE_DIR",
         "VANGUARD_BIND_ADDRESS",
+        "VANGUARD_HOST_PORT",
         "TS_AUTHKEY",
       ]) {
         assert.match(
@@ -237,6 +268,14 @@ describe("self-hosted deployment contract", () => {
           `.env.example must document ${key}`,
         );
       }
+    });
+
+    it("documents 3001 as the default published host port", () => {
+      assert.match(
+        example,
+        /^VANGUARD_HOST_PORT="3001"$/m,
+        ".env.example must default VANGUARD_HOST_PORT to 3001",
+      );
     });
   });
 

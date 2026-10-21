@@ -22,7 +22,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
-      - "${VANGUARD_BIND_ADDRESS:-127.0.0.1}:3000:3000"
+      - "${VANGUARD_BIND_ADDRESS:-127.0.0.1}:${VANGUARD_HOST_PORT:-3001}:3000"
     volumes:
       - vanguard-data:/data
     healthcheck:

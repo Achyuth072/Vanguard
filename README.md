@@ -204,8 +204,28 @@ GROQ_MODEL="llama-3.3-70b-versatile"
 docker compose up -d --build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to access the cockpit.
+Open [http://localhost:3001](http://localhost:3001) to access the cockpit.
+
+> [!TIP]
+> The cockpit is published on **`http://localhost:3001`** by default, leaving
+> port `3000` free for other projects. Override it with `VANGUARD_HOST_PORT`
+> in `.env` and open `http://localhost:<VANGUARD_HOST_PORT>` — the container,
+> healthcheck, and Tailscale proxy keep using port `3000` internally.
+
 SQLite data persists in the `vanguard-data` volume (`/data/pulse.db`), and embeddings run locally using pre-baked ONNX weights.
+
+### 3. Local Development (npm)
+
+```bash
+npm install
+npm run dev
+```
+
+Opens the cockpit on [http://localhost:3002](http://localhost:3002) with hot
+reload, backed by the repo-local `./pulse.db` — a separate database from the
+Docker volume. Port 3002 keeps local dev clear of the container's `3001` and
+any other project on `3000`. Use `npx prisma db push` after a schema change,
+since only the Docker entrypoint syncs the schema automatically.
 
 ---
 

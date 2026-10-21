@@ -119,9 +119,14 @@ async function main() {
   console.log(`Unreachable:   \x1b[31m${unreachableCount}\x1b[0m`);
   console.log(`Avg Latency:   ${avgLatency}ms\n`);
 
-  if (unreachableCount > 0) {
+  const isStrict = process.argv.includes("--strict");
+
+  if (unreachableCount > 0 && (isStrict || sourcesToProbe.length === 1)) {
     console.error(`\x1b[31mProbe failed: ${unreachableCount} source(s) were unreachable.\x1b[0m`);
     process.exit(1);
+  } else if (unreachableCount > 0) {
+    console.warn(`\x1b[33mProbe completed with warnings: ${unreachableCount} source(s) were unreachable (use --strict to exit with failure).\x1b[0m`);
+    process.exit(0);
   } else {
     console.log(`\x1b[32mAll probed sources reachable.\x1b[0m`);
     process.exit(0);

@@ -21,5 +21,9 @@ export const db =
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db;
 
+void db.$executeRawUnsafe("PRAGMA busy_timeout = 5000;").catch((error) => {
+  console.warn("[db] Could not set SQLite busy_timeout:", error);
+});
+
 
 

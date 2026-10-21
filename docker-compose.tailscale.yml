@@ -1,0 +1,13 @@
+services:
+  vanguard:
+    depends_on:
+      tailscale:
+        condition: service_started
+    network_mode: service:tailscale
+    ports: !reset []
+    extra_hosts: !reset []
+
+  tailscale:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+

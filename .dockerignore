@@ -1,0 +1,26 @@
+# Dependencies and build output are regenerated inside the image.
+node_modules
+.next
+out
+build
+
+# Host databases, WAL sidecars, and model caches must not leak into the image.
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.db.bak
+.cache
+
+# Secrets and local environment files.
+.env
+.env.*
+!.env.example
+
+# Local-only scratch space and tooling artifacts.
+.scratch
+.git
+.gitignore
+coverage
+*.tsbuildinfo
+pulse-test.db

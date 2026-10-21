@@ -4,9 +4,17 @@
  */
 import { pipeline, env, type FeatureExtractionPipeline } from "@huggingface/transformers";
 
-// Configure local cache directory to avoid re-downloading ONNX weights
-env.cacheDir = "./.cache/transformers";
+export function resolveTransformersCacheDir(
+  environment: Record<string, string | null | undefined> = process.env
+): string {
+  const configured = environment.TRANSFORMERS_CACHE?.trim();
+  return configured && configured.length > 0 ? configured : "./.cache/transformers";
+}
+
+env.cacheDir = resolveTransformersCacheDir();
 env.allowLocalModels = true;
+
+export const DEFAULT_EDGE_EMBEDDING_MODEL = "Xenova/bge-small-en-v1.5";
 
 export interface EdgeEmbeddingOptions {
   modelName?: string;
@@ -21,7 +29,7 @@ export class EdgeEmbeddingEngine {
   private quantized: boolean;
 
   constructor(options?: EdgeEmbeddingOptions) {
-    this.modelName = options?.modelName ?? "Xenova/bge-small-en-v1.5";
+    this.modelName = options?.modelName ?? DEFAULT_EDGE_EMBEDDING_MODEL;
     this.quantized = options?.quantized ?? true;
   }
 

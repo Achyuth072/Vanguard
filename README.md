@@ -1,8 +1,43 @@
-# <img src="app/icon.svg" width="32" height="32" alt="Vanguard Logo" valign="middle" /> Vanguard
+<div align="center">
 
-**A local-first, human-in-the-loop Developer Career Cockpit & Application Assistant for software engineers.**
+  <img src="app/icon.svg" width="64" height="64" alt="Vanguard Logo" />
 
-Vanguard is an intelligent career scouting and application preparation cockpit built specifically for software engineers and technical practitioners. It eliminates the operational friction of technical job hunting without relinquishing human agency or hallucinating candidate credentials.
+  # Vanguard
+
+  **A local-first, human-in-the-loop Developer Career Cockpit & Application Assistant for software engineers.**
+
+  <p align="center">
+    Vanguard is an intelligent career scouting and application preparation cockpit built specifically for software engineers and technical practitioners. It eliminates the operational friction of technical job hunting without relinquishing human agency or hallucinating candidate credentials.
+  </p>
+
+</div>
+
+---
+
+<div align="center">
+  <img src="docs/screenshots/desktop-cockpit.png" alt="Vanguard Desktop Tactical Cockpit" width="100%" />
+</div>
+
+<br />
+
+<table align="center" width="100%">
+  <thead>
+    <tr>
+      <th align="center" width="67%"><b>Desktop Lifecycle Kanban Pipeline</b></th>
+      <th align="center" width="33%"><b>Mobile PWA Tactical Shell</b></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center" valign="top">
+        <img src="docs/screenshots/desktop-pipeline.png" alt="Vanguard Desktop Kanban Pipeline" />
+      </td>
+      <td align="center" valign="top">
+        <img src="docs/screenshots/mobile-cockpit.png" alt="Vanguard Mobile Cockpit" />
+      </td>
+    </tr>
+  </tbody>
+</table>
 
 ---
 
@@ -131,23 +166,15 @@ Vanguard evaluates candidate-job fit using a staged funnel that maximizes precis
 
 ## Getting Started
 
-### 1. Clone & Install
+### 1. Clone & Configure Environment
 
 ```bash
 git clone https://github.com/Achyuth072/Vanguard.git
 cd Vanguard
-npm install
-```
-
-### 2. Configure Environment
-
-Copy the example environment file:
-
-```bash
 cp .env.example .env
 ```
 
-Configure your API keys in `.env` (supports comma-separated keys and models for automatic matrix rotation and 429 failover):
+Configure your LLM provider API keys in `.env` (supports comma-separated keys and models for automatic failover and load balancing):
 
 ```env
 # Google Gemini (Tier 0 & Tier 1)
@@ -171,22 +198,54 @@ GROQ_API_KEY="gsk_..."
 GROQ_MODEL="llama-3.3-70b-versatile"
 ```
 
-### 3. Initialize Database
-
-Generate Prisma client and apply migrations:
+### 2. Start Vanguard (Docker)
 
 ```bash
-npx prisma db push
-npm run db:seed
+docker compose up -d --build
 ```
 
-### 4. Start Development Server
+Open [http://localhost:3000](http://localhost:3000) to access the cockpit.
+SQLite data persists in the `vanguard-data` volume (`/data/pulse.db`), and embeddings run locally using pre-baked ONNX weights.
 
-```bash
-npm run dev
-```
+---
 
-Open [http://localhost:3001](http://localhost:3001) to access the Vanguard dashboard.
+## Assisted Browser Automation (Host Chrome)
+
+Vanguard drives your desktop Chrome session via the Chrome DevTools Protocol (CDP) to reuse existing cookies, logins, and display for review:
+
+1. **Start Chrome with remote debugging**:
+   ```bash
+   google-chrome --remote-debugging-port=9222 --user-data-dir="$HOME/.pulse-chrome"
+   ```
+
+2. **Start the CDP bridge** (bridges loopback into Docker network):
+   ```bash
+   node scripts/cdp-bridge.mjs
+   ```
+
+   *(Optional)* Run as a persistent background service:
+   ```bash
+   mkdir -p ~/.config/systemd/user && cp scripts/cdp-bridge.service ~/.config/systemd/user/
+   systemctl --user daemon-reload && systemctl --user enable --now cdp-bridge.service
+   ```
+
+3. **Set the endpoint in `.env`**:
+   ```env
+   PLAYWRIGHT_CDP_ENDPOINT="http://host.docker.internal:9333"
+   ```
+
+---
+
+## Private Mobile Access (Tailscale)
+
+Access Vanguard securely from iOS or Android without opening firewall ports:
+
+1. Add your Tailscale auth key (`TS_AUTHKEY`) to `.env`.
+2. Launch with the Tailscale profile:
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.tailscale.yml --profile tailscale up -d --build
+   ```
+3. Open `https://vanguard-cockpit.<your-tailnet>.ts.net` in your mobile browser and install as a PWA.
 
 ---
 

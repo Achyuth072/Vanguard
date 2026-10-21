@@ -99,6 +99,10 @@ export class GreenhouseAdapter implements FeedAdapter {
       });
 
       if (!response.ok) {
+        if (response.status === 404 && boardSlugs.length > 1) {
+          console.warn(`[GreenhouseAdapter] Board slug '${slug}' returned 404 (not found). Skipping.`);
+          continue;
+        }
         throw new Error(`Greenhouse API request failed for board '${slug}' (${response.status} ${response.statusText})`);
       }
 

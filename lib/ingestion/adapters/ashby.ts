@@ -95,6 +95,10 @@ export class AshbyAdapter implements FeedAdapter {
       });
 
       if (!response.ok) {
+        if (response.status === 404 && boardSlugs.length > 1) {
+          console.warn(`[AshbyAdapter] Board slug '${slug}' returned 404 (not found). Skipping.`);
+          continue;
+        }
         throw new Error(`Ashby API request failed for board '${slug}' (${response.status} ${response.statusText})`);
       }
 

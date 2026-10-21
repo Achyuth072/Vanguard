@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import type { EnrichedJob } from "@/lib/data";
 import { updateJobDetailsAction } from "../actions";
 import {
@@ -24,7 +24,6 @@ import {
   Radio,
   Sparkles,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 interface EditJobModalProps {
   job: EnrichedJob | null;
@@ -33,46 +32,34 @@ interface EditJobModalProps {
   onSuccess?: () => void;
 }
 
-export default function EditJobModal({
+function EditJobForm({
   job,
-  isOpen,
   onClose,
   onSuccess,
-}: EditJobModalProps) {
-  const [title, setTitle] = useState("");
-  const [company, setCompany] = useState("");
-  const [location, setLocation] = useState("");
-  const [remoteStatus, setRemoteStatus] = useState("UNKNOWN");
-  const [employmentType, setEmploymentType] = useState("FULL_TIME");
-  const [currency, setCurrency] = useState("INR");
-  const [salaryMin, setSalaryMin] = useState<string>("");
-  const [salaryMax, setSalaryMax] = useState<string>("");
-  const [url, setUrl] = useState("");
-  const [source, setSource] = useState("MANUAL");
-  const [description, setDescription] = useState("");
+}: {
+  job: EnrichedJob;
+  onClose: () => void;
+  onSuccess?: () => void;
+}) {
+  const [title, setTitle] = useState(job.title || "");
+  const [company, setCompany] = useState(job.company || "");
+  const [location, setLocation] = useState(job.location || "");
+  const [remoteStatus, setRemoteStatus] = useState(job.remoteStatus || "UNKNOWN");
+  const [employmentType, setEmploymentType] = useState(job.employmentType || "FULL_TIME");
+  const [currency, setCurrency] = useState(job.currency || "INR");
+  const [salaryMin, setSalaryMin] = useState<string>(
+    job.salaryMin !== null && job.salaryMin !== undefined ? String(job.salaryMin) : ""
+  );
+  const [salaryMax, setSalaryMax] = useState<string>(
+    job.salaryMax !== null && job.salaryMax !== undefined ? String(job.salaryMax) : ""
+  );
+  const [url, setUrl] = useState(job.url || "");
+  const [source, setSource] = useState(job.source ? normalizeSource(job.source, job.url) : "MANUAL");
+  const [description, setDescription] = useState(job.description || "");
   const [rerunAI, setRerunAI] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (job && isOpen) {
-      setTitle(job.title || "");
-      setCompany(job.company || "");
-      setLocation(job.location || "");
-      setRemoteStatus(job.remoteStatus || "UNKNOWN");
-      setEmploymentType(job.employmentType || "FULL_TIME");
-      setCurrency(job.currency || "INR");
-      setSalaryMin(job.salaryMin !== null && job.salaryMin !== undefined ? String(job.salaryMin) : "");
-      setSalaryMax(job.salaryMax !== null && job.salaryMax !== undefined ? String(job.salaryMax) : "");
-      setUrl(job.url || "");
-      setSource(job.source ? normalizeSource(job.source, job.url) : "MANUAL");
-      setDescription(job.description || "");
-      setRerunAI(false);
-      setError(null);
-      setSuccessMessage(null);
-    }
-  }, [job, isOpen]);
 
   // Derived normalized preview data
   const previewData = useMemo(() => {
@@ -97,11 +84,8 @@ export default function EditJobModal({
     };
   }, [title, company, source, location, remoteStatus, salaryMin, salaryMax, currency]);
 
-  if (!job) return null;
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!job) return;
 
     setIsLoading(true);
     setError(null);
@@ -142,9 +126,8 @@ export default function EditJobModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto border-[#2a2e38] bg-[#15171d] text-[#f4f2ec] p-6 rounded-[3px] shadow-none gap-5">
-        <DialogHeader className="space-y-1.5 pb-3 border-b border-[#2a2e38] text-left">
+    <>
+      <DialogHeader className="space-y-1.5 pb-3 border-b border-[#2a2e38] text-left">
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-[2px] bg-[#0d0e12] border border-[#2a2e38] text-[#d4a745]">
               JOB RECORD EDITOR
@@ -424,6 +407,22 @@ export default function EditJobModal({
             </Button>
           </DialogFooter>
         </form>
+    </>
+  );
+}
+
+export default function EditJobModal({
+  job,
+  isOpen,
+  onClose,
+  onSuccess,
+}: EditJobModalProps) {
+  if (!isOpen || !job) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto border-[#2a2e38] bg-[#15171d] text-[#f4f2ec] p-6 rounded-[3px] shadow-none gap-5">
+        <EditJobForm key={job.id} job={job} onClose={onClose} onSuccess={onSuccess} />
       </DialogContent>
     </Dialog>
   );

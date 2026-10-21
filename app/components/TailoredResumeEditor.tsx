@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   FileText,
   List,
@@ -18,7 +18,6 @@ import type { TailoredResume } from "@/types/tailoring";
 import { updateTailoredResume } from "@/app/actions/tailoring";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 interface TailoredResumeEditorProps {
@@ -38,15 +37,16 @@ export default function TailoredResumeEditor({
 }: TailoredResumeEditorProps) {
   const [activeView, setActiveView] = useState<"highlights" | "markdown">("highlights");
   const [markdownText, setMarkdownText] = useState(tailoredResume.markdownContent || "");
+  const [prevMarkdown, setPrevMarkdown] = useState(tailoredResume.markdownContent);
+  if (tailoredResume.markdownContent !== prevMarkdown) {
+    setPrevMarkdown(tailoredResume.markdownContent);
+    setMarkdownText(tailoredResume.markdownContent || "");
+  }
   const [copied, setCopied] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
   const [newSkillInput, setNewSkillInput] = useState("");
   const [isAddingSkill, setIsAddingSkill] = useState(false);
-
-  useEffect(() => {
-    setMarkdownText(tailoredResume.markdownContent || "");
-  }, [tailoredResume.markdownContent]);
 
   async function handleCopy() {
     try {

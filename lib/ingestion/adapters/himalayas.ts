@@ -12,6 +12,7 @@ import { extractSalaryFromRawText } from "../../filters/prefilter";
 
 interface HimalayasApiResponse {
   data?: HimalayasJobItem[];
+  jobs?: HimalayasJobItem[];
   meta?: {
     total?: number;
     count?: number;
@@ -21,7 +22,8 @@ interface HimalayasApiResponse {
 }
 
 interface HimalayasJobItem {
-  id: string | number;
+  id?: string | number;
+  guid?: string;
   title: string;
   companyName: string;
   companySlug?: string;
@@ -76,11 +78,16 @@ export class HimalayasAdapter implements FeedAdapter {
     }
 
     const payload = (await response.json()) as HimalayasApiResponse;
-    const items = Array.isArray(payload.data) ? payload.data : [];
+    const items = Array.isArray(payload.jobs)
+      ? payload.jobs
+      : Array.isArray(payload.data)
+      ? payload.data
+      : [];
     const allJobs: RawFeedJob[] = [];
 
     for (const item of items) {
-      if (!item.id || !item.title) continue;
+      const itemId = item.id ?? item.guid ?? item.applicationLink;
+      if (!itemId || !item.title) continue;
 
       const postedAt = typeof item.pubDate === "number"
         ? new Date(item.pubDate > 1e11 ? item.pubDate : item.pubDate * 1000)
@@ -103,10 +110,10 @@ export class HimalayasAdapter implements FeedAdapter {
         }
       }
 
-      const jobUrl = item.applicationLink || `https://himalayas.app/jobs/${item.id}`;
+      const jobUrl = item.applicationLink || (item.id ? `https://himalayas.app/jobs/${item.id}` : "");
 
       allJobs.push({
-        sourceExternalId: String(item.id),
+        sourceExternalId: String(itemId),
         title: item.title.trim(),
         company: (item.companyName || "Himalayas Employer").trim(),
         location: locationStr,

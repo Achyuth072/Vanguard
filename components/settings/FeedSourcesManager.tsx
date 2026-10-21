@@ -99,8 +99,35 @@ export function FeedSourcesManager({
   }, []);
 
   useEffect(() => {
-    fetchSources();
-  }, [fetchSources]);
+    let active = true;
+    if (feedSourcesCache && Date.now() - feedSourcesCache.timestamp < 120_000 && feedSourcesCache.data.length > 0) {
+      return;
+    }
+    void (async () => {
+      try {
+        const res = await fetch("/api/feeds");
+        const json = await res.json();
+        if (!active) return;
+        if (json.success && Array.isArray(json.data)) {
+          feedSourcesCache = { data: json.data, timestamp: Date.now() };
+          setSources(json.data);
+        } else {
+          throw new Error(json.error || "Failed to load feed sources");
+        }
+      } catch (err) {
+        if (!active) return;
+        console.error("Error fetching feed sources:", err);
+        setError(err instanceof Error ? err.message : "Error fetching feed sources");
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const showStatus = (text: string, type: "success" | "error" | "info" = "success") => {
     setStatusMessage({ text, type });

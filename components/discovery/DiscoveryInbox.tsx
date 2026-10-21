@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Sparkles,
   Trash2,
@@ -77,7 +77,7 @@ export function DiscoveryInbox({
 
   // Expanded card view for inspecting job description
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
-  const querySeqRef = React.useRef<number>(0);
+  const querySeqRef = useRef<number>(0);
 
   // Synchronously compute filtered and sorted jobs in 0ms (Zero network delay, zero UI flash)
   const jobs = useMemo(() => {
@@ -167,13 +167,41 @@ export function DiscoveryInbox({
   );
 
   useEffect(() => {
-    fetchDiscoveryJobs();
-  }, [fetchDiscoveryJobs]);
+    let active = true;
+    void (async () => {
+      try {
+        const res = await fetch("/api/discovery?limit=100");
+        const json = await res.json();
+        if (!active) return;
+        if (json.success && json.data) {
+          const newJobs: DiscoveryJobItem[] = json.data.jobs || [];
+          setRawJobs(newJobs);
+        } else {
+          throw new Error(json.error || "Failed to load discovery jobs");
+        }
+      } catch (err) {
+        if (!active) return;
+        console.error("Error loading discovery jobs:", err);
+        setError(err instanceof Error ? err.message : "Error fetching discovery jobs");
+      } finally {
+        if (active) {
+          setLoading(false);
+          setIsFetching(false);
+        }
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
-  useEffect(() => {
+  const [prevFilterKey, setPrevFilterKey] = useState(`${selectedSource}|${searchQuery}|${sortBy}`);
+  const currentFilterKey = `${selectedSource}|${searchQuery}|${sortBy}`;
+  if (currentFilterKey !== prevFilterKey) {
+    setPrevFilterKey(currentFilterKey);
     setPage(1);
     setSelectedJobIds(new Set());
-  }, [selectedSource, searchQuery, sortBy]);
+  }
 
   const showToast = (message: string, type: "success" | "error" | "info" = "success") => {
     setStatusNotification({ message, type });

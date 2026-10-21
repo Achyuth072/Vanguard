@@ -74,7 +74,8 @@ export class LeverAdapter implements FeedAdapter {
         ? source.url.replace(/\/+$/, "")
         : "https://api.lever.co/v0/postings";
 
-      const endpoint = `${baseUrl}/${encodeURIComponent(slug)}?mode=json`;
+      const limitQuery = options?.limit ? `&limit=${encodeURIComponent(options.limit)}` : "";
+      const endpoint = `${baseUrl}/${encodeURIComponent(slug)}?mode=json${limitQuery}`;
 
       const response = await fetchFn(endpoint, {
         headers: {
@@ -85,6 +86,10 @@ export class LeverAdapter implements FeedAdapter {
       });
 
       if (!response.ok) {
+        if (response.status === 404 && boardSlugs.length > 1) {
+          console.warn(`[LeverAdapter] Board slug '${slug}' returned 404 (not found). Skipping.`);
+          continue;
+        }
         throw new Error(`Lever API request failed for board '${slug}' (${response.status} ${response.statusText})`);
       }
 
@@ -172,6 +177,13 @@ export class LeverAdapter implements FeedAdapter {
             workplaceType: item.workplaceType,
           },
         });
+
+        if (options?.limit && allJobs.length >= options.limit) {
+          break;
+        }
+      }
+      if (options?.limit && allJobs.length >= options.limit) {
+        break;
       }
     }
 

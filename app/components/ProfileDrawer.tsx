@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Loader2,
   Check,
@@ -149,33 +149,46 @@ export default function ProfileDrawer({
   // Skill category filter tab
   const [selectedSkillCategory, setSelectedSkillCategory] = useState<string>("ALL");
 
-  const loadProfile = useCallback(async () => {
+  const [prevIsOpen, setPrevIsOpen] = useState(false);
+  if (isOpen && !prevIsOpen) {
+    setPrevIsOpen(true);
     setIsLoading(true);
     setErrorMessage(null);
-    try {
-      const data = await getCandidateProfile("candidate-default");
-      setProfile(data);
-      if (data.projects.length > 0) {
-        setExpandedProjectId(data.projects[0].id);
-      }
-      if (data.experiences.length > 0) {
-        setExpandedExpId(data.experiences[0].id);
-      }
-    } catch (err: unknown) {
-      console.error("Failed to load candidate profile:", err);
-      setErrorMessage(
-        err instanceof Error ? err.message : "Failed to load candidate profile"
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  } else if (!isOpen && prevIsOpen) {
+    setPrevIsOpen(false);
+  }
 
   useEffect(() => {
+    let active = true;
     if (isOpen) {
-      loadProfile();
+      void (async () => {
+        try {
+          const data = await getCandidateProfile("candidate-default");
+          if (!active) return;
+          setProfile(data);
+          if (data.projects.length > 0) {
+            setExpandedProjectId(data.projects[0].id);
+          }
+          if (data.experiences.length > 0) {
+            setExpandedExpId(data.experiences[0].id);
+          }
+        } catch (err: unknown) {
+          if (!active) return;
+          console.error("Failed to load candidate profile:", err);
+          setErrorMessage(
+            err instanceof Error ? err.message : "Failed to load candidate profile"
+          );
+        } finally {
+          if (active) {
+            setIsLoading(false);
+          }
+        }
+      })();
     }
-  }, [isOpen, loadProfile]);
+    return () => {
+      active = false;
+    };
+  }, [isOpen]);
 
   async function handleSave() {
     setIsSaving(true);

@@ -181,7 +181,7 @@ const HARD_NON_TECH_PATTERNS = [
   /\b(?:flight attendant|pilot|cabin crew)\b/i,
 ];
 
-function checkDomainMismatch(title: string, description: string): boolean {
+function checkDomainMismatch(title: string): boolean {
   for (const pattern of HARD_NON_TECH_PATTERNS) {
     if (pattern.test(title)) {
       return true;
@@ -256,10 +256,10 @@ export async function scoreJobHybrid(
   let domainFit = normalizeDenseScore(domainSim, 0.30, 0.75);
 
   // 4. Trajectory Fit (15%)
-  let trajectoryResult = calculateTrajectoryScore(candidateTargetRole, job.title);
+  const trajectoryResult = calculateTrajectoryScore(candidateTargetRole, job.title);
   let trajectoryFit = trajectoryResult.score;
 
-  const isHardMismatch = checkDomainMismatch(job.title, job.description);
+  const isHardMismatch = checkDomainMismatch(job.title);
   if (isHardMismatch) {
     domainFit = 0;
     trajectoryFit = Math.min(30, trajectoryFit);

@@ -88,7 +88,29 @@ export default function ScoringFeedbackLoopSettings() {
   }
 
   useEffect(() => {
-    loadData();
+    let active = true;
+    void (async () => {
+      try {
+        const [loopState, historyData] = await Promise.all([
+          getScoringFeedbackLoopState(),
+          getScoringWeightHistory(),
+        ]);
+        if (!active) return;
+        setState(loopState);
+        setWeights(loopState.currentWeights);
+        setHistory(historyData);
+      } catch (err) {
+        if (!active) return;
+        console.error("Failed to load scoring feedback loop data:", err);
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    })();
+    return () => {
+      active = false;
+    };
   }, []);
 
   function handleSliderChange(key: keyof FitScoreWeights, value: number) {

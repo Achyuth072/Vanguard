@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Loader2,
   Sparkles,
@@ -53,7 +53,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import TailoredResumeEditor from "./TailoredResumeEditor";
@@ -134,41 +133,47 @@ export default function ApplicationPreparationDrawer({
   const [rejectionNotes, setRejectionNotes] = useState<string>("");
   const [isSubmittingRejection, setIsSubmittingRejection] = useState(false);
 
-  const loadData = useCallback(async () => {
-    if (!job) return;
+  const [prevJobId, setPrevJobId] = useState<string | null>(null);
+  if (isOpen && job && job.id !== prevJobId) {
+    setPrevJobId(job.id);
     setIsLoading(true);
     setError(null);
-    try {
-      const data = await getApplicationData(job.id);
-      if (data.tailoredResume) {
-        setTailoredResume(data.tailoredResume);
-      } else {
-        setTailoredResume(null);
-      }
-      setQuestionAnswers(data.questionAnswers || []);
-      setApplicationStatus(data.application?.status || job.status);
-      if (data.application?.id) {
-        setApplicationId(data.application.id);
-      }
-      if (data.application?.rejectionStage) {
-        setSelectedRejectionStage(data.application.rejectionStage);
-      }
-      if (data.application?.rejectionReason) {
-        setSelectedRejectionReason(data.application.rejectionReason);
-      }
-    } catch (err: unknown) {
-      console.error("Failed to load application data:", err);
-      setError(err instanceof Error ? err.message : "Failed to load application details");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [job]);
+  }
 
   useEffect(() => {
+    let active = true;
     if (isOpen && job) {
-      loadData();
+      void (async () => {
+        try {
+          const data = await getApplicationData(job.id);
+          if (!active) return;
+          setTailoredResume(data.tailoredResume || null);
+          setQuestionAnswers(data.questionAnswers || []);
+          setApplicationStatus(data.application?.status || job.status);
+          if (data.application?.id) {
+            setApplicationId(data.application.id);
+          }
+          if (data.application?.rejectionStage) {
+            setSelectedRejectionStage(data.application.rejectionStage);
+          }
+          if (data.application?.rejectionReason) {
+            setSelectedRejectionReason(data.application.rejectionReason);
+          }
+        } catch (err: unknown) {
+          if (!active) return;
+          console.error("Failed to load application data:", err);
+          setError(err instanceof Error ? err.message : "Failed to load application details");
+        } finally {
+          if (active) {
+            setIsLoading(false);
+          }
+        }
+      })();
     }
-  }, [isOpen, job, loadData]);
+    return () => {
+      active = false;
+    };
+  }, [isOpen, job]);
 
   // Clean up abort controller on unmount
   useEffect(() => {

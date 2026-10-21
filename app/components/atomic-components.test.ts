@@ -2,7 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import type { EnrichedJob } from "@/lib/data";
+import type { EnrichedJob, EnrichedFitScore, EnrichedApplication } from "@/lib/data";
 
 describe("Atomic Components — ReticleGauge & TelemetryStrip", () => {
   const reticleGaugePath = path.join(process.cwd(), "components/ui/ReticleGauge.tsx");
@@ -82,14 +82,14 @@ describe("Atomic Components — ReticleGauge & TelemetryStrip", () => {
         id: "job-1",
         title: "Staff Engineer",
         status: "DISCOVERED",
-        fitScore: { id: "fs-1", jobId: "job-1", score: 92, createdAt: new Date(), updatedAt: new Date() } as any,
+        fitScore: { id: "fs-1", jobId: "job-1", score: 92, createdAt: new Date(), updatedAt: new Date() } as unknown as EnrichedFitScore,
         application: null,
       },
       {
         id: "job-2",
         title: "Senior AI Engineer",
         status: "SHORTLISTED",
-        fitScore: { id: "fs-2", jobId: "job-2", score: 85, createdAt: new Date(), updatedAt: new Date() } as any,
+        fitScore: { id: "fs-2", jobId: "job-2", score: 85, createdAt: new Date(), updatedAt: new Date() } as unknown as EnrichedFitScore,
         application: null,
       },
       // Assessment (60 <= score < 80)
@@ -97,7 +97,7 @@ describe("Atomic Components — ReticleGauge & TelemetryStrip", () => {
         id: "job-3",
         title: "Backend Engineer",
         status: "DISCOVERED",
-        fitScore: { id: "fs-3", jobId: "job-3", score: 72, createdAt: new Date(), updatedAt: new Date() } as any,
+        fitScore: { id: "fs-3", jobId: "job-3", score: 72, createdAt: new Date(), updatedAt: new Date() } as unknown as EnrichedFitScore,
         application: null,
       },
       // Active Pipeline (APPLIED)
@@ -105,22 +105,22 @@ describe("Atomic Components — ReticleGauge & TelemetryStrip", () => {
         id: "job-4",
         title: "Fullstack Tech Lead",
         status: "APPLIED",
-        fitScore: { id: "fs-4", jobId: "job-4", score: 88, createdAt: new Date(), updatedAt: new Date() } as any,
-        application: { id: "app-1", jobId: "job-4", stage: "APPLIED" } as any,
+        fitScore: { id: "fs-4", jobId: "job-4", score: 88, createdAt: new Date(), updatedAt: new Date() } as unknown as EnrichedFitScore,
+        application: { id: "app-1", jobId: "job-4", stage: "APPLIED" } as unknown as EnrichedApplication,
       },
       // Ignored / Archived (should be excluded from active telemetry)
       {
         id: "job-5",
         title: "Legacy Dev",
         status: "ARCHIVED",
-        fitScore: { id: "fs-5", jobId: "job-5", score: 95, createdAt: new Date(), updatedAt: new Date() } as any,
+        fitScore: { id: "fs-5", jobId: "job-5", score: 95, createdAt: new Date(), updatedAt: new Date() } as unknown as EnrichedFitScore,
         application: null,
       },
       {
         id: "job-6",
         title: "Irrelevant Role",
         status: "IGNORED",
-        fitScore: { id: "fs-6", jobId: "job-6", score: 40, createdAt: new Date(), updatedAt: new Date() } as any,
+        fitScore: { id: "fs-6", jobId: "job-6", score: 40, createdAt: new Date(), updatedAt: new Date() } as unknown as EnrichedFitScore,
         application: null,
       },
     ];

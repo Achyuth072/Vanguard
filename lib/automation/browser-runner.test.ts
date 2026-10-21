@@ -1,11 +1,15 @@
-import test from "node:test";
+import test, { type TestContext } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { chromium, type BrowserContext, type Page } from "playwright";
+import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import {
   DEFAULT_INSPECTION_COLORS,
   getBrowserProfileDir,
+  resolveBrowserProfileDir,
+  resolveCdpEndpoint,
+  connectCdpBrowserContext,
+  launchBrowserContext,
   generateInspectionStylesheet,
   injectInspectionStyles,
   scrollToReviewPosition,
@@ -25,6 +29,307 @@ import type {
   NormalizedFormField,
   RunnerProgressEvent,
 } from "./types";
+
+function createFakePage(): Page {
+  return {
+    isClosed: () => false,
+    url: () => "about:blank",
+  } as unknown as Page;
+}
+
+function createFakeBrowserContext(page: Page = createFakePage()): BrowserContext {
+  return {
+    pages: () => [page],
+    newPage: async () => page,
+  } as unknown as BrowserContext;
+}
+
+function createFakeBrowser(context: BrowserContext): Browser {
+  return {
+    contexts: () => [context],
+    newContext: async () => context,
+    close: async () => {},
+  } as unknown as Browser;
+}
+
+interface MockableChromium {
+  connectOverCDP: (endpoint: string) => Promise<Browser>;
+  launchPersistentContext: (
+    userDataDir: string,
+    options?: Record<string, unknown>
+  ) => Promise<BrowserContext>;
+}
+
+function mockConnectOverCDP(
+  t: TestContext,
+  implementation: (endpoint: string) => Promise<Browser>
+) {
+  return t.mock.method(
+    chromium as unknown as MockableChromium,
+    "connectOverCDP",
+    implementation
+  );
+}
+
+function mockLaunchPersistentContext(
+  t: TestContext,
+  implementation: (userDataDir: string) => Promise<BrowserContext>
+) {
+  return t.mock.method(
+    chromium as unknown as MockableChromium,
+    "launchPersistentContext",
+    implementation
+  );
+}
+
+async function withEnv<T>(
+  key: string,
+  value: string | undefined,
+  fn: () => T | Promise<T>
+): Promise<T> {
+  const previous = process.env[key];
+  if (value === undefined) {
+    delete process.env[key];
+  } else {
+    process.env[key] = value;
+  }
+  try {
+    return await fn();
+  } finally {
+    if (previous === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = previous;
+    }
+  }
+}
+
+test("Host CDP browser automation adapter", async (t) => {
+  await t.test("resolves CDP endpoint precedence and browser profile overrides", () => {
+    assert.equal(
+      resolveCdpEndpoint(
+        { cdpEndpoint: "http://localhost:9222" },
+        { PLAYWRIGHT_CDP_ENDPOINT: "http://env-host:9222" }
+      ),
+      "http://localhost:9222"
+    );
+    assert.equal(
+      resolveCdpEndpoint({}, { PLAYWRIGHT_CDP_ENDPOINT: "  http://env-host:9222  " }),
+      "http://env-host:9222"
+    );
+    assert.equal(resolveCdpEndpoint({}, { PLAYWRIGHT_CDP_ENDPOINT: "   " }), undefined);
+    assert.equal(resolveCdpEndpoint({}, {}), undefined);
+
+    assert.equal(
+      resolveBrowserProfileDir(undefined, { BROWSER_PROFILE_DIR: "/data/browser-profile" }),
+      "/data/browser-profile"
+    );
+    assert.equal(
+      resolveBrowserProfileDir(".scratch/explicit-profile", {
+        BROWSER_PROFILE_DIR: "/data/browser-profile",
+      }),
+      path.resolve(".scratch/explicit-profile")
+    );
+    assert.ok(
+      resolveBrowserProfileDir(undefined, {}).includes(".scratch/browser-profile")
+    );
+  });
+
+  await t.test("connects over CDP and reuses the default context and active page", async (t) => {
+    const page = createFakePage();
+    const context = createFakeBrowserContext(page);
+    const browser = createFakeBrowser(context);
+    let connectedEndpoint: string | undefined;
+
+    const connectMock = mockConnectOverCDP(t, async (endpoint: string) => {
+      connectedEndpoint = endpoint;
+      return browser;
+    });
+
+    const launched = await launchBrowserContext({
+      cdpEndpoint: "http://host.docker.internal:9222",
+    });
+
+    assert.equal(connectMock.mock.callCount(), 1);
+    assert.equal(connectedEndpoint, "http://host.docker.internal:9222");
+    assert.equal(launched.mode, "cdp");
+    assert.equal(launched.context, context);
+    assert.equal(launched.page, page);
+    assert.equal(launched.browser, browser);
+    assert.equal(launched.cdpEndpoint, "http://host.docker.internal:9222");
+    assert.equal(launched.fallbackReason, undefined);
+  });
+
+  await t.test("honors PLAYWRIGHT_CDP_ENDPOINT when no option is provided", async (t) => {
+    const browser = createFakeBrowser(createFakeBrowserContext());
+    let connectedEndpoint: string | undefined;
+    mockConnectOverCDP(t, async (endpoint: string) => {
+      connectedEndpoint = endpoint;
+      return browser;
+    });
+
+    const launched = await withEnv("PLAYWRIGHT_CDP_ENDPOINT", "http://env-host:9222", () =>
+      launchBrowserContext({})
+    );
+
+    assert.equal(connectedEndpoint, "http://env-host:9222");
+    assert.equal(launched.mode, "cdp");
+    assert.equal(launched.cdpEndpoint, "http://env-host:9222");
+  });
+
+  await t.test("creates a context and page when the CDP browser has none", async (t) => {
+    const page = createFakePage();
+    const context = {
+      pages: () => [] as Page[],
+      newPage: async () => page,
+    } as unknown as BrowserContext;
+    let newContextCalls = 0;
+    const browser = {
+      contexts: () => [] as BrowserContext[],
+      newContext: async () => {
+        newContextCalls++;
+        return context;
+      },
+    } as unknown as Browser;
+
+    mockConnectOverCDP(t, async () => browser);
+
+    const connection = await connectCdpBrowserContext("http://localhost:9222");
+
+    assert.equal(newContextCalls, 1);
+    assert.equal(connection.context, context);
+    assert.equal(connection.page, page);
+  });
+
+  await t.test("uses a local persistent context when no CDP endpoint is configured", async (t) => {
+    const context = createFakeBrowserContext();
+    const launchedDirs: string[] = [];
+
+    mockLaunchPersistentContext(t, async (userDataDir: string) => {
+      launchedDirs.push(userDataDir);
+      return context;
+    });
+    mockConnectOverCDP(t, async () => {
+      throw new Error("CDP must not be used without an endpoint");
+    });
+
+    const launched = await withEnv("PLAYWRIGHT_CDP_ENDPOINT", undefined, () =>
+      launchBrowserContext({
+        userDataDir: path.resolve(process.cwd(), ".scratch/test-cdp-persistent-profile"),
+        headless: true,
+      })
+    );
+
+    assert.equal(launched.mode, "persistent");
+    assert.equal(launched.browser, null);
+    assert.equal(launched.page, null);
+    assert.equal(launched.context, context);
+    assert.equal(launchedDirs.length, 1);
+    assert.ok(launchedDirs[0].includes(".scratch/test-cdp-persistent-profile"));
+  });
+
+  await t.test("falls back to a persistent context when the CDP connection fails", async (t) => {
+    const context = createFakeBrowserContext();
+    let persistentLaunchCount = 0;
+
+    t.mock.method(console, "warn", () => {});
+    mockConnectOverCDP(t, async () => {
+      throw new Error("connect ECONNREFUSED 127.0.0.1:9222");
+    });
+    mockLaunchPersistentContext(t, async () => {
+      persistentLaunchCount++;
+      return context;
+    });
+
+    const launched = await launchBrowserContext({
+      cdpEndpoint: "http://host.docker.internal:9222",
+      userDataDir: path.resolve(process.cwd(), ".scratch/test-cdp-fallback-profile"),
+      headless: true,
+    });
+
+    assert.equal(persistentLaunchCount, 1);
+    assert.equal(launched.mode, "persistent");
+    assert.equal(launched.context, context);
+    assert.equal(launched.cdpEndpoint, "http://host.docker.internal:9222");
+    assert.match(launched.fallbackReason ?? "", /ECONNREFUSED/);
+  });
+
+  await t.test("runner consumes the CDP context, reports the mode, and disconnects without closing Chrome", async (t) => {
+    const profileDir = path.resolve(process.cwd(), ".scratch/test-cdp-runner-profile");
+    const context = await chromium.launchPersistentContext(profileDir, { headless: true });
+    const page = (await context.pages())[0] ?? (await context.newPage());
+    let browserClosed = false;
+
+    const browser = {
+      contexts: () => [context],
+      newContext: async () => context,
+      close: async () => {
+        browserClosed = true;
+      },
+    } as unknown as Browser;
+
+    const connectMock = mockConnectOverCDP(t, async () => browser);
+
+    await context.addCookies([
+      {
+        name: "pulse_cdp_session",
+        value: "existing-login",
+        url: "https://example.com",
+        expires: Math.floor(Date.now() / 1000) + 3600,
+      },
+    ]);
+
+    const runner = new PlaywrightBrowserRunner();
+    try {
+      const events: RunnerProgressEvent[] = [];
+      const outcome = await runner.run({
+        jobId: "test-job-cdp",
+        url: `data:text/html;charset=utf-8,${encodeURIComponent(`
+          <form id="application-form">
+            <label for="first_name">First Name</label>
+            <input id="first_name" name="first_name" required />
+            <label for="email">Email</label>
+            <input id="email" type="email" name="email" required />
+          </form>
+        `)}`,
+        cdpEndpoint: "http://localhost:9222",
+        candidateData: {
+          profile: {
+            firstName: "Jane",
+            email: "jane.doe@example.com",
+          },
+        },
+        humanTypingDelay: 0,
+        onProgress: (event) => events.push(event),
+      });
+
+      assert.equal(outcome.status, "awaiting_review");
+      assert.ok(outcome.filledFields.length >= 2);
+      assert.equal(connectMock.mock.callCount(), 1);
+
+      const startEvent = events
+        .filter((event) => event.state === "STARTING_BROWSER")
+        .find((event) => event.payload?.connectionMode);
+      assert.equal(startEvent?.payload?.connectionMode, "cdp");
+      assert.equal(startEvent?.payload?.cdpEndpoint, "http://localhost:9222");
+
+      // The candidate's pre-existing session cookies survive the fill.
+      const cookies = await context.cookies("https://example.com");
+      assert.ok(
+        cookies.some((cookie) => cookie.name === "pulse_cdp_session" && cookie.value === "existing-login"),
+        "CDP attachment must reuse the host context's cookies"
+      );
+
+      await runner.close();
+      assert.equal(browserClosed, true);
+      assert.equal(page.isClosed(), false, "candidate Chrome context must remain open");
+    } finally {
+      await runner.close().catch(() => {});
+      await context.close().catch(() => {});
+      fs.rmSync(profileDir, { recursive: true, force: true });
+    }
+  });
+});
 
 test("Playwright Persistent Browser Automation & PDF Upload Engine", async (t) => {
   const fixturesDir = path.resolve(process.cwd(), ".scratch/phase-3/fixtures");

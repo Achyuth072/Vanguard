@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   chromium,
+  type Browser,
   type BrowserContext,
   type Frame,
   type Page,
@@ -12,6 +13,7 @@ import {
   mapFormFields,
 } from "./form-mapper";
 import type {
+  BrowserConnectionMode,
   BrowserRunnerOptions,
   BrowserRunnerOutcome,
   CandidateProfilePayload,
@@ -19,6 +21,7 @@ import type {
   FormFieldMapping,
   InspectionHighlightColors,
   NormalizedFormField,
+  RunnerConnectionMode,
   RunnerProgressEvent,
   RunnerState,
 } from "./types";
@@ -30,14 +33,35 @@ export const DEFAULT_INSPECTION_COLORS: InspectionHighlightColors = {
 };
 
 export const DEFAULT_BROWSER_PROFILE_DIR = ".scratch/browser-profile";
+export const BROWSER_PROFILE_DIR_ENV = "BROWSER_PROFILE_DIR";
+export const CDP_ENDPOINT_ENV = "PLAYWRIGHT_CDP_ENDPOINT";
+
+export type BrowserEnvironment = Record<string, string | undefined>;
+
+export function resolveBrowserProfileDir(
+  customDir?: string,
+  env: BrowserEnvironment = process.env
+): string {
+  const explicitDir = customDir?.trim();
+  if (explicitDir) {
+    return path.resolve(explicitDir);
+  }
+
+  const configuredDir = env[BROWSER_PROFILE_DIR_ENV]?.trim();
+  if (configuredDir) {
+    return path.resolve(configuredDir);
+  }
+
+  return path.resolve(process.cwd(), DEFAULT_BROWSER_PROFILE_DIR);
+}
 
 /**
- * Resolves the persistent browser profile directory.
+ * Resolves the persistent browser profile directory and ensures it exists.
  */
 export function getBrowserProfileDir(customDir?: string): string {
-  const profileDir = customDir || path.resolve(process.cwd(), DEFAULT_BROWSER_PROFILE_DIR);
-  if (!fs.existsSync(profileDir)) {
-    fs.mkdirSync(profileDir, { recursive: true });
+  const profileDir = resolveBrowserProfileDir(customDir);
+  if (!fs.existsSync(/* turbopackIgnore: true */ profileDir)) {
+    fs.mkdirSync(/* turbopackIgnore: true */ profileDir, { recursive: true });
   }
   return profileDir;
 }
@@ -260,6 +284,76 @@ export async function attachResumeFile(
   }
 
   return false;
+}
+
+export function resolveCdpEndpoint(
+  options: Partial<BrowserRunnerOptions> = {},
+  env: BrowserEnvironment = process.env
+): string | undefined {
+  const endpoint = options.cdpEndpoint || env[CDP_ENDPOINT_ENV];
+  const trimmed = endpoint?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+export type { BrowserConnectionMode };
+
+export interface BrowserLaunchResult {
+  context: BrowserContext;
+  browser: Browser | null;
+  page: Page | null;
+  mode: BrowserConnectionMode;
+  cdpEndpoint?: string;
+  fallbackReason?: string;
+}
+
+export async function connectCdpBrowserContext(
+  endpoint: string
+): Promise<{ browser: Browser; context: BrowserContext; page: Page }> {
+  const browser = await chromium.connectOverCDP(endpoint);
+  const context = browser.contexts()[0] ?? (await browser.newContext());
+  const page = context.pages()[0] ?? (await context.newPage());
+  return { browser, context, page };
+}
+
+export async function launchBrowserContext(
+  options: Partial<BrowserRunnerOptions> = {}
+): Promise<BrowserLaunchResult> {
+  const cdpEndpoint = resolveCdpEndpoint(options);
+
+  if (cdpEndpoint) {
+    try {
+      const { browser, context, page } = await connectCdpBrowserContext(cdpEndpoint);
+      return { context, browser, page, mode: "cdp", cdpEndpoint };
+    } catch (error) {
+      const fallbackReason = error instanceof Error ? error.message : String(error);
+      console.warn(
+        `[automation] CDP connection to ${cdpEndpoint} failed; falling back to a local persistent Chrome profile.`,
+        fallbackReason
+      );
+      const context = await launchPersistentBrowserContext(options);
+      return {
+        context,
+        browser: null,
+        page: null,
+        mode: "persistent",
+        cdpEndpoint,
+        fallbackReason,
+      };
+    }
+  }
+
+  const context = await launchPersistentBrowserContext(options);
+  return { context, browser: null, page: null, mode: "persistent" };
+}
+
+export function describeBrowserLaunch(result: BrowserLaunchResult): string {
+  if (result.mode === "cdp") {
+    return `Connected to host Chrome via CDP at ${result.cdpEndpoint}. Preserving the candidate's cookies, logins, and desktop window for human review.`;
+  }
+  if (result.fallbackReason) {
+    return `CDP connection to ${result.cdpEndpoint} failed (${result.fallbackReason}). Falling back to a local persistent Chrome profile.`;
+  }
+  return "Launched a local persistent Chrome profile.";
 }
 
 /**
@@ -743,7 +837,8 @@ export function setupSubmissionMonitoring(
  */
 export class PlaywrightBrowserRunner {
   private context: BrowserContext | null = null;
-  private ownContext = false;
+  private browser: Browser | null = null;
+  private connectionMode: RunnerConnectionMode | null = null;
   private activeCleanup: (() => void) | null = null;
 
   constructor(public defaultOptions: Partial<BrowserRunnerOptions> = {}) {}
@@ -781,20 +876,32 @@ export class PlaywrightBrowserRunner {
 
     try {
       // Step 1: STARTING_BROWSER
-      this.emitProgress(
-        options,
-        "STARTING_BROWSER",
-        1,
-        totalSteps,
-        "Launching persistent Google Chrome session..."
-      );
+      let launchPage: Page | null = null;
 
       if (options.browserContext) {
         this.context = options.browserContext;
-        this.ownContext = false;
+        this.browser = null;
+        this.connectionMode = "provided";
+        this.emitProgress(
+          options,
+          "STARTING_BROWSER",
+          1,
+          totalSteps,
+          "Using the browser context provided by the caller.",
+          { connectionMode: "provided" }
+        );
       } else {
-        this.context = await launchPersistentBrowserContext(options);
-        this.ownContext = true;
+        const launched = await launchBrowserContext(options);
+        this.context = launched.context;
+        this.browser = launched.browser;
+        this.connectionMode = launched.mode;
+        launchPage = launched.page;
+
+        this.emitProgress(options, "STARTING_BROWSER", 1, totalSteps, describeBrowserLaunch(launched), {
+          connectionMode: launched.mode,
+          cdpEndpoint: launched.cdpEndpoint,
+          fallbackReason: launched.fallbackReason,
+        });
       }
 
       // Step 2: NAVIGATING
@@ -807,7 +914,12 @@ export class PlaywrightBrowserRunner {
       );
 
       const pages = this.context.pages();
-      page = pages.length > 0 ? pages[0] : await this.context.newPage();
+      page =
+        launchPage && !launchPage.isClosed()
+          ? launchPage
+          : pages.length > 0
+            ? pages[0]
+            : await this.context.newPage();
 
       await page.goto(options.url, {
         waitUntil: "domcontentloaded",
@@ -816,6 +928,11 @@ export class PlaywrightBrowserRunner {
 
       // Brief settling time for client-side frameworks (Greenhouse/Lever/Ashby)
       await page.waitForTimeout(1000);
+
+      // Raise the headed window so the candidate sees the review surface (no-op when headless).
+      if (!options.headless) {
+        await page.bringToFront().catch(() => {});
+      }
 
       // Check for bot verification challenge
       const isBotChallenge = await checkForBotChallenge(page);
@@ -975,10 +1092,16 @@ export class PlaywrightBrowserRunner {
       this.activeCleanup();
       this.activeCleanup = null;
     }
-    if (this.context && this.ownContext) {
+
+    if (this.connectionMode === "persistent" && this.context) {
       await this.context.close().catch(() => {});
-      this.context = null;
+    } else if (this.connectionMode === "cdp" && this.browser) {
+      await this.browser.close().catch(() => {});
     }
+
+    this.context = null;
+    this.browser = null;
+    this.connectionMode = null;
   }
 }
 

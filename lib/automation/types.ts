@@ -142,6 +142,9 @@ export type RunnerState =
   | "SUBMITTED"
   | "ERROR";
 
+export type BrowserConnectionMode = "cdp" | "persistent";
+export type RunnerConnectionMode = BrowserConnectionMode | "provided";
+
 export interface RunnerProgressEvent {
   jobId?: string;
   state: RunnerState;
@@ -162,6 +165,9 @@ export interface RunnerProgressEvent {
     submissionDetected?: boolean;
     submissionUrl?: string;
     botCheckDetected?: boolean;
+    connectionMode?: RunnerConnectionMode;
+    cdpEndpoint?: string;
+    fallbackReason?: string;
     [key: string]: unknown;
   };
 }
@@ -181,6 +187,12 @@ export interface BrowserRunnerOptions {
   url: string;
   candidateData: CandidateProfilePayload;
   userDataDir?: string;
+  /**
+   * Chrome DevTools Protocol endpoint of an already-running host Chrome
+   * instance (e.g. `http://host.docker.internal:9222`). Defaults to the
+   * `PLAYWRIGHT_CDP_ENDPOINT` environment variable when omitted.
+   */
+  cdpEndpoint?: string;
   channel?: string;
   headless?: boolean;
   slowMo?: number;

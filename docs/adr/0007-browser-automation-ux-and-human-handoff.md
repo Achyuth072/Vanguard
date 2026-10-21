@@ -16,6 +16,7 @@ Vanguard adopts a **Coordinated Dual-Interface Handoff Model** backed by Playwri
 ### 1. Browser Instance Lifecycle
 - **Isolated Dedicated Session**: Vanguard launches Playwright using a dedicated persistent profile (`.scratch/browser-profile` / `~/.pulse/browser-profile`) with system Google Chrome (`channel: 'chrome'`). This avoids port conflicts and profile locking with the user's daily Chrome instance while retaining ATS portal logins and cookies.
 - **Session Reuse**: If the persistent browser is already open from a prior fill, Vanguard focuses or opens a new tab rather than spawning duplicate windows.
+- **Container CDP Attachment (2026-10-20)**: In the self-hosted Docker runtime, where no Chrome binary is bundled, Vanguard may attach to the candidate's already-running headed host Chrome via `chromium.connectOverCDP()` (configured with `PLAYWRIGHT_CDP_ENDPOINT`) rather than launching an isolated profile. This intentionally shares the host window and its portal logins; `STARTING_BROWSER` then means "attached to host Chrome". The isolated persistent profile remains the default outside containers and the graceful fallback when the endpoint is unset or unreachable.
 
 ### 2. Step-by-Step User Flow & State Machine
 1. **Trigger**: User clicks "Fill Application in Browser" inside the `ApplicationPreparationDrawer` in Vanguard UI.

@@ -1,0 +1,34 @@
+# Vanguard CDP bridge, as a systemd user unit.
+#
+# Chrome binds its DevTools server to 127.0.0.1, so containers cannot reach it
+# directly. This bridge rewrites the Host header, rewrites the WebSocket URL
+# Playwright connects to, and tunnels the upgrade.
+#
+# Install:
+#   mkdir -p ~/.config/systemd/user
+#   cp scripts/cdp-bridge.service ~/.config/systemd/user/
+#   # point ExecStart at your node binary if it is not on the default PATH
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now cdp-bridge.service
+#
+# Stop / disable:
+#   systemctl --user disable --now cdp-bridge.service
+
+[Unit]
+Description=Vanguard CDP bridge (host Chrome DevTools -> Docker network)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/projects/pulse-career-module
+ExecStart=/usr/bin/env node %h/projects/pulse-career-module/scripts/cdp-bridge.mjs
+Environment=CDP_TARGET_HOST=127.0.0.1
+Environment=CDP_TARGET_PORT=9222
+Environment=CDP_BRIDGE_PORT=9333
+Environment=CDP_PUBLIC_HOST=host.docker.internal
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

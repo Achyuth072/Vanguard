@@ -24,6 +24,8 @@ Adopt **Playwright (Node.js)** with persistent browser contexts and system Googl
 4. **Human-in-the-Loop Handoff**: Form filling stops at the review stage before the final submit button. The browser window remains visible, headed, and interactive for the user to inspect, solve any interactive CAPTCHA, and complete the application.
 5. **Local-First Integration**: Place automation orchestration under `lib/automation/` invoked directly within Next.js API routes or Server Actions in the local Node runtime.
 
+> **Update (2026-10-20) — Host Chrome attachment for containerized runs.** The self-hosted Docker runtime (see `.scratch/self-host-mobile/`) ships no Chrome binary, so the persistent-context launch above cannot run in-container. When `PLAYWRIGHT_CDP_ENDPOINT` is set, `lib/automation/browser-runner.ts` instead attaches to an already-running headed host Chrome with `chromium.connectOverCDP()`, reusing that browser's default context (cookies, logins) and window for human-in-the-loop review. Playwright still performs all DOM automation, so this does not revisit the "Raw Chrome DevTools Protocol" rejection in the Context above. When the endpoint is unset or unreachable, the runner falls back to the persistent context described in Decision 1.
+
 ## Consequences
 
 - Full automation of repetitive ATS form filling and document attachment while preserving the human-in-the-loop invariant.

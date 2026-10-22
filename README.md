@@ -279,3 +279,11 @@ npm test
 npm run test:sources        # Probe live feed adapter connectivity
 npm run test:sources:all    # Probe all adapters with live multi-post verification
 ```
+
+---
+
+## License
+
+Vanguard is licensed under the GNU Affero General Public License v3.0. See [LICENSE](LICENSE) for the full text.
+
+Copyright (C) 2026 Achyuth

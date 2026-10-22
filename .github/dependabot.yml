@@ -1,0 +1,37 @@
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: chore
+    labels:
+      - dependencies
+    groups:
+      next:
+        patterns:
+          - next
+          - eslint-config-next
+      prisma:
+        patterns:
+          - prisma
+          - "@prisma/*"
+      radix:
+        patterns:
+          - "@radix-ui/*"
+      minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+    # typescript-eslint has no TypeScript 7 API support yet. Re-enable once
+    # https://github.com/typescript-eslint/typescript-eslint/issues/10940 lands.
+    ignore:
+      - dependency-name: typescript
+        versions:
+          - ">=7.0.0"

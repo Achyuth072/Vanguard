@@ -160,7 +160,7 @@ Vanguard evaluates candidate-job fit using a staged funnel that maximizes precis
 - **AI & LLM**: Vercel AI SDK (`ai`), `@ai-sdk/google` (Gemini), `@ai-sdk/openai` (NVIDIA NIM, Ollama Cloud, OpenRouter, Groq)
 - **Local ML & Embeddings**: `@huggingface/transformers` (Transformers.js v4, ONNX runtime, `Xenova/bge-small-en-v1.5`)
 - **Browser Automation**: Playwright (headed persistent contexts)
-- **Language & Runtime**: TypeScript 5, Node.js
+- **Language & Runtime**: TypeScript 6, Node.js 22+
 
 ---
 

@@ -31,6 +31,7 @@ import type {
 } from "@/lib/automation/types";
 import BottomSheet, {
   TACTICAL_DRAWER_CLASS,
+  useIsCompactViewport,
 } from "@/components/ui/bottom-sheet";
 import {
   SheetHeader,
@@ -106,7 +107,12 @@ export default function ApplicationPreparationDrawer({
   onUpdate,
 }: ApplicationPreparationDrawerProps) {
   const notifyUpdated = onUpdate || onStatusUpdated;
+  const isCompactViewport = useIsCompactViewport();
   const [activeTab, setActiveTab] = useState<DrawerTab>("resume");
+  // Browser automation needs a desktop-hosted Chrome session, so the tab is
+  // unavailable on compact viewports; fall back to the resume tab if selected.
+  const visibleTab: DrawerTab =
+    isCompactViewport && activeTab === "automate" ? "resume" : activeTab;
   const [isLoading, setIsLoading] = useState(false);
   const [isPreparing, setIsPreparing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -377,14 +383,14 @@ export default function ApplicationPreparationDrawer({
         mobileClassName="bg-[#15171d] border-t border-[#2a2e38]"
       >
           <Tabs
-            value={activeTab}
+            value={visibleTab}
             onValueChange={(val) => setActiveTab(val as DrawerTab)}
-            className="flex flex-col h-full overflow-hidden"
+            className="flex min-h-0 flex-1 flex-col overflow-hidden"
           >
             {/* Header */}
-            <SheetHeader className="p-6 border-b border-[#2a2e38] bg-[#15171d] shrink-0 space-y-4 text-left">
-              <div className="flex items-start justify-between gap-4 pr-6">
-                <div className="space-y-1.5">
+            <SheetHeader className="p-3 sm:p-6 border-b border-[#2a2e38] bg-[#15171d] shrink-0 space-y-3 sm:space-y-4 text-left">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:pr-6">
+                <div className="space-y-1.5 pr-10 sm:pr-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-mono text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-[2px] bg-[#0d0e12] border border-[#2a2e38] text-[#d4a745]">
                       APPLICATION PREPARATION
@@ -425,7 +431,7 @@ export default function ApplicationPreparationDrawer({
                   </SheetDescription>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0">
                   {/* Fill Application in Browser Action */}
                   <Button
                     type="button"
@@ -433,7 +439,7 @@ export default function ApplicationPreparationDrawer({
                     size="sm"
                     onClick={startBrowserAutomation}
                     disabled={isAutomating}
-                    className="gap-1.5 font-mono text-xs rounded-[2px] border-[#2a2e38] bg-[#15171d] text-[#f4f2ec] hover:bg-[#1f222a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4a745]"
+                    className="hidden sm:inline-flex gap-1.5 font-mono text-xs rounded-[2px] border-[#2a2e38] bg-[#15171d] text-[#f4f2ec] hover:bg-[#1f222a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4a745]"
                     title="Open dedicated Chrome session and auto-fill fields"
                   >
                     {isAutomating ? (
@@ -454,7 +460,7 @@ export default function ApplicationPreparationDrawer({
                     size="sm"
                     onClick={handlePrepare}
                     disabled={isPreparing}
-                    className="gap-1.5 font-bold text-xs bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] rounded-[2px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4a745]"
+                    className="flex-1 sm:flex-none gap-1.5 font-bold text-xs bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] rounded-[2px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d4a745]"
                   >
                     {isPreparing ? (
                       <>
@@ -503,51 +509,57 @@ export default function ApplicationPreparationDrawer({
               )}
 
               {/* Tab Navigation with 12px mono indicators */}
-              <TabsList className="w-full flex h-auto p-1 bg-[#0d0e12] border border-[#2a2e38] rounded-[2px]">
+              <TabsList className="w-full flex h-auto p-1 bg-[#0d0e12] border border-[#2a2e38] rounded-[2px] gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar">
                 <TabsTrigger
                   value="resume"
-                  className="flex-1 py-1.5 text-xs font-mono font-semibold gap-1.5 rounded-[2px] border border-transparent text-[#a6abbd] transition-colors data-[state=active]:bg-[#1f222a] data-[state=active]:text-[#f4f2ec] data-[state=active]:border-[#3d4352] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                  className="flex-1 px-2 sm:px-3 py-1.5 text-xs font-mono font-semibold gap-1 sm:gap-1.5 rounded-[2px] border border-transparent text-[#a6abbd] transition-colors data-[state=active]:bg-[#1f222a] data-[state=active]:text-[#f4f2ec] data-[state=active]:border-[#3d4352] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
                 >
                   <FileText className="w-3.5 h-3.5 text-[#d4a745]" />
-                  <span>01 · TAILORED RESUME</span>
+                  <span className="sm:hidden">Resume</span>
+                  <span className="hidden sm:inline">01 · TAILORED RESUME</span>
                   {tailoredResume && <span className="w-1.5 h-1.5 rounded-full bg-[#8ab384]" />}
                 </TabsTrigger>
 
                 <TabsTrigger
                   value="answers"
-                  className="flex-1 py-1.5 text-xs font-mono font-semibold gap-1.5 rounded-[2px] border border-transparent text-[#a6abbd] transition-colors data-[state=active]:bg-[#1f222a] data-[state=active]:text-[#f4f2ec] data-[state=active]:border-[#3d4352] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                  className="flex-1 px-2 sm:px-3 py-1.5 text-xs font-mono font-semibold gap-1 sm:gap-1.5 rounded-[2px] border border-transparent text-[#a6abbd] transition-colors data-[state=active]:bg-[#1f222a] data-[state=active]:text-[#f4f2ec] data-[state=active]:border-[#3d4352] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
                 >
                   <MessageSquare className="w-3.5 h-3.5 text-[#d4a745]" />
-                  <span>02 · CITED Q&amp;A</span>
+                  <span className="sm:hidden">Q&amp;A</span>
+                  <span className="hidden sm:inline">02 · CITED Q&amp;A</span>
                   <span className="px-1.5 py-0.2 rounded-[2px] bg-[#15171d] border border-[#2a2e38] text-[#a6abbd] font-mono text-[10px]">
                     {questionAnswers.length}
                   </span>
                 </TabsTrigger>
 
-                <TabsTrigger
-                  value="automate"
-                  className="flex-1 py-1.5 text-xs font-mono font-semibold gap-1.5 rounded-[2px] border border-transparent text-[#a6abbd] transition-colors data-[state=active]:bg-[#1f222a] data-[state=active]:text-[#f4f2ec] data-[state=active]:border-[#3d4352] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
-                >
-                  <Workflow className="w-3.5 h-3.5 text-[#d4a745]" />
-                  <span>03 · AUTOMATION</span>
-                  {isAutomating && <span className="w-2 h-2 rounded-full bg-[#d4a745] animate-ping" />}
-                  {mappedFields.length > 0 && !isAutomating && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#8ab384]" />
-                  )}
-                </TabsTrigger>
+                {!isCompactViewport && (
+                  <TabsTrigger
+                    value="automate"
+                    className="flex-1 px-2 sm:px-3 py-1.5 text-xs font-mono font-semibold gap-1 sm:gap-1.5 rounded-[2px] border border-transparent text-[#a6abbd] transition-colors data-[state=active]:bg-[#1f222a] data-[state=active]:text-[#f4f2ec] data-[state=active]:border-[#3d4352] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                  >
+                    <Workflow className="w-3.5 h-3.5 text-[#d4a745]" />
+                    <span className="sm:hidden">Automation</span>
+                    <span className="hidden sm:inline">03 · AUTOMATION</span>
+                    {isAutomating && <span className="w-2 h-2 rounded-full bg-[#d4a745] animate-ping" />}
+                    {mappedFields.length > 0 && !isAutomating && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#8ab384]" />
+                    )}
+                  </TabsTrigger>
+                )}
 
                 <TabsTrigger
                   value="status"
-                  className="flex-1 py-1.5 text-xs font-mono font-semibold gap-1.5 rounded-[2px] border border-transparent text-[#a6abbd] transition-colors data-[state=active]:bg-[#1f222a] data-[state=active]:text-[#f4f2ec] data-[state=active]:border-[#3d4352] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                  className="flex-1 px-2 sm:px-3 py-1.5 text-xs font-mono font-semibold gap-1 sm:gap-1.5 rounded-[2px] border border-transparent text-[#a6abbd] transition-colors data-[state=active]:bg-[#1f222a] data-[state=active]:text-[#f4f2ec] data-[state=active]:border-[#3d4352] focus-visible:outline-2 focus-visible:outline-[#d4a745]"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#d4a745]" />
-                  <span>04 · AUDIT &amp; STAGE</span>
+                  <span className="sm:hidden">Audit</span>
+                  <span className="hidden sm:inline">04 · AUDIT &amp; STAGE</span>
                 </TabsTrigger>
               </TabsList>
             </SheetHeader>
 
             {/* Drawer Body */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-[#0d0e12]">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 sm:space-y-6 bg-[#0d0e12]">
               {isLoading ? (
                 <div className="h-64 flex items-center justify-center text-[#a6abbd] text-xs">
                   <div className="flex items-center gap-2">
@@ -651,8 +663,8 @@ export default function ApplicationPreparationDrawer({
 
                     {/* Real-time Runner Progress Stepper */}
                     <div className="bg-[#15171d] p-5 rounded-[3px] border border-[#2a2e38] space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="min-w-0">
                           <h3 className="text-sm font-semibold text-[#f4f2ec] tracking-tight flex items-center gap-2 font-mono">
                             <Bot className="w-4 h-4 text-[#d4a745]" />
                             <span>BROWSER AUTOMATION RUNNER</span>
@@ -662,13 +674,13 @@ export default function ApplicationPreparationDrawer({
                           </p>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 shrink-0">
                           {job.url && (
                             <a
                               href={job.url}
                               target="_blank"
                               rel="noreferrer"
-                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-mono rounded-[2px] border border-[#2a2e38] bg-[#0d0e12] text-[#f4f2ec] hover:bg-[#1f222a]"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-mono rounded-[2px] border border-[#2a2e38] bg-[#0d0e12] text-[#f4f2ec] hover:bg-[#1f222a] whitespace-nowrap shrink-0"
                             >
                               <ExternalLink className="w-3 h-3 text-[#d4a745]" />
                               <span>Portal Link ↗</span>
@@ -762,7 +774,7 @@ export default function ApplicationPreparationDrawer({
                             type="button"
                             onClick={() => setChecklistFilter("all")}
                             className={cn(
-                              "px-2.5 py-0.5 rounded-[2px] font-semibold transition-colors focus-visible:outline-1 focus-visible:outline-[#d4a745]",
+                              "px-2.5 py-0.5 rounded-[2px] font-semibold transition-colors inline-flex items-center gap-1 border border-transparent focus-visible:outline-1 focus-visible:outline-[#d4a745]",
                               checklistFilter === "all" ? "bg-[#1f222a] text-[#f4f2ec]" : "text-[#a6abbd] hover:text-[#f4f2ec]"
                             )}
                           >
@@ -772,7 +784,7 @@ export default function ApplicationPreparationDrawer({
                             type="button"
                             onClick={() => setChecklistFilter("filled")}
                             className={cn(
-                              "px-2.5 py-0.5 rounded-[2px] font-semibold transition-colors flex items-center gap-1 focus-visible:outline-1 focus-visible:outline-[#d4a745]",
+                              "px-2.5 py-0.5 rounded-[2px] font-semibold transition-colors flex items-center gap-1 border border-transparent focus-visible:outline-1 focus-visible:outline-[#d4a745]",
                               checklistFilter === "filled" ? "bg-[#1f222a] text-[#8ab384] border border-[#8ab384]/60" : "text-[#a6abbd] hover:text-[#f4f2ec]"
                             )}
                           >
@@ -785,7 +797,7 @@ export default function ApplicationPreparationDrawer({
                             type="button"
                             onClick={() => setChecklistFilter("review")}
                             className={cn(
-                              "px-2.5 py-0.5 rounded-[2px] font-semibold transition-colors flex items-center gap-1 focus-visible:outline-1 focus-visible:outline-[#d4a745]",
+                              "px-2.5 py-0.5 rounded-[2px] font-semibold transition-colors flex items-center gap-1 border border-transparent focus-visible:outline-1 focus-visible:outline-[#d4a745]",
                               checklistFilter === "review" ? "bg-[#1f222a] text-[#d4a745] border border-[#d4a745]/60" : "text-[#a6abbd] hover:text-[#f4f2ec]"
                             )}
                           >
@@ -798,7 +810,7 @@ export default function ApplicationPreparationDrawer({
                             type="button"
                             onClick={() => setChecklistFilter("missing")}
                             className={cn(
-                              "px-2.5 py-0.5 rounded-[2px] font-semibold transition-colors flex items-center gap-1 focus-visible:outline-1 focus-visible:outline-[#d4a745]",
+                              "px-2.5 py-0.5 rounded-[2px] font-semibold transition-colors flex items-center gap-1 border border-transparent focus-visible:outline-1 focus-visible:outline-[#d4a745]",
                               checklistFilter === "missing" ? "bg-[#1f222a] text-[#c4634e] border border-[#c4634e]/60" : "text-[#a6abbd] hover:text-[#f4f2ec]"
                             )}
                           >
@@ -1074,21 +1086,21 @@ export default function ApplicationPreparationDrawer({
             </div>
 
             {/* Action Footer */}
-            <SheetFooter className="p-4 border-t border-[#2a2e38] bg-[#15171d] flex flex-wrap items-center justify-between shrink-0 text-xs font-mono gap-3">
-              <div className="flex items-center gap-2 text-[#a6abbd]">
+            <SheetFooter className="p-3 sm:p-4 border-t border-[#2a2e38] bg-[#15171d] flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between shrink-0 text-xs font-mono">
+              <div className="flex flex-wrap items-center gap-2 text-[#a6abbd]">
                 <span>JOB // {job.id.slice(0, 8)}</span>
                 <span>·</span>
                 <span className="text-[#d4a745]">STAGE // {applicationStatus}</span>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex w-full items-center gap-2 sm:w-auto">
                 {tailoredResume?.markdownContent && (
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={handleExportResume}
-                    className="font-mono text-xs rounded-[2px] border-[#2a2e38] bg-[#0d0e12] text-[#f4f2ec] hover:bg-[#1f222a] flex items-center gap-1.5 focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                    className="flex-1 sm:flex-none font-mono text-xs rounded-[2px] border-[#2a2e38] bg-[#0d0e12] text-[#f4f2ec] hover:bg-[#1f222a] flex items-center gap-1.5 focus-visible:outline-2 focus-visible:outline-[#d4a745]"
                     title="Export Tailored Resume"
                   >
                     <Download className="w-3.5 h-3.5 text-[#d4a745]" />
@@ -1101,7 +1113,7 @@ export default function ApplicationPreparationDrawer({
                     type="button"
                     size="sm"
                     onClick={() => handleStatusChange("APPLIED")}
-                    className="font-bold text-xs gap-1.5 bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] rounded-[2px] transition-colors focus-visible:outline-2 focus-visible:outline-[#d4a745]"
+                    className="flex-1 sm:flex-none font-bold text-xs gap-1.5 bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] rounded-[2px] transition-colors focus-visible:outline-2 focus-visible:outline-[#d4a745]"
                   >
                     <Check className="w-3.5 h-3.5" />
                     <span>Mark as Applied</span>
@@ -1113,7 +1125,7 @@ export default function ApplicationPreparationDrawer({
                   variant="outline"
                   size="sm"
                   onClick={onClose}
-                  className="font-mono text-xs rounded-[2px] border-[#2a2e38] bg-[#0d0e12] text-[#a6abbd] hover:text-[#f4f2ec] hover:bg-[#1f222a]"
+                  className="flex-1 sm:flex-none font-mono text-xs rounded-[2px] border-[#2a2e38] bg-[#0d0e12] text-[#a6abbd] hover:text-[#f4f2ec] hover:bg-[#1f222a]"
                 >
                   Close
                 </Button>

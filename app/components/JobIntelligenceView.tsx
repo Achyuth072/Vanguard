@@ -133,14 +133,14 @@ export function JobIntelligenceView({
           </div>
 
           {/* Quick Action Buttons */}
-          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:flex-nowrap md:shrink-0">
             {/* Status Change Selector */}
             {onStatusChange && (
               <select
                 value={job.status}
                 onChange={(e) => onStatusChange(job.id, e.target.value)}
                 aria-label="Target status"
-                className="px-2.5 py-2 bg-[#1f222a] border border-[#2a2e38] text-xs font-mono font-semibold text-[#f4f2ec] rounded-[2px] focus:outline-none focus:border-[#d4a745] cursor-pointer"
+                className="w-full px-2.5 py-2 bg-[#1f222a] border border-[#2a2e38] text-xs font-mono font-semibold text-[#f4f2ec] rounded-[2px] focus:outline-none focus:border-[#d4a745] cursor-pointer md:w-auto"
               >
                 <option value="DISCOVERED">DISCOVERED</option>
                 <option value="SHORTLISTED">SHORTLISTED</option>
@@ -159,7 +159,7 @@ export function JobIntelligenceView({
               <button
                 type="button"
                 onClick={() => onDeployApplication(job)}
-                className="px-4 py-2 bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] text-xs font-bold font-sans uppercase tracking-wider rounded-[2px] transition-colors flex items-center gap-2 cursor-pointer shadow-sm"
+                className="flex w-full items-center justify-center gap-2 px-4 py-2 bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] text-xs font-bold font-sans uppercase tracking-wider rounded-[2px] transition-colors cursor-pointer shadow-sm md:w-auto"
               >
                 <Send className="w-4 h-4 stroke-[2]" />
                 <span>Deploy Application</span>
@@ -170,61 +170,63 @@ export function JobIntelligenceView({
               <button
                 type="button"
                 onClick={() => onOverrideFilter(job.id)}
-                className="px-4 py-2 bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] text-xs font-bold font-sans uppercase tracking-wider rounded-[2px] transition-colors flex items-center gap-2 cursor-pointer shadow-sm"
+                className="flex w-full items-center justify-center gap-2 px-4 py-2 bg-[#d4a745] hover:bg-[#e8bd59] text-[#0d0e12] text-xs font-bold font-sans uppercase tracking-wider rounded-[2px] transition-colors cursor-pointer shadow-sm md:w-auto"
               >
                 <ShieldCheck className="w-4 h-4 stroke-[2]" />
                 <span>Rescue Target</span>
               </button>
             )}
 
-            {job.url && (
-              <a
-                href={job.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Open Original Job Posting"
-                aria-label="Open Original Job Posting"
-                className="p-2 bg-[#1f222a] hover:bg-[#2a2e38] border border-[#2a2e38] text-[#a6abbd] hover:text-[#f4f2ec] rounded-[2px] transition-colors inline-flex items-center cursor-pointer"
-              >
-                <ExternalLink className="w-4 h-4" />
-              </a>
-            )}
+            <div className="flex w-full items-center gap-2 md:w-auto">
+              {job.url && (
+                <a
+                  href={job.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Open Original Job Posting"
+                  aria-label="Open Original Job Posting"
+                  className="flex flex-1 items-center justify-center p-2 bg-[#1f222a] hover:bg-[#2a2e38] border border-[#2a2e38] text-[#a6abbd] hover:text-[#f4f2ec] rounded-[2px] transition-colors cursor-pointer md:flex-none"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              )}
 
-            {onEdit && (
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={() => onEdit(job)}
+                  title="Edit Target Details"
+                  aria-label="Edit Target Details"
+                  className="flex flex-1 items-center justify-center p-2 bg-[#1f222a] hover:bg-[#2a2e38] border border-[#2a2e38] text-[#a6abbd] hover:text-[#f4f2ec] rounded-[2px] transition-colors cursor-pointer md:flex-none"
+                >
+                  <Edit2 className="w-4 h-4" />
+                </button>
+              )}
+
+              {onRescore && (
+                <button
+                  type="button"
+                  onClick={handleRescoreClick}
+                  disabled={isRescoring || isDeleting}
+                  title="Re-run AI evaluation"
+                  aria-label="Re-run AI evaluation"
+                  className="flex flex-1 items-center justify-center p-2 bg-[#1f222a] hover:bg-[#2a2e38] border border-[#2a2e38] text-[#a6abbd] hover:text-[#f4f2ec] rounded-[2px] transition-colors cursor-pointer disabled:opacity-50 md:flex-none"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isRescoring ? "animate-spin text-[#d4a745]" : ""}`} />
+                </button>
+              )}
+
               <button
                 type="button"
-                onClick={() => onEdit(job)}
-                title="Edit Target Details"
-                aria-label="Edit Target Details"
-                className="p-2 bg-[#1f222a] hover:bg-[#2a2e38] border border-[#2a2e38] text-[#a6abbd] hover:text-[#f4f2ec] rounded-[2px] transition-colors cursor-pointer"
+                onClick={handleDeleteClick}
+                disabled={isDeleting || isRescoring}
+                title="Delete Target"
+                aria-label="Delete Target"
+                className="flex flex-1 items-center justify-center p-2 bg-[#1f222a] hover:bg-[#c4634e]/15 border border-[#2a2e38] hover:border-[#c4634e]/40 text-[#c4634e]/80 hover:text-[#c4634e] rounded-[2px] transition-colors cursor-pointer disabled:opacity-50 md:flex-none"
               >
-                <Edit2 className="w-4 h-4" />
+                <Trash2 className="w-4 h-4" />
               </button>
-            )}
-
-            {onRescore && (
-              <button
-                type="button"
-                onClick={handleRescoreClick}
-                disabled={isRescoring || isDeleting}
-                title="Re-run AI evaluation"
-                aria-label="Re-run AI evaluation"
-                className="p-2 bg-[#1f222a] hover:bg-[#2a2e38] border border-[#2a2e38] text-[#a6abbd] hover:text-[#f4f2ec] rounded-[2px] transition-colors cursor-pointer disabled:opacity-50"
-              >
-                <RefreshCw className={`w-4 h-4 ${isRescoring ? "animate-spin text-[#d4a745]" : ""}`} />
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={handleDeleteClick}
-              disabled={isDeleting || isRescoring}
-              title="Delete Target"
-              aria-label="Delete Target"
-              className="p-2 bg-[#1f222a] hover:bg-[#c4634e]/15 border border-[#2a2e38] hover:border-[#c4634e]/40 text-[#c4634e]/80 hover:text-[#c4634e] rounded-[2px] transition-colors cursor-pointer disabled:opacity-50"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+            </div>
           </div>
         </div>
 

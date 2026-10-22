@@ -702,11 +702,17 @@ export async function generateStructuredWithFallback<T>({
   prompt,
   system,
   options,
+  validateResult,
 }: {
   schema: z.ZodType<T>;
   prompt: string;
   system?: string;
   options?: AIRouterOptions;
+  /**
+   * Optional post-generation quality gate. Throw to reject the response and
+   * fail over to the next provider instead of returning malformed output.
+   */
+  validateResult?: (value: T) => void;
 }): Promise<T> {
   const resolvedProfile =
     options?.profile || options?.workload || options?.workloadIdentifier;
@@ -732,7 +738,19 @@ export async function generateStructuredWithFallback<T>({
   if (cacheKey) {
     const cached = AICacheService.get<T>(cacheKey);
     if (cached !== null) {
-      return cached;
+      let acceptable = true;
+      if (validateResult) {
+        try {
+          validateResult(cached);
+        } catch {
+          acceptable = false;
+        }
+      }
+      if (acceptable) {
+        return cached;
+      }
+      // Never keep serving a cached result that fails the current quality gate.
+      AICacheService.delete(cacheKey);
     }
   }
 
@@ -811,6 +829,23 @@ export async function generateStructuredWithFallback<T>({
         ...(effectiveTemperature !== undefined ? { temperature: effectiveTemperature } : {}),
         ...(effectiveMaxTokens !== undefined ? { maxTokens: effectiveMaxTokens } : {}),
       });
+
+      if (validateResult) {
+        try {
+          validateResult(result.object);
+        } catch (validationErr) {
+          const validationMsg =
+            validationErr instanceof Error ? validationErr.message : String(validationErr);
+          errors.push(`${candidate.name}: ${validationMsg}`);
+          poolManager.trackEnd(candidate.id, false);
+          console.warn(
+            `AI provider ${candidate.name} returned a result that failed quality validation (${i + 1}/${prioritizedCandidates.length}), attempting next provider in pool:`,
+            validationMsg
+          );
+          continue;
+        }
+      }
+
       clearCandidateCooldown(candidate.id);
       poolManager.trackEnd(candidate.id, true);
 

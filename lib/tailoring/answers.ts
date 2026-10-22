@@ -9,7 +9,42 @@ import {
   ApplicationAnswerSchema,
   ApplicationAnswersBatchSchema,
   type ApplicationAnswer,
+  type ApplicationAnswersBatch,
 } from "../../types/tailoring";
+
+export const MAX_KEY_POINTS_PER_ANSWER = 8;
+
+const COMPLETE_SENTENCE_END = /[.!?…]["'”’)\]]*$/;
+
+export function assertApplicationAnswerQuality(answer: ApplicationAnswer): void {
+  const trimmed = answer.answer.trim();
+  const label = answer.question ? `"${answer.question}"` : "application answer";
+
+  if (!trimmed) {
+    throw new Error(`Generated ${label} is empty`);
+  }
+
+  if (!COMPLETE_SENTENCE_END.test(trimmed)) {
+    throw new Error(
+      `Generated ${label} appears truncated: expected a finished sentence ending in terminal punctuation`
+    );
+  }
+
+  if (answer.keyPointsUsed.length > MAX_KEY_POINTS_PER_ANSWER) {
+    throw new Error(
+      `Generated ${label} cited ${answer.keyPointsUsed.length} facts (max ${MAX_KEY_POINTS_PER_ANSWER})`
+    );
+  }
+}
+
+export function assertApplicationAnswersQuality(result: ApplicationAnswersBatch): void {
+  if (result.answers.length === 0) {
+    throw new Error("Generated application answers batch is empty");
+  }
+  for (const answer of result.answers) {
+    assertApplicationAnswerQuality(answer);
+  }
+}
 
 export const STANDARD_APPLICATION_QUESTIONS = [
   "Why are you interested in this role and company?",
@@ -56,8 +91,9 @@ CRITICAL ANTI-HALLUCINATION INVARIANTS:
 1. Ground all answers STRICTLY and EXCLUSIVELY in the provided candidate facts (skills, projects, experiences, metrics, resume text).
 2. NEVER invent, fabricate, extrapolate, or assume skills, technologies, companies, dates, metrics, or personal circumstances not present in the candidate facts.
 3. If a question asks about details not present in the candidate profile (such as exact notice period or visa details if unstated), state the known preferences honestly or frame neutrally without fabricating credentials or commitments.
-4. In 'keyPointsUsed', list the specific verified candidate facts, project names, or metrics directly cited in the answer.
-5. Provide a unique string 'id' (e.g. slug or uuid) and valid ISO timestamp 'createdAt' for each answer.`;
+4. In 'keyPointsUsed', list 2-6 short labels for the specific verified candidate facts, project names, or metrics that the answer directly references. Never list job requirements, inferred matches, speculative claims, or entries that note a skill is "not explicitly mentioned".
+5. Every answer must be a complete, self-contained response that ends with a finished sentence.
+6. Provide a unique string 'id' (e.g. slug or uuid) and valid ISO timestamp 'createdAt' for each answer.`;
 
   const prompt = `CANDIDATE FACTS:
 ${buildCandidateFactSheet(candidate)}
@@ -84,6 +120,7 @@ Generate grounded, authentic application answers adhering strictly to the schema
       workload: "SCREENING_QA",
       ...options,
     },
+    validateResult: assertApplicationAnswersQuality,
   });
 
   return result.answers;
@@ -107,8 +144,9 @@ VOICE, TONE & STYLE GUIDELINES:
 CRITICAL ANTI-HALLUCINATION INVARIANTS:
 1. Ground all answers STRICTLY and EXCLUSIVELY in the provided candidate facts (skills, projects, experiences, metrics, resume text).
 2. NEVER invent, fabricate, extrapolate, or assume skills, technologies, companies, dates, metrics, or credentials not present in candidate facts.
-3. In 'keyPointsUsed', list the specific verified candidate facts, project names, or metrics directly cited in the answer.
-4. Provide a unique string 'id' and valid ISO timestamp 'createdAt'.`;
+3. In 'keyPointsUsed', list 2-6 short labels for the specific verified candidate facts, project names, or metrics that the answer directly references. Never list job requirements, inferred matches, speculative claims, or entries that note a skill is "not explicitly mentioned".
+4. Every answer must be a complete, self-contained response that ends with a finished sentence.
+5. Provide a unique string 'id' and valid ISO timestamp 'createdAt'.`;
 
   const prompt = `CANDIDATE FACTS:
 ${buildCandidateFactSheet(candidate)}
@@ -134,5 +172,6 @@ Generate a grounded, authentic answer adhering strictly to the schema, voice gui
       workload: "SCREENING_QA",
       ...options,
     },
+    validateResult: assertApplicationAnswerQuality,
   });
 }

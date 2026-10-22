@@ -11,6 +11,9 @@ import {
   answerCustomQuestion,
   STANDARD_APPLICATION_QUESTIONS,
   BANNED_AI_CLICHES,
+  MAX_KEY_POINTS_PER_ANSWER,
+  assertApplicationAnswerQuality,
+  assertApplicationAnswersQuality,
 } from "./answers";
 import {
   type CandidateContext,
@@ -361,7 +364,7 @@ describe("Grounded Application Question Answering Engine", () => {
     const mockAnswer = {
       id: "ans-router-test",
       question: "Test question",
-      answer: "Test answer from router export",
+      answer: "Test answer from router export.",
       keyPointsUsed: ["Test point"],
       createdAt: "2026-08-17T12:00:00.000Z",
     };
@@ -371,7 +374,7 @@ describe("Grounded Application Question Answering Engine", () => {
     });
 
     assert.strictEqual(result.id, "ans-router-test");
-    assert.strictEqual(result.answer, "Test answer from router export");
+    assert.strictEqual(result.answer, "Test answer from router export.");
   });
 
   it("verifies negative prompt constraints prohibit blacklisted AI tropes and cliches", async () => {
@@ -417,5 +420,104 @@ describe("Grounded Application Question Answering Engine", () => {
         `Generated answer must not contain blacklisted phrase: "${cliche}"`
       );
     }
+  });
+
+  it("rejects an answer that was cut off mid-sentence", () => {
+    assert.throws(
+      () =>
+        assertApplicationAnswerQuality({
+          id: "ans-truncated",
+          question: "What interests you about this company?",
+          answer:
+            "I'm drawn to Vercel because it sits at the intersection of developer tooling and AI. I've also spent time on the backend—my at",
+          keyPointsUsed: ["Stripe", "Pulse Career Module"],
+          createdAt: "2026-08-17T12:00:00.000Z",
+        }),
+      /appears truncated/
+    );
+  });
+
+  it("rejects citation bloat beyond the allowed number of facts", () => {
+    const facts = Array.from({ length: MAX_KEY_POINTS_PER_ANSWER + 1 }, (_, idx) => `Fact ${idx + 1}`);
+
+    assert.throws(
+      () =>
+        assertApplicationAnswerQuality({
+          id: "ans-bloated",
+          question: "Why should we hire you?",
+          answer: "I built offline-first product surfaces and owned deployment end to end.",
+          keyPointsUsed: facts,
+          createdAt: "2026-08-17T12:00:00.000Z",
+        }),
+      /cited \d+ facts/
+    );
+  });
+
+  it("accepts a complete answer with bounded citations", () => {
+    assert.doesNotThrow(() =>
+      assertApplicationAnswerQuality({
+        id: "ans-valid",
+        question: "Why should we hire you?",
+        answer: "I built offline-first product surfaces and owned deployment end to end.",
+        keyPointsUsed: ["Stripe", "Pulse Career Module"],
+        createdAt: "2026-08-17T12:00:00.000Z",
+      })
+    );
+  });
+
+  it("fails over when the primary provider returns a truncated answer", async () => {
+    const truncatedModel = createMockModel({
+      generateOutput: {
+        id: "ans-cut",
+        question: "What interests you about this company?",
+        answer: "I'm drawn to this company because of the ownership-heavy engineering and my at",
+        keyPointsUsed: ["Stripe"],
+        createdAt: "2026-08-17T12:00:00.000Z",
+      },
+    });
+
+    const completeModel = createMockModel({
+      generateOutput: {
+        id: "ans-complete",
+        question: "What interests you about this company?",
+        answer:
+          "I'm drawn to this company because the role combines ownership-heavy engineering with shipping AI features. At Stripe I owned the full lifecycle from schema design to production deployment.",
+        keyPointsUsed: ["Stripe", "Next.js"],
+        createdAt: "2026-08-17T12:00:00.000Z",
+      },
+    });
+
+    const result = await answerCustomQuestion(
+      sampleCandidate,
+      sampleJob,
+      "What interests you about this company?",
+      { primaryModel: truncatedModel, fallbackModel: completeModel }
+    );
+
+    assert.strictEqual(result.id, "ans-complete");
+    assert.match(result.answer, /production deployment\.$/);
+  });
+
+  it("rejects a batch containing any truncated answer", () => {
+    const batch = {
+      answers: [
+        {
+          id: "ans-1",
+          question: STANDARD_APPLICATION_QUESTIONS[0],
+          answer: "I want to join because the team ships fast and my at",
+          keyPointsUsed: ["Stripe"],
+          createdAt: "2026-08-17T12:00:00.000Z",
+        },
+        {
+          id: "ans-2",
+          question: STANDARD_APPLICATION_QUESTIONS[1],
+          answer: "I built an offline-first PWA with Next.js and TypeScript.",
+          keyPointsUsed: ["Pulse Career Module"],
+          createdAt: "2026-08-17T12:00:00.000Z",
+        },
+      ],
+    };
+
+    assert.throws(() => assertApplicationAnswersQuality(batch), /appears truncated/);
   });
 });

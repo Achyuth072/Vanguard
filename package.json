@@ -21,7 +21,7 @@
     "@ai-sdk/google": "^2.0.45",
     "@ai-sdk/openai": "^2.0.80",
     "@huggingface/transformers": "^4.2.0",
-    "@libsql/client": "^0.17.4",
+    "@libsql/client": "^0.18.0",
     "@prisma/adapter-libsql": "^7.9.1",
     "@prisma/client": "^7.9.1",
     "@radix-ui/react-dialog": "^1.1.23",

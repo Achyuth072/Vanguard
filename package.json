@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.99",
-    "@ai-sdk/openai": "^2.0.80",
+    "@ai-sdk/openai": "^4.0.98",
     "@huggingface/transformers": "^4.2.0",
     "@libsql/client": "^0.17.4",
     "@prisma/adapter-libsql": "^7.9.1",

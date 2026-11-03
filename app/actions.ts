@@ -4,7 +4,19 @@ import { revalidatePath } from "next/cache";
 import { generateText } from "ai";
 import { getModel } from "@/lib/ai";
 import { db } from "@/lib/db";
-import { ingestJobPipeline, type IngestionInput } from "@/lib/ingestion";
+import { ingestJobPipeline, type IngestionInput, type IngestionResult } from "@/lib/ingestion";
+
+export type IngestJobActionResult =
+  | (IngestionResult & { success: true; error?: never })
+  | {
+      success: false;
+      error: string;
+      job?: never;
+      isDuplicate?: never;
+      status?: never;
+      fitScore?: never;
+      filterResult?: never;
+    };
 
 // ---------------------------------------------------------
 // 1. AI EMAIL DRAFTER (Called by the "Draft Follow-up" button)
@@ -50,10 +62,29 @@ export async function generateDraft(jobRole: string, companyName: string) {
 // ---------------------------------------------------------
 // 2. SYNCHRONOUS INGESTION ACTION
 // ---------------------------------------------------------
-export async function ingestJob(input: IngestionInput) {
-  const result = await ingestJobPipeline(input);
-  revalidatePath("/");
-  return result;
+export async function ingestJob(input: IngestionInput): Promise<IngestJobActionResult> {
+  try {
+    const result = await ingestJobPipeline(input);
+    try {
+      revalidatePath("/");
+    } catch (revalidateErr: unknown) {
+      // Next.js revalidatePath throws if called outside an active request context (e.g. in test suites)
+      const msg = revalidateErr instanceof Error ? revalidateErr.message : String(revalidateErr);
+      if (!msg.includes("static generation store missing") && !msg.includes("Invariant")) {
+        console.warn("revalidatePath error:", revalidateErr);
+      }
+    }
+    return {
+      success: true,
+      ...result,
+    };
+  } catch (error) {
+    console.error("ingestJob action error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to ingest job posting",
+    };
+  }
 }
 
 // ---------------------------------------------------------

@@ -2,7 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import type { LanguageModelV2 } from "@ai-sdk/provider";
 import type { LanguageModel } from "ai";
-import { ingestJobPipeline, type IngestionInput } from "./pipeline";
+import { ingestJobPipeline, fetchJobPageContent, type IngestionInput } from "./pipeline";
 import type { db } from "@/lib/db";
 
 interface MockCandidate {
@@ -877,5 +877,183 @@ describe("Ingestion Pipeline", () => {
     );
 
     assert.strictEqual(resultOverride.job.currency, "EUR");
+  });
+
+  describe("fetchJobPageContent — Seam 1 (Anti-Bot & SPA Detection)", () => {
+    it("uses standard browser User-Agent header instead of bot string", async () => {
+      let capturedHeaders: Record<string, string> = {};
+      const mockFetch = async (_url: string | URL | Request, init?: RequestInit) => {
+        capturedHeaders = (init?.headers as Record<string, string>) || {};
+        return {
+          ok: true,
+          status: 200,
+          statusText: "OK",
+          headers: new Headers(),
+          text: async () => "<html><body><h1>Software Engineer</h1><p>Description with plenty of details about the engineering position.</p></body></html>",
+        } as unknown as Response;
+      };
+
+      await fetchJobPageContent("https://example.com/job/123", mockFetch as unknown as typeof fetch);
+      const ua = capturedHeaders["User-Agent"] || capturedHeaders["user-agent"] || "";
+      assert.ok(ua.includes("Mozilla/5.0"), "User-Agent should look like a standard modern browser");
+      assert.ok(!ua.includes("VanguardCareerBot"), "Should not use VanguardCareerBot user-agent");
+    });
+
+    it("throws descriptive error when AWS WAF or bot challenge returns 202 challenge or robot verification text", async () => {
+      const mockFetch = async () => ({
+        ok: true,
+        status: 202,
+        statusText: "Accepted",
+        headers: new Headers({ "x-amzn-waf-action": "challenge" }),
+        text: async () => "JavaScript is disabled In order to continue, we need to verify that you're not a robot. This requires JavaScript. Enable JavaScript and then reload the page.",
+      } as unknown as Response);
+
+      await assert.rejects(
+        async () => {
+          await fetchJobPageContent("https://pwcta.phenompro.com/global/en/job/", mockFetch as unknown as typeof fetch);
+        },
+        (err: Error) => {
+          assert.match(err.message, /protected by anti-bot verification|requires JavaScript/i);
+          return true;
+        }
+      );
+    });
+
+    it("throws descriptive error when Cloudflare challenge (403 / Turnstile / Just a moment) is returned", async () => {
+      const mockFetch = async () => ({
+        ok: false,
+        status: 403,
+        statusText: "Forbidden",
+        headers: new Headers({ "cf-mitigated": "challenge" }),
+        text: async () => "<!DOCTYPE html><html><head><title>Just a moment...</title></head><body>Enable JavaScript and cookies to continue</body></html>",
+      } as unknown as Response);
+
+      await assert.rejects(
+        async () => {
+          await fetchJobPageContent("https://hiring.cafe/jobs/123", mockFetch as unknown as typeof fetch);
+        },
+        (err: Error) => {
+          assert.match(err.message, /protected by anti-bot verification|Cloudflare|requires JavaScript/i);
+          return true;
+        }
+      );
+    });
+
+    it("throws descriptive error when page content is an empty SPA shell requiring JavaScript", async () => {
+      const mockFetch = async () => ({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        headers: new Headers(),
+        text: async () => "<!DOCTYPE html><html><head><title>Job Board</title></head><body><div id='root'></div><script src='/bundle.js'></script></body></html>",
+      } as unknown as Response);
+
+      await assert.rejects(
+        async () => {
+          await fetchJobPageContent("https://spa-board.com/jobs/123", mockFetch as unknown as typeof fetch);
+        },
+        (err: Error) => {
+          assert.match(err.message, /dynamically rendered via JavaScript|empty shell/i);
+          return true;
+        }
+      );
+    });
+  });
+
+  describe("ingestJobPipeline — Seam 2 (URL Error Propagation)", () => {
+    it("propagates descriptive URL fetch failure error when URL fetching fails and title/company are not provided", async () => {
+      const mockDb = createMockDb();
+      const mockFetch = async () => ({
+        ok: false,
+        status: 403,
+        statusText: "Forbidden",
+        headers: new Headers({ "cf-mitigated": "challenge" }),
+        text: async () => "Just a moment...",
+      } as unknown as Response);
+
+      await assert.rejects(
+        async () => {
+          await ingestJobPipeline(
+            { url: "https://hiring.cafe/jobs/sample-role" },
+            {
+              prismaClient: mockDb as unknown as typeof db,
+              fetchFn: mockFetch as unknown as typeof fetch,
+            }
+          );
+        },
+        (err: Error) => {
+          assert.match(
+            err.message,
+            /protected by anti-bot verification|Cloudflare|requires JavaScript/i
+          );
+          assert.doesNotMatch(
+            err.message,
+            /^Job title and company name are required for ingestion$/
+          );
+          return true;
+        }
+      );
+    });
+
+    it("propagates URL fetch error when URL is provided with manual title/company but description failed to load", async () => {
+      const mockDb = createMockDb();
+      const mockFetch = async () => ({
+        ok: false,
+        status: 403,
+        statusText: "Forbidden",
+        headers: new Headers(),
+        text: async () => "Forbidden",
+      } as unknown as Response);
+
+      await assert.rejects(
+        async () => {
+          await ingestJobPipeline(
+            {
+              url: "https://protected-ats.com/job/456",
+              title: "Staff Engineer",
+              company: "Protected Corp",
+            },
+            {
+              prismaClient: mockDb as unknown as typeof db,
+              fetchFn: mockFetch as unknown as typeof fetch,
+            }
+          );
+        },
+        (err: Error) => {
+          assert.match(err.message, /Failed to fetch job posting/i);
+          return true;
+        }
+      );
+    });
+
+    it("propagates WAF challenge error when PhenomPro-style robot verification page is encountered", async () => {
+      const mockDb = createMockDb();
+      const mockFetch = async () => ({
+        ok: true,
+        status: 202,
+        statusText: "Accepted",
+        headers: new Headers({ "x-amzn-waf-action": "challenge" }),
+        text: async () => "JavaScript is disabled In order to continue, we need to verify that you're not a robot.",
+      } as unknown as Response);
+
+      await assert.rejects(
+        async () => {
+          await ingestJobPipeline(
+            { url: "https://pwcta.phenompro.com/global/en/job/" },
+            {
+              prismaClient: mockDb as unknown as typeof db,
+              fetchFn: mockFetch as unknown as typeof fetch,
+            }
+          );
+        },
+        (err: Error) => {
+          assert.match(
+            err.message,
+            /protected by anti-bot verification|requires JavaScript/i
+          );
+          return true;
+        }
+      );
+    });
   });
 });

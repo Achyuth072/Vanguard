@@ -189,6 +189,11 @@ export default function IngestModal({
       };
 
       const res = await ingestJob(payload);
+      if (!res.success) {
+        setError(res.error);
+        return;
+      }
+
       if (res && res.job) {
         const isFilteredOut = res.status === "FILTERED_OUT" || res.filterResult?.passed === false;
         const isIgnored = res.fitScore?.recommendation === "IGNORE";

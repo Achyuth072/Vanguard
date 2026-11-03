@@ -102,25 +102,79 @@ export function extractTextFromHtml(html: string): string {
 }
 
 /**
+ * Standard browser User-Agent and headers to prevent false-positive bot blocks on standard job boards.
+ */
+const BROWSER_HEADERS: Record<string, string> = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept-Language": "en-US,en;q=0.9",
+};
+
+/**
  * Fetches and extracts text content from a remote URL.
+ * Detects anti-bot challenges (Cloudflare, AWS WAF) and empty client-side SPAs,
+ * failing fast with actionable user messages.
  */
 export async function fetchJobPageContent(
   url: string,
   fetchFn: typeof fetch = fetch
 ): Promise<string> {
   const response = await fetchFn(url, {
-    headers: {
-      "User-Agent": "VanguardCareerBot/1.0 (+https://vanguard-career.internal)",
-      Accept: "text/html,application/xhtml+xml,text/plain",
-    },
+    headers: BROWSER_HEADERS,
   });
 
+  const wafHeader = response.headers?.get?.("x-amzn-waf-action");
+  const cfHeader = response.headers?.get?.("cf-mitigated");
+  const isChallengeHeader = wafHeader === "challenge" || cfHeader === "challenge";
+  const isWaf202 = response.status === 202;
+
+  let body = "";
+  try {
+    body = await response.text();
+  } catch {
+    body = "";
+  }
+
+  const isChallengeBody =
+    /verify that you're not a robot/i.test(body) ||
+    /enable javascript and (?:then )?(?:reload|cookies)/i.test(body) ||
+    /just a moment\.\.\./i.test(body) ||
+    body.includes("challenge-platform") ||
+    body.includes("challenges.cloudflare.com") ||
+    body.includes("cf-turnstile") ||
+    body.includes("turnstile") ||
+    body.includes("cf-chl-");
+
+  if (isChallengeHeader || isChallengeBody || isWaf202) {
+    throw new Error(
+      "Failed to fetch job posting: site is protected by anti-bot verification (Cloudflare/WAF) or requires JavaScript. Please paste the job description directly."
+    );
+  }
+
   if (!response.ok) {
+    if (response.status === 403 || response.status === 401) {
+      throw new Error(
+        `Failed to fetch job posting (${response.status}): site is protected by anti-bot verification (Cloudflare/WAF) or requires authentication. Please paste the job description directly.`
+      );
+    }
     throw new Error(`Failed to fetch job posting from URL (${response.status} ${response.statusText})`);
   }
 
-  const body = await response.text();
-  return extractTextFromHtml(body);
+  const text = extractTextFromHtml(body);
+
+  // Detect empty SPA shells (e.g. <div id="root"></div> without pre-rendered content)
+  const isSpaShell =
+    text.length < 50 &&
+    (/<div\s+id=["'](?:root|app|__next)["']/i.test(body) || /<script\b/i.test(body));
+
+  if (isSpaShell || text.length === 0) {
+    throw new Error(
+      "Unable to extract text from URL: page content is dynamically rendered via JavaScript or empty shell. Please paste the job description directly."
+    );
+  }
+
+  return text;
 }
 
 /**
@@ -140,6 +194,7 @@ export async function ingestJobPipeline(
 
   let rawContent = input.rawText || input.description || "";
   let source = input.source || (input.url ? "URL" : "MANUAL");
+  let urlFetchError: Error | null = null;
 
   // Step 1: Handle URL ingestion if no raw text was directly provided
   if (input.url && !rawContent) {
@@ -147,6 +202,7 @@ export async function ingestJobPipeline(
       rawContent = await fetchJobPageContent(input.url, customFetch);
       source = "URL";
     } catch (fetchError) {
+      urlFetchError = fetchError instanceof Error ? fetchError : new Error(String(fetchError));
       console.warn("Could not fetch remote URL content, continuing with available metadata:", fetchError);
     }
   }
@@ -252,6 +308,10 @@ export async function ingestJobPipeline(
         : input.employmentType;
     description = description || extracted.description;
     requiredExperienceYears = requiredExperienceYears ?? extracted.requiredExperienceYears ?? null;
+  }
+
+  if (urlFetchError && !input.rawText && !input.description) {
+    throw urlFetchError;
   }
 
   if (!title || !company) {

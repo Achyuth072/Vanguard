@@ -46,4 +46,32 @@ describe("ingestJob Server Action — Seam 3", () => {
     assert.strictEqual(result.job.title, "Senior Reliability Engineer");
     assert.strictEqual(result.job.company, "Acme Cloud");
   });
+
+  it("returns { success: true, ... } when ingesting a URL with Cloudflare telemetry and valid job content", async () => {
+    globalThis.fetch = (async () => ({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      headers: new Headers(),
+      text: async () => `<!DOCTYPE html><html><head>
+        <title>Founding Engineer at Acme</title>
+        <script src="/cdn-cgi/challenge-platform/scripts/jsd/main.js"></script>
+        <script>turnstileLoad = function() {};</script>
+      </head><body>
+        <h1>Founding Engineer</h1>
+        <p>Company: Acme AI. Location: Remote. Requirements: 5 years of fullstack TypeScript and Node.js.</p>
+      </body></html>`,
+    })) as unknown as typeof fetch;
+
+    const result = await ingestJob({
+      url: "https://wellfound.com/jobs/acme-founding-engineer",
+      title: "Founding Engineer",
+      company: "Acme AI",
+    });
+
+    assert.strictEqual(result.success, true);
+    assert.ok(result.job);
+    assert.strictEqual(result.job.title, "Founding Engineer");
+    assert.strictEqual(result.job.company, "Acme AI");
+  });
 });

@@ -939,6 +939,73 @@ describe("Ingestion Pipeline", () => {
       );
     });
 
+    it("successfully extracts job page content from pages containing Cloudflare telemetry (challenge-platform) and Turnstile scripts when valid HTML content is returned", async () => {
+      const mockHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <title>Senior Platform Engineer at Wellfound Startup</title>
+  <script src="/cdn-cgi/challenge-platform/scripts/jsd/main.js"></script>
+  <script>
+    turnstileLoad = function () {
+      const overlay = document.getElementById("turnstile_widget");
+    };
+  </script>
+</head>
+<body>
+  <h1>Senior Platform Engineer</h1>
+  <p>About the Job: We are seeking an experienced Senior Platform Engineer to scale our distributed cloud systems. Requirements include 5+ years of TypeScript, Kubernetes, and Go experience.</p>
+</body>
+</html>`;
+
+      const mockFetch = async () => ({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        headers: new Headers(),
+        text: async () => mockHtml,
+      } as unknown as Response);
+
+      const content = await fetchJobPageContent(
+        "https://wellfound.com/jobs/12345-senior-platform-engineer",
+        mockFetch as unknown as typeof fetch
+      );
+
+      assert.ok(content.length > 50);
+      assert.ok(content.includes("Senior Platform Engineer"));
+      assert.ok(content.includes("About the Job: We are seeking an experienced"));
+    });
+
+    it("throws descriptive error when HTTP 200 contains an interstitial Turnstile challenge with minimal text", async () => {
+      const mockHtml = `<!DOCTYPE html>
+<html>
+<head><title>Verification Required</title></head>
+<body>
+  <div id="challenge-form">
+    <div class="cf-turnstile" data-sitekey="sample"></div>
+    <p>Please verify that you're not a robot to access this career page.</p>
+  </div>
+</body>
+</html>`;
+
+      const mockFetch = async () => ({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        headers: new Headers(),
+        text: async () => mockHtml,
+      } as unknown as Response);
+
+      await assert.rejects(
+        async () => {
+          await fetchJobPageContent("https://protected-site.com/jobs/1", mockFetch as unknown as typeof fetch);
+        },
+        (err: Error) => {
+          assert.match(err.message, /protected by anti-bot verification|requires JavaScript/i);
+          return true;
+        }
+      );
+    });
+
     it("throws descriptive error when page content is an empty SPA shell requiring JavaScript", async () => {
       const mockFetch = async () => ({
         ok: true,

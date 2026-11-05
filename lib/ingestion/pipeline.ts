@@ -111,6 +111,11 @@ const BROWSER_HEADERS: Record<string, string> = {
   "Accept-Language": "en-US,en;q=0.9",
 };
 
+const ANTI_BOT_CHALLENGE_ERROR =
+  "Failed to fetch job posting: site is protected by anti-bot verification (Cloudflare/WAF) or requires JavaScript. Please paste the job description directly.";
+
+const CHALLENGE_BODY_LENGTH_THRESHOLD = 500;
+
 /**
  * Fetches and extracts text content from a remote URL.
  * Detects anti-bot challenges (Cloudflare, AWS WAF) and empty client-side SPAs,
@@ -136,20 +141,8 @@ export async function fetchJobPageContent(
     body = "";
   }
 
-  const isChallengeBody =
-    /verify that you're not a robot/i.test(body) ||
-    /enable javascript and (?:then )?(?:reload|cookies)/i.test(body) ||
-    /just a moment\.\.\./i.test(body) ||
-    body.includes("challenge-platform") ||
-    body.includes("challenges.cloudflare.com") ||
-    body.includes("cf-turnstile") ||
-    body.includes("turnstile") ||
-    body.includes("cf-chl-");
-
-  if (isChallengeHeader || isChallengeBody || isWaf202) {
-    throw new Error(
-      "Failed to fetch job posting: site is protected by anti-bot verification (Cloudflare/WAF) or requires JavaScript. Please paste the job description directly."
-    );
+  if (isChallengeHeader || isWaf202) {
+    throw new Error(ANTI_BOT_CHALLENGE_ERROR);
   }
 
   if (!response.ok) {
@@ -162,6 +155,27 @@ export async function fetchJobPageContent(
   }
 
   const text = extractTextFromHtml(body);
+
+  // Detect anti-bot challenge interstitial pages that return 200 OK without real content.
+  // Note: Telemetry scripts (e.g. /cdn-cgi/challenge-platform/scripts/jsd/main.js) or Turnstile
+  // definitions may be present on legitimate pages (e.g. Wellfound with thousands of chars of text),
+  // so we only flag challenge interstitials when the page lacks meaningful extracted content
+  // (< CHALLENGE_BODY_LENGTH_THRESHOLD characters) or has explicit challenge interstitial titles.
+  const isChallengeInterstitial =
+    /<title>\s*Just a moment\.\.\.\s*<\/title>/i.test(body) ||
+    /<title>\s*Attention Required!\s*\|\s*Cloudflare\s*<\/title>/i.test(body) ||
+    ((/verify that you're not a robot/i.test(body) ||
+      /enable javascript and (?:then )?(?:reload|cookies)/i.test(body) ||
+      /just a moment\.\.\./i.test(body) ||
+      body.includes("cf-chl-widget") ||
+      /id=['"](?:challenge-form|turnstile_widget)['"]/.test(body) ||
+      body.includes("challenges.cloudflare.com") ||
+      body.includes("cf-turnstile")) &&
+      text.length < CHALLENGE_BODY_LENGTH_THRESHOLD);
+
+  if (isChallengeInterstitial) {
+    throw new Error(ANTI_BOT_CHALLENGE_ERROR);
+  }
 
   // Detect empty SPA shells (e.g. <div id="root"></div> without pre-rendered content)
   const isSpaShell =
